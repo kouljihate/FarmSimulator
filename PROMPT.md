@@ -50,10 +50,13 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - Persistence: `/upload` saves `uploads/<token>.pkl` (pickle of the plan);
   `get_plan()` reloads from disk on cache miss so tokens survive restarts.
 - `/upload` re-renders `index.html` (same page) with the plan inside a
-  collapsible-free **"Upload Result" card** (`UPLOAD_RESULT_TITLE`); the result
-  markup lives in `templates/_upload_result.html`. `result.html` was removed.
+  **"Upload Result" card** (`UPLOAD_RESULT_TITLE`) shown in the **Basin tab**
+  (id `upload-result-card`); the result markup lives in
+  `templates/_upload_result.html`. `result.html` was removed.
   The sectorisation config maps bleed wider than their cards (`-mx-6` wrapper,
   card `overflow-hidden` removed).
+- Default active tab: **Upload** when no result card exists, **Basin** once a
+  plan was analysed (`upload-result-card` is present).
 - Bilingual: English left (Comfortaa), Arabic right (VIP RAWY Regular in
   `static/fonts/`). Text goes through `core/i18n.py` helpers registered as
   Jinja globals in `app.py`: `t`, `bt`, `btcfg`, `i18n_css`. Map tooltips use

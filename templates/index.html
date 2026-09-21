@@ -81,26 +81,26 @@
         </div>
       </div>
 
-    {% if plan %}
-    <div class="mt-8 overflow-hidden rounded-3xl glass">
-      <div class="glass-head flex flex-wrap items-center justify-between gap-2 px-6 py-4">
-        <h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2>
-        <span class="text-sm text-white/55">{{ plan.name }} · v{{ version }}</span>
-      </div>
-      <div class="p-5 md:p-6">
-        {% include "_upload_result.html" %}
-      </div>
-    </div>
-    {% endif %}
-
     </div>
     </div>
 
     <div class="tab-panel" id="tab-basin">
+      {% if plan %}
+      <div class="overflow-hidden rounded-3xl glass" id="upload-result-card">
+        <div class="glass-head flex flex-wrap items-center justify-between gap-2 px-6 py-4">
+          <h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2>
+          <span class="text-sm text-white/55">{{ plan.name }} · v{{ version }}</span>
+        </div>
+        <div class="p-5 md:p-6">
+          {% include "_upload_result.html" %}
+        </div>
+      </div>
+      {% else %}
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">Basin</h2>
         <p class="mt-1 text-white/50">Coming soon</p>
       </div>
+      {% endif %}
     </div>
 
     <div class="tab-panel" id="tab-sectors">
@@ -150,7 +150,7 @@
     panels.forEach(function (p) { p.classList.toggle('active', p.id === btn.getAttribute('data-tab-target')); });
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
-  activate(document.querySelector('[data-tab-target="tab-upload"]'));
+  activate(document.querySelector('[data-tab-target="' + (document.getElementById('upload-result-card') ? 'tab-basin' : 'tab-upload') + '"]'));
 })();
 </script>
 
