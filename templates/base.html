@@ -105,23 +105,24 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.8rem;
-    height: 1.8rem;
-    min-width: 1.8rem;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
     border-radius: 9999px;
-    border: 1px solid rgba(255,255,255,.22);
-    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(139,92,246,.55);
+    background: linear-gradient(135deg, rgba(34,211,238,.25), rgba(139,92,246,.35));
     color: #fff;
-    font-size: .68rem;
+    font-size: .7rem;
     font-weight: 700;
     cursor: pointer;
     transition: all .18s ease;
+    box-shadow: 0 0 12px rgba(139,92,246,.25);
   }
-  .sector-chip:hover { background: rgba(34,211,238,.3); border-color: #22d3ee; transform: translateY(-1px); }
+  .sector-chip:hover { border-color: #22d3ee; box-shadow: 0 0 16px rgba(34,211,238,.5); transform: translateY(-1px); }
   .sector-chip.active {
     background: linear-gradient(135deg, #22d3ee, #8b5cf6);
     border-color: transparent;
-    box-shadow: 0 0 14px rgba(139,92,246,.55);
+    box-shadow: 0 0 18px rgba(139,92,246,.65);
   }
 </style>
 </head>

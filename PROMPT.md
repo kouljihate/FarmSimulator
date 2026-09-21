@@ -75,8 +75,11 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    cards + legend); `result.html` / `_upload_result.html` were removed.
    In the **Sectorisation card the config cards are single-column full-width**
    (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
-   Each config card shows **circular sector buttons** (`.sector-chip`,
-   `data-cfg`/`data-idx`): clicking one highlights that sector in the map, and
+   Each config card shows **circular sector buttons** (`sector-chip`,
+   `data-cfg`/`data-idx`) spread across one full-width row
+   (`flex flex-1 justify-between`) in the neon theme (translucent cyan/violet
+   gradient, active = solid gradient + glow): clicking one highlights that
+   sector in the map, and
    clicking a sector *in* the map activates its button. The preview maps are
    interactive, built by `mapper._sector_select_js(cfg)`: sector polygons are
    drawn directly with Leaflet (a `sector` option tags each; folium drops
@@ -217,3 +220,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 6. v0.7.1: Sectors tab config cards made single-column full-width maps.
 7. v0.7.2: sector circle buttons select sectors in the config maps (click a
    chip → highlight in map; click a sector in map → activate its chip).
+8. v0.7.3: sector buttons spread on one row (`justify-between`) with the neon
+   theme.
