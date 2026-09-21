@@ -75,21 +75,25 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    cards + legend); `result.html` / `_upload_result.html` were removed.
    In the **Sectorisation card the config cards are single-column full-width**
    (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
-   Each config card shows **circular sector buttons** (`sector-chip`,
-   `data-cfg`/`data-idx`) spread across one full-width row
-   (`flex flex-1 justify-between`) in the neon theme (translucent cyan/violet
-   gradient, active = solid gradient + glow): clicking one highlights that
-   sector in the map, and
-   clicking a sector *in* the map activates its button. The preview maps are
-   interactive, built by `mapper._sector_select_js(cfg)`: sector polygons are
-   drawn directly with Leaflet (a `sector` option tags each; folium drops
-   unknown options) and carry a `sticky` tooltip; `window.selectSector(idx)`
-   highlights a sector (yellow fill + black outline); clicks post
-   `{type:'sector-select', cfg, idx}` to `window.top`. `index.html` delegates
-   clicks on `.sector-chip` and descends the map iframe (outer srcdoc → inner
-   folium iframe) to call `selectSector`, polling until the map is ready.
+   Each config card shows **sector checkboxes** (`sector-check` label +
+   `sector-chk` input, `data-cfg`/`data-idx`, name in `value`) grouped across
+   one row (`flex-wrap justify-center`), neon themed (checked label = solid
+   gradient + glow via `.sector-check:has(.sector-chk:checked)`). **Multiple
+   boxes can be checked at once**; all checked sectors are highlighted in the
+   map, and clicking a sector *in* the map toggles its checkbox. The preview
+   maps are interactive, built by `mapper._sector_select_js(cfg)`: sector
+   polygons are drawn directly with Leaflet (a `sector` option tags each;
+   folium drops unknown options) and carry a `sticky` tooltip;
+   `window.selectSectors([...])` syncs the highlighted set from the parent
+   checkboxes, `window.toggleSector(idx)` flips one (used by map clicks, which
+   post `{type:'sector-select', cfg, idx, checked}` to `window.top`), and a
+   single-select `window.selectSector(idx)` is kept for legacy checks.
+   `index.html` listens for `change` on `.sector-chk`, tracks the last-checked
+   sector as the operation target (`sel[cfg]`; merge uses **any two checked
+   sectors**), and descends the map iframe (outer srcdoc → inner folium
+   iframe) to call `selectSectors`, polling until the map is ready.
    `load_run` regenerates config preview maps that lack `selectSector`
-   (old saved runs). i18n: `SECTOR_SELECT` (EN+AR).
+   (old saved runs). i18n: `SECTOR_SELECT`, `SECTOR_SELECT_MULTI` (EN+AR).
 - **Sector management** (v0.8.0): each config card has a **taller map**
    (`iframe.map.tall`, 560 px) and a toolbar of `tool-btn` buttons with
    `data-op` = `add | edit | rename | merge | remove` plus a status line.
@@ -254,3 +258,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    Rename, Merge, Remove per config, all rebuilding the pipeline and maps
    in place (AJAX fragment swap), with taller maps; fixed a `sweep_split`
    crash on GeometryCollection zone pieces.
+10. v0.9.0: sector circle buttons replaced with **grouped checkboxes**
+   (`sector-check`/`sector-chk`); multiple sectors can be checked/highlighted
+   at once, map clicks toggle checkboxes, and Merge uses any two checked
+   sectors.

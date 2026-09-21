@@ -102,28 +102,41 @@
   main { padding-bottom: 3rem; }
   .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; box-shadow: 0 0 6px rgba(255,255,255,.35); }
 
-  .sector-chip {
+  .sector-check {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    min-width: 2rem;
-    border-radius: 9999px;
+    gap: .35rem;
+    padding: .3rem .65rem;
+    border-radius: .6rem;
     border: 1px solid rgba(139,92,246,.55);
-    background: linear-gradient(135deg, rgba(34,211,238,.25), rgba(139,92,246,.35));
+    background: linear-gradient(135deg, rgba(34,211,238,.22), rgba(139,92,246,.32));
     color: #fff;
-    font-size: .7rem;
+    font-size: .72rem;
     font-weight: 700;
     cursor: pointer;
+    user-select: none;
     transition: all .18s ease;
-    box-shadow: 0 0 12px rgba(139,92,246,.25);
+    box-shadow: 0 0 10px rgba(139,92,246,.25);
   }
-  .sector-chip:hover { border-color: #22d3ee; box-shadow: 0 0 16px rgba(34,211,238,.5); transform: translateY(-1px); }
-  .sector-chip.active {
-    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+  .sector-check:hover { border-color: #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,.45); transform: translateY(-1px); }
+  .sector-chk {
+    appearance: none;
+    -webkit-appearance: none;
+    width: .95rem;
+    height: .95rem;
+    flex-shrink: 0;
+    border-radius: .3rem;
+    border: 1px solid rgba(255,255,255,.55);
+    background: rgba(0,0,0,.3);
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .sector-chk:checked { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 8px rgba(34,211,238,.8); }
+  .sector-chk:checked::after { content: '\2713'; display: block; text-align: center; font-size: .7rem; line-height: .95rem; color: #fff; }
+  .sector-check:has(.sector-chk:checked) {
     border-color: transparent;
-    box-shadow: 0 0 18px rgba(139,92,246,.65);
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    box-shadow: 0 0 16px rgba(139,92,246,.6);
   }
 
   .tool-btn {

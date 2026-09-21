@@ -11,8 +11,13 @@
       <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
       <div class="mb-3 flex items-center gap-3 text-sm text-white/60">
         <span class="shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
-        <div class="flex flex-1 items-center justify-between gap-1">
-          {% for s in cfg.sectors[:8] %}<button type="button" class="sector-chip" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ t('SECTOR_SELECT') }} {{ s.name }}">{{ s.name }}</button>{% endfor %}
+        <div class="flex flex-1 flex-wrap items-center justify-center gap-1.5">
+          {% for s in cfg.sectors[:8] %}
+          <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ t('SECTOR_SELECT_MULTI') }}">
+            <input type="checkbox" class="sector-chk" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" value="{{ s.name }}">
+            <span>{{ s.name }}</span>
+          </label>
+          {% endfor %}
         </div>
       </div>
       <div class="-mx-6 mb-2 flex flex-wrap items-center gap-2 border-y border-white/10 bg-white/5 px-5 py-2.5">

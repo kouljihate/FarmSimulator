@@ -187,13 +187,15 @@
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
   activate(document.querySelector('[data-tab-target="' + (document.getElementById('upload-result-card') ? 'tab-basin' : 'tab-upload') + '"]'));
 
-  function syncSectorChip(cfg, idx) {
+  function checkedIdx(cfg) {
     var s = document.getElementById('sectors-result');
-    if (!s) return;
-    var btns = s.querySelectorAll('.sector-chip[data-cfg="' + cfg + '"]');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('active', btns[i].getAttribute('data-idx') == idx);
+    if (!s) return [];
+    var out = [];
+    var boxes = s.querySelectorAll('.sector-chk[data-cfg="' + cfg + '"]');
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].checked) out.push(parseInt(boxes[i].getAttribute('data-idx'), 10));
     }
+    return out;
   }
 
   function withSectorMap(frame, fn, attempt) {
@@ -204,7 +206,7 @@
         var inner = frame.contentDocument.querySelector('iframe');
         if (inner && inner.contentWindow) w = inner.contentWindow;
       }
-      if (w && typeof w.selectSector === 'function') { fn(w); return; }
+      if (w && (typeof w.selectSectors === 'function' || typeof w.selectSector === 'function')) { fn(w); return; }
     } catch (x) {}
     if (attempt < 40) setTimeout(function () { withSectorMap(frame, fn, attempt + 1); }, 100);
   }
@@ -230,8 +232,8 @@
   }
   function chipName(cfg, idx) {
     var s = document.getElementById('sectors-result');
-    var c = s && s.querySelector('.sector-chip[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
-    return c ? c.textContent : '';
+    var c = s && s.querySelector('.sector-chk[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+    return c ? c.value : '';
   }
   function setStatus(cfg, key) {
     var st = statusNode(cfg);
@@ -287,24 +289,25 @@
     req.send(JSON.stringify(body));
   }
 
-  document.addEventListener('click', function (e) {
-    var chip = e.target && e.target.closest ? e.target.closest('.sector-chip') : null;
-    if (!chip) return;
-    var cfg = chip.getAttribute('data-cfg');
-    var idx = parseInt(chip.getAttribute('data-idx'), 10);
-    if (mergeFrom[cfg] != null) {
-      applySectorOp(cfg, 'merge', { idx: mergeFrom[cfg], idx2: idx });
-      mergeFrom[cfg] = null;
-      var mb = pickBtn(cfg, 'merge');
-      if (mb) mb.classList.remove('armed');
-      return;
+  document.addEventListener('change', function (e) {
+    var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
+    if (!box) return;
+    var cfg = box.getAttribute('data-cfg');
+    var idx = parseInt(box.getAttribute('data-idx'), 10);
+    if (box.checked) {
+      sel[cfg] = idx;
+    } else if (sel[cfg] == idx) {
+      sel[cfg] = null;
     }
-    sel[cfg] = idx;
-    syncSectorChip(cfg, idx);
     var st = statusNode(cfg);
-    if (st) st.textContent = chipName(cfg, idx);
+    if (st) st.textContent = box.value;
     var frame = iframeFor(cfg);
-    if (frame) withSectorMap(frame, function (w) { w.selectSector(idx); });
+    if (frame) {
+      withSectorMap(frame, function (w) {
+        if (w.selectSectors) w.selectSectors(checkedIdx(cfg));
+        else if (w.selectSector && sel[cfg] != null) w.selectSector(sel[cfg]);
+      });
+    }
   });
 
   document.addEventListener('click', function (e) {
@@ -362,15 +365,11 @@
       return;
     }
     if (op === 'merge') {
-      if (!needsSel(cfg)) return;
-      if (mergeFrom[cfg] == null) {
-        mergeFrom[cfg] = sel[cfg];
-        b.classList.add('armed');
-        setStatus(cfg, 'tmerge');
+      var chk = checkedIdx(cfg);
+      if (chk.length === 2) {
+        applySectorOp(cfg, 'merge', { idx: chk[0], idx2: chk[1] });
       } else {
-        applySectorOp(cfg, 'merge', { idx: mergeFrom[cfg], idx2: sel[cfg] });
-        mergeFrom[cfg] = null;
-        b.classList.remove('armed');
+        setStatus(cfg, chk.length < 2 ? 'tneed' : 'tmerge');
       }
       return;
     }
@@ -380,11 +379,16 @@
     if (!e.data || !e.data.type) return;
     var cfg = e.data.cfg;
     if (e.data.type === 'sector-select') {
-      syncSectorChip(cfg, e.data.idx);
-      if (cfg != null) {
-        sel[cfg] = e.data.idx;
-        var st = statusNode(cfg);
-        if (st) st.textContent = chipName(cfg, e.data.idx);
+      if (cfg != null && e.data.idx != null) {
+        var s = document.getElementById('sectors-result');
+        var box = s && s.querySelector('.sector-chk[data-cfg="' + cfg + '"][data-idx="' + e.data.idx + '"]');
+        if (box) {
+          box.checked = !!e.data.checked;
+          if (box.checked) sel[cfg] = e.data.idx;
+          else if (sel[cfg] == e.data.idx) sel[cfg] = null;
+          var st = statusNode(cfg);
+          if (st) st.textContent = box.value;
+        }
       }
       return;
     }

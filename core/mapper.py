@@ -201,11 +201,13 @@ def _sector_select_js(cfg):
     """Script for the sectorisation preview maps.
 
     Renders each sector polygon with an extra `sector` option (folium drops
-    unknown options, so they are added directly via Leaflet), exposes
-    `window.selectSector(idx)` so the parent page can highlight a sector, and
-    posts `{type:'sector-select', cfg, idx}` to the top window when the user
-    clicks a sector inside the map (the map lives one extra folium iframe
-    deep, so *top*, not parent).
+    unknown options, so they are added directly via Leaflet) and supports
+    multi-selection: `window.selectSectors([...])` sets the checked set from
+    the parent checkboxes, `window.toggleSector(idx)` flips one, and a single
+    `window.selectSector(idx)` is kept for legacy/load_run checks. Clicking a
+    sector in the map toggles it and posts
+    `{type:'sector-select', cfg, idx, checked}` to the top window (the map
+    lives one extra folium iframe deep, so *top*, not parent).
     """
     import json
     sectors = []
@@ -224,24 +226,26 @@ def _sector_select_js(cfg):
         "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
         "if(!mp)return;"
         "var SECTORS=" + data + ";"
-        "var defs={},order=[];"
+        "var defs={},order=[],checked={};"
         "function pushSector(o,pl){"
         "if(!defs[o.idx]){defs[o.idx]=[];order.push(o.idx);}"
         "defs[o.idx].push({l:pl,o:{color:o.color,weight:2,fillColor:o.color,fillOpacity:.14}});"
-        "pl.on('click',function(ev){window.selectSector(ev.target.options.sector);"
-        "try{window.top.postMessage({type:'sector-select',cfg:" + str(cfg["id"]) + ",idx:ev.target.options.sector},'*');}catch(x){}});"
+        "pl.on('click',function(ev){window.toggleSector(ev.target.options.sector);"
+        "try{window.top.postMessage({type:'sector-select',cfg:" + str(cfg["id"]) + ",idx:ev.target.options.sector,checked:!!checked[ev.target.options.sector]},'*');}catch(x){}});"
         "}"
         "for(var i=0;i<SECTORS.length;i++){var o=SECTORS[i];"
         "var pl=L.polygon(o.locs,{color:o.color,weight:2,opacity:.9,"
         "fill:true,fillColor:o.color,fillOpacity:.14,sector:o.idx});"
         "pl.addTo(mp);pl.bindTooltip(o.tip,{sticky:true});pl.bringToBack();"
         "pushSector(o,pl);}"
-        "function reset(){for(var a=0;a<order.length;a++){var z=defs[order[a]];"
-        "for(var b=0;b<z.length;b++)z[b].l.setStyle(z[b].o);}}"
-        "window.selectSector=function(idx){reset();var z=defs[idx];if(!z)return;"
-        "for(var b=0;b<z.length;b++){"
-        "z[b].l.setStyle({color:'#000000',weight:4,fillColor:'#ffd700',fillOpacity:.5});"
-        "z[b].l.bringToFront();}};"
+        "function applySel(){for(var a=0;a<order.length;a++){var on=!!checked[order[a]];"
+        "var z=defs[order[a]];for(var b=0;b<z.length;b++){var q=z[b];"
+        "q.l.setStyle(on?{color:'#000000',weight:4,fillColor:'#ffd700',fillOpacity:.5}:q.o);"
+        "if(on)q.l.bringToFront();}}}"
+        "window.selectSectors=function(list){checked={};"
+        "for(var i=0;i<list.length;i++)checked[list[i]]=true;applySel();};"
+        "window.toggleSector=function(idx){checked[idx]=!checked[idx];applySel();};"
+        "window.selectSector=function(idx){checked={};checked[idx]=true;applySel();};"
         "});"
     ) + "</script>"
 
