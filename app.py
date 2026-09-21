@@ -98,11 +98,15 @@ def load_run(token):
     plan = doc["plan"]
     cfg_maps = doc.get("cfg_maps") or {}
     basin_map = doc.get("basin_map")
-    if not basin_map or not cfg_maps:
+    stale = (not basin_map) or (not cfg_maps) or any(
+        "selectSector" not in (cfg_maps[v] or "") for v in cfg_maps
+    )
+    if stale:
         cfg_maps = {}
         for cfg in plan["configs"]:
             cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
-        basin_map = mapper.map_basin(plan)
+        if not basin_map:
+            basin_map = mapper.map_basin(plan)
         STORE.save_maps(token, {"basin_map": basin_map, "cfg_maps": cfg_maps})
     return render_template(
         "index.html",

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.7.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.7.2 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -62,6 +62,10 @@ Open <http://127.0.0.1:8501>.
    the same page: the **Basin tab** gets an Upload Result card (basin info +
    full-width map), and the **Sectors tab** shows the 3 sectorisation
    suggestions as full-width stacked map cards (one column, edge-to-edge).
+   Each config card has a set of **circular sector buttons** (S1, S2, …):
+   clicking one highlights the matching sector in that card's map (yellow
+   outline + fill), and clicking a sector inside the map activates its button
+   too — preparing for sector-boundary edits.
 3. Pick a config → you get the overview with zones, valves and pipes, plus a
    page per sector.
 4. Every run is persisted — plan + all generated maps (basin, config

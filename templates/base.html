@@ -100,6 +100,29 @@
   iframe.map.big { height: 440px; }
   main { padding-bottom: 3rem; }
   .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; box-shadow: 0 0 6px rgba(255,255,255,.35); }
+
+  .sector-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    min-width: 1.8rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .18s ease;
+  }
+  .sector-chip:hover { background: rgba(34,211,238,.3); border-color: #22d3ee; transform: translateY(-1px); }
+  .sector-chip.active {
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    border-color: transparent;
+    box-shadow: 0 0 14px rgba(139,92,246,.55);
+  }
 </style>
 </head>
 <body class="min-h-screen font-sans antialiased" dir="ltr">

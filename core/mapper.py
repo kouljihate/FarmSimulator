@@ -197,17 +197,64 @@ def map_basin(plan):
 _ZONE_COLORS = ["#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
 
 
+def _sector_select_js(cfg):
+    """Script for the sectorisation preview maps.
+
+    Renders each sector polygon with an extra `sector` option (folium drops
+    unknown options, so they are added directly via Leaflet), exposes
+    `window.selectSector(idx)` so the parent page can highlight a sector, and
+    posts `{type:'sector-select', cfg, idx}` to the top window when the user
+    clicks a sector inside the map (the map lives one extra folium iframe
+    deep, so *top*, not parent).
+    """
+    import json
+    sectors = []
+    colors = _sector_color_map(cfg)
+    for s in cfg["sectors"]:
+        sectors.append({
+            "idx": s["idx"],
+            "color": colors[s["idx"]],
+            "locs": _poly_locations(s["poly"]),
+            "tip": _ti("sector", name=s["name"], area=s["area_m2"]),
+        })
+    data = json.dumps(sectors)
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp)return;"
+        "var SECTORS=" + data + ";"
+        "var defs={},order=[];"
+        "function pushSector(o,pl){"
+        "if(!defs[o.idx]){defs[o.idx]=[];order.push(o.idx);}"
+        "defs[o.idx].push({l:pl,o:{color:o.color,weight:2,fillColor:o.color,fillOpacity:.14}});"
+        "pl.on('click',function(ev){window.selectSector(ev.target.options.sector);"
+        "try{window.top.postMessage({type:'sector-select',cfg:" + str(cfg["id"]) + ",idx:ev.target.options.sector},'*');}catch(x){}});"
+        "}"
+        "for(var i=0;i<SECTORS.length;i++){var o=SECTORS[i];"
+        "var pl=L.polygon(o.locs,{color:o.color,weight:2,opacity:.9,"
+        "fill:true,fillColor:o.color,fillOpacity:.14,sector:o.idx});"
+        "pl.addTo(mp);pl.bindTooltip(o.tip,{sticky:true});pl.bringToBack();"
+        "pushSector(o,pl);}"
+        "function reset(){for(var a=0;a<order.length;a++){var z=defs[order[a]];"
+        "for(var b=0;b<z.length;b++)z[b].l.setStyle(z[b].o);}}"
+        "window.selectSector=function(idx){reset();var z=defs[idx];if(!z)return;"
+        "for(var b=0;b<z.length;b++){"
+        "z[b].l.setStyle({color:'#000000',weight:4,fillColor:'#ffd700',fillOpacity:.5});"
+        "z[b].l.bringToFront();}};"
+        "});"
+    ) + "</script>"
+
+
 def map_config_preview(plan, cfg):
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
-    colors = _sector_color_map(cfg)
-    for s in cfg["sectors"]:
-        lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
-                    colors[s["idx"]], 0.14, weight=2)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 10)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    return to_html(build(lay, center, 16))
+    m = build(lay, center, 16)
+    m.get_root().html.add_child(folium.Element(_sector_select_js(cfg)))
+    return to_html(m)
 
 
 def map_config_overview(plan, cfg):

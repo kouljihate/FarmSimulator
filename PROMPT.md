@@ -75,6 +75,18 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    cards + legend); `result.html` / `_upload_result.html` were removed.
    In the **Sectorisation card the config cards are single-column full-width**
    (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
+   Each config card shows **circular sector buttons** (`.sector-chip`,
+   `data-cfg`/`data-idx`): clicking one highlights that sector in the map, and
+   clicking a sector *in* the map activates its button. The preview maps are
+   interactive, built by `mapper._sector_select_js(cfg)`: sector polygons are
+   drawn directly with Leaflet (a `sector` option tags each; folium drops
+   unknown options) and carry a `sticky` tooltip; `window.selectSector(idx)`
+   highlights a sector (yellow fill + black outline); clicks post
+   `{type:'sector-select', cfg, idx}` to `window.top`. `index.html` delegates
+   clicks on `.sector-chip` and descends the map iframe (outer srcdoc → inner
+   folium iframe) to call `selectSector`, polling until the map is ready.
+   `load_run` regenerates config preview maps that lack `selectSector`
+   (old saved runs). i18n: `SECTOR_SELECT` (EN+AR).
   The **Basin placement card body is split 80% / 20%** on lg
   (`lg:grid-cols-[4fr_1fr]`): first column = info grid + basin map, second
   column = the X/Y + Apply form.
@@ -203,3 +215,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 5. v0.7.0: **MongoDB persistence** (`core/storage.py`), all maps saved with
    the plan, new **Load** tab (first) to list and restore saved runs.
 6. v0.7.1: Sectors tab config cards made single-column full-width maps.
+7. v0.7.2: sector circle buttons select sectors in the config maps (click a
+   chip → highlight in map; click a sector in map → activate its chip).

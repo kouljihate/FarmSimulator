@@ -187,8 +187,46 @@
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
   activate(document.querySelector('[data-tab-target="' + (document.getElementById('upload-result-card') ? 'tab-basin' : 'tab-upload') + '"]'));
 
+  function syncSectorChip(cfg, idx) {
+    var s = document.getElementById('sectors-result');
+    if (!s) return;
+    var btns = s.querySelectorAll('.sector-chip[data-cfg="' + cfg + '"]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-idx') == idx);
+    }
+  }
+
+  function withSectorMap(frame, fn, attempt) {
+    attempt = attempt || 0;
+    try {
+      var w = frame.contentWindow;
+      if (frame.contentDocument) {
+        var inner = frame.contentDocument.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.selectSector === 'function') { fn(w); return; }
+    } catch (x) {}
+    if (attempt < 40) setTimeout(function () { withSectorMap(frame, fn, attempt + 1); }, 100);
+  }
+
+  document.addEventListener('click', function (e) {
+    var chip = e.target && e.target.closest ? e.target.closest('.sector-chip') : null;
+    if (!chip) return;
+    var cfg = chip.getAttribute('data-cfg');
+    var idx = parseInt(chip.getAttribute('data-idx'), 10);
+    syncSectorChip(cfg, idx);
+    var s = document.getElementById('sectors-result');
+    var frame = s && s.querySelector('iframe.map[data-cfg="' + cfg + '"]');
+    if (frame) withSectorMap(frame, function (w) { w.selectSector(idx); });
+  });
+
   window.addEventListener('message', function (e) {
-    if (!e.data || e.data.type !== 'basin-marker-drag') return;
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'sector-select') {
+      syncSectorChip(e.data.cfg, e.data.idx);
+      return;
+    }
+    if (e.data.type !== 'basin-marker-drag') return;
     var lon = document.getElementById('basin-lon');
     var lat = document.getElementById('basin-lat');
     if (!lon || !lat) return;

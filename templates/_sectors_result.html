@@ -11,10 +11,10 @@
       <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
       <div class="mb-2 flex flex-wrap items-center gap-1 text-sm text-white/60">
         {{ cfg.n_sectors }} {{ t('SECTORS') }}
-        {% for s in cfg.sectors[:8] %}<span class="rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium text-white/85">{{ s.name }}</span>{% endfor %}
+        {% for s in cfg.sectors[:8] %}<button type="button" class="sector-chip" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ t('SECTOR_SELECT') }} {{ s.name }}">{{ s.name }}</button>{% endfor %}
       </div>
       <div class="-mx-6 mb-2">
-        <iframe class="map" srcdoc="{{ cfg_maps[cfg.id]|e }}"></iframe>
+        <iframe class="map" data-cfg="{{ cfg.id }}" srcdoc="{{ cfg_maps[cfg.id]|e }}"></iframe>
       </div>
       <a class="glow-btn mt-auto block w-full rounded-xl px-4 py-2.5 text-center font-semibold" href="/view/{{ token }}/{{ cfg.id }}">{{ t('USE_CONFIG') }}</a>
     </div>
