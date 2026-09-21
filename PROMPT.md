@@ -68,7 +68,8 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - Home page has a **centred pill tab bar**: **Upload, Basin, Sectors, Zones,
   Valve, Pipes, Final Result** (pipeline stages; the last six are placeholders).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
-  `base.html` (`.tab-btn`, `.tab-panel`).
+  `base.html` (`.tab-btn`, `.tab-panel`). **Upload is the default (active)
+  tab** — the JS activates `data-tab-target="tab-upload"` on load.
   The "Analyse the plot" button is wider than its card (`-mx-6` bleed).
 - "Accepted formats" and "What Part 1 produces" cards render the body as **two
   columns: English left, Arabic right** (via `tl(key)` = `(en, ar)` plain-text
