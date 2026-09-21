@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.9.6 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.9.7 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -79,9 +79,9 @@ Each config card has a set of **sector checkboxes labelled sequentially
    **Add** (draw the new sector boundary on the map, then *Done*),
    **Edit** (drag the vertices of a selected sector, then *Done*),
    **Rename**, **Merge** (check two sectors), **Remove**. **Rename** and
-   **Remove** ask for confirmation in a small modal dialog (a new-name field
-   for renaming; a "this cannot be undone" message for removal) instead of the
-   browser's native prompt/confirm. The modal matches the app theme
+   **Remove** ask for confirmation in a small modal dialog — the modal header
+   shows bilingual text (English left, Arabic right), the body and buttons
+   show Arabic on top and English below. The modal matches the app theme
    (blurred backdrop, glassmorphism card with neon glow, gradient
    confirm/danger buttons). **Removing (or merging/editing) a sector does not
    rename the others** — the remaining sectors keep their names (S3 stays S3,

@@ -184,8 +184,8 @@
     <input id="sector-modal-name" type="text">
     <p id="sector-modal-msg" class="sector-modal-msg mb-5 text-sm leading-relaxed"></p>
     <div class="flex justify-end gap-3">
-      <button type="button" id="sector-modal-cancel" class="sector-modal-btn">{{ t('CANCEL') }}</button>
-      <button type="button" id="sector-modal-ok" class="sector-modal-btn danger">{{ t('CONFIRM') }}</button>
+      <button type="button" id="sector-modal-cancel" class="sector-modal-btn">{{ bv('CANCEL') }}</button>
+      <button type="button" id="sector-modal-ok" class="sector-modal-btn danger">{{ bv('CONFIRM') }}</button>
     </div>
   </div>
 </div>
@@ -396,17 +396,26 @@
   var modalCancel = document.getElementById('sector-modal-cancel');
   var modalMode = null, modalCfg = null, modalIdx = null;
 
+  function modalH(text) {
+    var p = text.split(' | ');
+    return '<span class="di"><span class="en">' + p[0] + '</span><span class="ar">' + (p[1] || p[0]) + '</span></span>';
+  }
+  function modalV(text) {
+    var p = text.split(' | ');
+    return '<span class="bv"><span class="ar">' + (p[1] || p[0]) + '</span><span class="en">' + p[0] + '</span></span>';
+  }
+
   function hideModal() { if (modal) modal.style.display = 'none'; }
   function openRenameModal(cfg, idx, curName) {
     if (!modal) return;
     modalMode = 'rename'; modalCfg = cfg; modalIdx = idx;
-    modalTitle.textContent = modal.dataset.titleRename;
+    modalTitle.innerHTML = modalH(modal.dataset.titleRename);
     modalMsg.style.display = 'none';
-    modalMsg.textContent = '';
+    modalMsg.innerHTML = '';
     modalName.style.display = '';
     modalName.value = curName;
     modalName.placeholder = modal.dataset.phNew;
-    modalOk.textContent = modal.dataset.okConfirm;
+    modalOk.innerHTML = modalV(modal.dataset.okConfirm);
     modalOk.className = 'sector-modal-btn primary';
     modal.style.display = 'flex';
     modalName.focus();
@@ -415,12 +424,12 @@
   function openRemoveModal(cfg, idx, curName) {
     if (!modal) return;
     modalMode = 'remove'; modalCfg = cfg; modalIdx = idx;
-    modalTitle.textContent = modal.dataset.titleRemove;
+    modalTitle.innerHTML = modalH(modal.dataset.titleRemove);
     modalName.style.display = 'none';
     modalName.value = '';
     modalMsg.style.display = '';
-    modalMsg.textContent = (modal.dataset.msgRemove || '').replace('__N__', curName);
-    modalOk.textContent = modal.dataset.okRemove;
+    modalMsg.innerHTML = modalV((modal.dataset.msgRemove || '').replace(/__N__/g, curName));
+    modalOk.innerHTML = modalV(modal.dataset.okRemove);
     modalOk.className = 'sector-modal-btn danger';
     modal.style.display = 'flex';
   }

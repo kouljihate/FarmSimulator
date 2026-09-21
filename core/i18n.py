@@ -376,6 +376,16 @@ def bv(key):
     )
 
 
+def bvfmt(key, **kw):
+    """Vertical bilingual with .format() applied (AR on top, EN below)."""
+    en = EN[key].format(**kw)
+    ar = AR.get(key, EN[key]).format(**kw)
+    return Markup(
+        '<span class="bv"><span class="ar">{ar}</span>'
+        '<span class="en">{en}</span></span>'.format(en=esc(en), ar=esc(ar))
+    )
+
+
 def ts(key):
     """Plain (no markup) bilingual line for JS-set status text."""
     en = EN[key]

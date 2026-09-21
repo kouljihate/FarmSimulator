@@ -33,6 +33,7 @@ app.jinja_env.globals.update(
     bt=i18n.bt,
     bi=i18n.bi,
     bv=i18n.bv,
+    bvfmt=i18n.bvfmt,
     ts=i18n.ts,
     tsf=i18n.tsf,
     btcfg=i18n.btcfg,

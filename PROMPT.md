@@ -279,8 +279,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 12. v0.9.2: **Rename** and **Remove** now open a small in-page modal
    (`#sector-modal` in `index.html`) instead of `prompt()`/`confirm()` —
    rename has a new-name input, remove shows a "cannot be undone" message;
-   both confirm/cancel/Enter/Escape/backdrop-click. New i18n keys
-   `CONFIRM`, `NEW_NAME`, `REMOVE_ASK` + the `tsf(key, **kw)` helper.
+    both confirm/cancel/Enter/Escape/backdrop-click. New i18n keys
+    `CONFIRM`, `NEW_NAME`, `REMOVE_ASK` + the `tsf(key, **kw)` helper.
+    Modal is fully bilingual: header shows EN left / AR right via `di` flex,
+    body and buttons show AR on top / EN below via `bv` flex; JS parses
+    plain `ts()`/`tsf()` data-* text and renders bilingual HTML with
+    `modalH()`/`modalV()` helpers.
 13. v0.9.3: checkbox labels are **strictly sequential `S1`, `S2`, …** (every
    sector shown, label = `"S" + loop.index`, actual name kept in `value` +
    plain `title`); fixed malformed bilingual-markup `title`/`data-*`
@@ -297,13 +301,18 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     duplicates after preserved-names edits).
 16. v0.9.6: **UI polish** — fixed extra `</div>` in `index.html` that broke
     tab padding; fixed `-mx-6` bleed to `-mx-5` + `overflow-hidden` on config
-    cards; added bilingual tab labels (`bi(key)` inline helper) for all 8 tabs;
-    bilingual placeholder headings for future tabs (Zones, Valve, Pipes, Final
-    Result) and "error" label; added `ZONES_TITLE` key for sector.html;
-    bilingual config names via `config_ar()` (Balanced grid → شبكة متوازنة,
-    Mosaic → فسيفساء, Fine → دقيق, Existing sectors → قطاعات موجودة) with
-    localised count suffixes (cells → خلايا, polygons → مضلّعات); fixed
-    `STEP_SECTORS` (up to 5 → 3); inline `.di` / `.legend` CSS fixes to prevent
-    tall stacked legends/info lines; fixed `map_sector` KeyError on
-    non-contiguous zone indices (robust colouring by position); engine zones
+    cards; added bilingual tab labels (`bi(key)` inline helper) for all 8 tabs; 
+    bilingual placeholder headings for future tabs (Zones, Valve, Pipes, Final 
+    Result) and "error" label; added `ZONES_TITLE` key for sector.html; 
+    bilingual config names via `config_ar()` (Balanced grid → شبكة متوازنة, 
+    Mosaic → فسيفساء, Fine → دقيق, Existing sectors → قطاعات موجودة) with 
+    localised count suffixes (cells → خلايا, polygons → مضلّعات); fixed 
+    `STEP_SECTORS` (up to 5 → 3); inline `.di` / `.legend` CSS fixes to prevent 
+    tall stacked legends/info lines; fixed `map_sector` KeyError on 
+    non-contiguous zone indices (robust colouring by position); engine zones 
     now numbered contiguously per sector even when a sliver piece is dropped.
+17. v0.9.7: **modal bilingual** — sector Rename/Remove modal now fully
+    bilingual: header uses `di` flex (EN left, AR right), body message and
+    footer buttons use `bv` flex (AR on top row, EN below). JS parses plain
+    `ts()`/`tsf()` data attributes and renders via `modalH()`/`modalV()`
+    helpers; added `bvfmt()` helper to i18n.py + registered in app.py globals.
