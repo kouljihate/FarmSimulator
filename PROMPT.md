@@ -74,7 +74,9 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   `rounded-2xl border border-white/10 bg-white/5` with
   `border-b border-white/10 px-5 py-3` headers — applied uniformly in all tabs.
 - Home page has a **centred pill tab bar**: **Upload, Basin, Sectors, Zones,
-  Valve, Pipes, Final Result** (pipeline stages; the last six are placeholders).
+  Valve, Pipes, Final Result** (pipeline stages; placeholders that show
+  `t('UPLOAD_FIRST')` = "Upload First a File (csv/kml)" when nothing was
+  uploaded yet).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
   `base.html` (`.tab-btn`, `.tab-panel`). **Upload is the default (active)
   tab** — the JS activates `data-tab-target="tab-upload"` on load.
