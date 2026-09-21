@@ -313,4 +313,5 @@ def css():
         "h1 .di > .ar, h2 .di > .ar, h3 .di > .ar, h4 .di > .ar, h5 .di > .ar { font-size: 20px; }\n"
         ".glass-head h1 .di > .ar, .glass-head h2 .di > .ar, .glass-head h3 .di > .ar,"
         " .glass-head h4 .di > .ar, .glass-head h5 .di > .ar { font-size: 18px; }\n"
+        "button .di > .ar, a .di > .ar { font-size: 18px; }\n"
     )
