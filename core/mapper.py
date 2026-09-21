@@ -146,19 +146,24 @@ def _marker(plan, lay, key, lon, lat, color, radius, **kw):
     lay.marker(lon, lat, _ti(key, **kw), color, radius=radius)
 
 
-def _drag_js(lon, lat):
-    """Script for the basin map: dragend on the draggable marker posts the new
-    lon/lat back to the parent page."""
+def _drag_js():
+    """Script for the basin map.
+
+    Exposes `window.basinSet(lon, lat)` so the parent page can move the marker,
+    and posts `{type:'basin-marker-drag', lon, lat}` to the top window when the
+    user drags it (the map lives one extra folium iframe deep, so *top*, not
+    parent).
+    """
     return "<script>" + (
         "window.addEventListener('load',function(){"
         "var mp=null;for(var k in window){"
         "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
-        "if(!mp)return;"
-        "mp.eachLayer(function(l){if(l&&l.getLatLng&&l.options&&l.options.draggable&&"
-        "Math.abs(l.getLatLng().lat-" + str(float(lat)) + ")<1e-5&&"
-        "Math.abs(l.getLatLng().lng-" + str(float(lon)) + ")<1e-5){"
-        "l.on('dragend',function(e){var p=e.target.getLatLng();"
-        "window.parent.postMessage({type:'basin-marker-drag',lon:p.lng,lat:p.lat},'*');});}});"
+        "if(!mp)return;var mk=null;"
+        "mp.eachLayer(function(l){if(!mk&&l&&l.getLatLng&&l.options&&l.options.draggable){mk=l;}});"
+        "if(!mk)return;"
+        "window.basinSet=function(lon,lat){try{mk.setLatLng([lat,lon]);}catch(x){}};"
+        "mk.on('dragend',function(e){var p=e.target.getLatLng();"
+        "try{window.top.postMessage({type:'basin-marker-drag',lon:p.lng,lat:p.lat},'*');}catch(x){}});"
         "});"
     ) + "</script>"
 
@@ -185,7 +190,7 @@ def map_basin(plan):
         popup=tip,
         tooltip=tip,
     ).add_to(m)
-    m.get_root().html.add_child(folium.Element(_drag_js(plan["basin"]["lon"], plan["basin"]["lat"])))
+    m.get_root().html.add_child(folium.Element(_drag_js()))
     return to_html(m)
 
 

@@ -2,9 +2,11 @@
 {% block content %}
 
 {% if error %}
-<div class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur">
+<div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur">
   <div>{{ error|safe }} <small class="text-red-300/70">error</small></div>
 </div>
+{% else %}
+<div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur" style="display:none"></div>
 {% endif %}
 
 <div class="mb-4 flex justify-center pt-1">
@@ -104,7 +106,7 @@
       {% if plan %}
       <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('SECTOR_TITLE') }}</h2></div>
-        <div class="space-y-4 p-5 md:p-6">
+        <div class="space-y-4 p-5 md:p-6" id="sectors-result">
           {% include "_sectors_result.html" %}
         </div>
       </div>
@@ -165,9 +167,78 @@
     if (!lon || !lat) return;
     lon.value = Number(e.data.lon).toFixed(6);
     lat.value = Number(e.data.lat).toFixed(6);
-    var f = document.getElementById('basin-form');
-    if (f) f.submit();
   });
+
+  function basinSetMarker(lon, lat) {
+    var frame = document.getElementById('basin-map-frame');
+    if (!frame) return;
+    try {
+      var w = frame.contentWindow;
+      var doc = frame.contentDocument;
+      if (doc) {
+        var inner = doc.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.basinSet === 'function') w.basinSet(lon, lat);
+    } catch (x) {}
+  }
+
+  var lonEl = document.getElementById('basin-lon');
+  var latEl = document.getElementById('basin-lat');
+  if (lonEl && latEl) {
+    function soil() {
+      var lon = parseFloat(lonEl.value);
+      var lat = parseFloat(latEl.value);
+      if (isFinite(lon) && isFinite(lat)) basinSetMarker(lon, lat);
+    }
+    lonEl.addEventListener('input', soil);
+    latEl.addEventListener('input', soil);
+  }
+
+  function showError(html) {
+    var e = document.getElementById('top-error');
+    if (!e) return;
+    e.innerHTML = html;
+    e.style.display = '';
+  }
+  function hideError() {
+    var e = document.getElementById('top-error');
+    if (e) e.style.display = 'none';
+  }
+  function setBasinInfo(lon, lat, dist) {
+    var rec = document.getElementById('basin-info-rec');
+    if (rec) rec.textContent = lon.toFixed(6) + ', ' + lat.toFixed(6);
+    var d = document.getElementById('basin-info-dist');
+    if (d) d.textContent = Math.round(dist).toLocaleString() + ' m';
+  }
+
+  var basinForm = document.getElementById('basin-form');
+  if (basinForm) {
+    basinForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      hideError();
+      var req = new XMLHttpRequest();
+      req.open('POST', basinForm.getAttribute('action'));
+      req.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      req.onload = function () {
+        if (req.status !== 200) return;
+        var data;
+        try { data = JSON.parse(req.responseText); } catch (x) { return; }
+        if (!data.ok || data.error_html) {
+          if (data.error_html) showError(data.error_html);
+          return;
+        }
+        if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
+        if (latEl) latEl.value = data.basin.lat.toFixed(6);
+        setBasinInfo(data.basin.lon, data.basin.lat, data.basin.dist_water_m);
+        var bm = document.getElementById('basin-map-frame');
+        if (bm) bm.innerHTML = data.basin_map;
+        var sp = document.getElementById('sectors-result');
+        if (sp) sp.innerHTML = data.sectors;
+      };
+      req.send(new FormData(basinForm));
+    });
+  }
 })();
 </script>
 

@@ -7,7 +7,7 @@ import os
 import pickle
 import uuid
 
-from flask import Flask, abort, render_template, request
+from flask import Flask, abort, jsonify, render_template, request
 
 from core import engine, i18n, mapper, parser
 
@@ -103,12 +103,29 @@ def edit_basin(token):
     cfg_maps = {}
     for cfg in plan["configs"]:
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
+    basin_map = mapper.map_basin(plan)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify(
+            ok=ok,
+            error_html=i18n.err(msg) if not ok else None,
+            basin={
+                "lon": plan["basin"]["lon"],
+                "lat": plan["basin"]["lat"],
+                "dist_water_m": plan["basin"]["dist_water_m"],
+            },
+            basin_map=basin_map,
+            sectors=render_template(
+                "_sectors_result.html", token=token, plan=plan, cfg_maps=cfg_maps
+            ),
+        )
+
     return render_template(
         "index.html",
         token=token,
         plan=plan,
         cfg_maps=cfg_maps,
-        basin_map=mapper.map_basin(plan),
+        basin_map=basin_map,
         error=i18n.err(msg) if not ok else None,
     )
 

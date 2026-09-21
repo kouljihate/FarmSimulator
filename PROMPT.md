@@ -127,13 +127,17 @@ Basin editing: `engine.set_basin(plan, lon, lat)` validates the point is
 inside the land (`_land_m.distance(pt) <= 1.0`), updates `basin`,
 `_basin_m`/`basin_m`, recomputes `dist_water_m` and re-runs `sectorise` /
 `_existing_config` (entries/ordering + zones/pipes then come from the new
-point). Route `POST /basin/<token>` (`app.py edit_basin`) re-renders the page
-with new `basin_map` + `cfg_maps` (pass all three even on the error path, and
-`error=` only via the standard `{% if error %}` block). The Basin map adds a
-**draggable** folium `Marker` and `mapper._drag_js` (injected via
-`folium.Element`) which posts `{type:'basin-marker-drag', lon, lat}` from the
-iframe to the parent; `index.html` listens, fills the X/Y inputs and
-auto-submits. i18n keys for the editor: `APPLY`, `LON`, `LAT`, `DRAG_HINT`,
+point). Route `POST /basin/<token>` (`app.py edit_basin`) accepts a plain form
+POST (full re-render) or an AJAX call (`X-Requested-With: XMLHttpRequest`;
+returns JSON `{ok, error_html, basin{lon,lat,dist_water_m}, basin_map,
+sectors(_sectors_result.html fragment)}`). `index.html` then swaps the
+`#basin-map-frame` srcdoc and `#sectors-result` innerHTML in place. The Basin
+map adds a **draggable** folium `Marker` and `mapper._drag_js` (injected via
+`folium.Element`) which exposes `window.basinSet(lon, lat)` (parent calls it
+from the X/Y inputs' `input` events) and, on `dragend`, posts
+`{type:'basin-marker-drag', lon, lat}` to `window.top` (the map sits one extra
+folium iframe deep); the parent message listener just fills the X/Y inputs
+(no auto-submit — Apply triggers the save). i18n keys for the editor: `APPLY`, `LON`, `LAT`, `DRAG_HINT`,
 plus the `"Point is outside the land boundary."` error.
 
 `sector`: `idx (1-based), name (S{idx}), poly_m, poly (lonlat), centroid,

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.6.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.6.2 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -60,10 +60,12 @@ Open <http://127.0.0.1:8501>.
    page per sector.
 4. An upload stays available across server restarts via `uploads/<token>.pkl`.
    Old files are kept until cleaned manually.
-5. **Move the basin**: in the Basin tab, edit the X/Y (longitude/latitude)
-   inputs and press **Apply**, or drag the brown marker directly on the map.
-   The app re-runs sector ordering, zones, valves and piping from the new
-   basin position (`POST /basin/<token>`).
+5. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
+   (longitude/latitude) — both stay in sync live. Press **Apply** to save:
+   `POST /basin/<token>` re-runs sector ordering, zones, valves and piping and,
+   via an AJAX response, updates the Basin map and the **Sectors** maps
+   in place, without reloading the page (falls back to a full render for
+   non-JS clients).
 
 ### Accepted file formats
 
