@@ -47,8 +47,23 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - **Maps are OSM-only** (requirement 1): `core/mapper.py` `_render_base` uses
   `tiles="OpenStreetMap"`, no satellite tiles, no `LayerControl`. There must be
   zero `ArcGIS` / satellite / layer-control strings in map output.
-- Persistence: `/upload` saves `uploads/<token>.pkl` (pickle of the plan);
-  `get_plan()` reloads from disk on cache miss so tokens survive restarts.
+- Persistence: `core/storage.get_store()` returns a **`MongoStore`** when
+  MongoDB (`127.0.0.1:27017`; env overrides `MONGO_URI`/`MONGO_DB`, default db
+  `farm_simulator`, collection `plans`) is reachable, else a **`FileStore`**
+  (per-token pickles in `uploads/<token>.db`; legacy `uploads/<token>.pkl`
+  files are migrated to the store on read). API: `get_plan`, `load`,
+  `save(token, plan, maps)`, `save_maps(token, maps)`, `list_runs(limit)`.
+  A stored record holds `name`, `updated_at`, `plan` (pickled Binary) and the
+  maps `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` — per-config
+  dict keys are **stringified for BSON and cast back to int on read**
+  (`_encode`/`_decode`). Routes persist at `/upload`, on basin **Apply**
+  (`edit_basin`), and in `view_config`/`sector_detail` (overview + per-sector
+  maps are **reused from the store instead of recomputed** once saved).
+  The **Load** tab (first tab, `tab-load`) lists saved runs
+  (`context_processor` injects `runs=STORE.list_runs()`), and
+  `GET /load/<token>` restores a full page from the saved plan + saved maps
+  (recomputes only if missing). i18n keys: `LOAD_TITLE`, `LOAD`, `LOAD_EMPTY`
+  (EN+AR).
 - `/upload` re-renders `index.html` (same page). The **Basin tab** holds an
   **"Upload Result" card** (`UPLOAD_RESULT_TITLE`, id `upload-result-card`,
   header with no version) whose content lives in `templates/_basin_result.html`:
@@ -58,6 +73,9 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   height of both rows (vertically centred). The **Sectors tab**
   holds `templates/_sectors_result.html` (sectorisation heading + config map
   cards + legend); `result.html` / `_upload_result.html` were removed.
+  The **Basin placement card body is split 80% / 20%** on lg
+  (`lg:grid-cols-[4fr_1fr]`): first column = info grid + basin map, second
+  column = the X/Y + Apply form.
 - Default active tab: **Upload** when no result card exists, **Basin** once a
   plan was analysed (`upload-result-card` is present).
 - Bilingual: English left (Comfortaa), Arabic right (VIP RAWY Regular in
@@ -75,13 +93,14 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   footer); **every tab content card** uses the flat Upload-tab style
   `rounded-2xl border border-white/10 bg-white/5` with
   `border-b border-white/10 px-5 py-3` headers — applied uniformly in all tabs.
-- Home page has a **centred pill tab bar**: **Upload, Basin, Sectors, Zones,
-  Valve, Pipes, Final Result** (pipeline stages; placeholders that show
+- Home page has a **centred pill tab bar**: **Load, Upload, Basin, Sectors,
+  Zones, Valve, Pipes, Final Result** (pipeline stages; placeholders that show
   `t('UPLOAD_FIRST')` = "Upload First a File (csv/kml)" when nothing was
   uploaded yet).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
-  `base.html` (`.tab-btn`, `.tab-panel`). **Upload is the default (active)
-  tab** — the JS activates `data-tab-target="tab-upload"` on load.
+  `base.html` (`.tab-btn`, `.tab-panel`). Default (active) tab: **Upload**
+  when no result card exists, **Basin** once a plan was analysed
+  (`#upload-result-card` is present).
   The "Analyse the plot" button is wider than its card (`-mx-6` bleed).
 - "Accepted formats" and "What Part 1 produces" cards render the body as **two
   columns: English left, Arabic right** (via `tl(key)` = `(en, ar)` plain-text
@@ -155,8 +174,8 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
   are fine and present).
 - Determinism matters: same input → same output (stable orderings, no RNG).
 - Do not introduce new heavy dependencies without a good reason; if you do,
-  update `requirements.txt` (currently flask, shapely, pyproj, folium) and note
-  it.
+  update `requirements.txt` (currently flask, shapely, pyproj, folium, pymongo)
+  and note it.
 - Python 3.14 venv in `.\venv\`. Prefer test-client requests over `requests`
   lib (not installed).
 - `README.md` and this `PROMPT.md` must be kept in sync with behaviour changes.
@@ -176,3 +195,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    per-sector `zone_angle`.
 3. Three latest changes: OSM-only maps; exactly 3 suggestions; existing
    sectors in the upload are reused instead of generating new ones.
+4. v0.6.x: result moved into the Basin tab with an editable basin (draggable
+   marker + X/Y inputs in live sync, AJAX Apply), sectors in the Sectors tab,
+   unified flat theme, `UPLOAD_FIRST` placeholders, 80/20 basin card layout.
+5. v0.7.0: **MongoDB persistence** (`core/storage.py`), all maps saved with
+   the plan, new **Load** tab (first) to list and restore saved runs.

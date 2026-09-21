@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.6.2 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.7.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -23,7 +23,8 @@ right. Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
 (right-aligned). The home page has a
-centred tab bar: **Upload, Basin, Sectors, Zones, Valve, Pipes, Final Result**
+centred tab bar: **Load, Upload, Basin, Sectors, Zones, Valve, Pipes,
+Final Result**
 (the pipeline stages; last five are placeholders for future parts). The
 "Accepted formats" and "What Part 1 produces"
 cards split their content into two columns: English on the left, Arabic on the
@@ -34,7 +35,12 @@ right.
 ## Requirements
 
 - Python **3.12+** (developed on 3.14)
-- Dependencies (see `requirements.txt`): `flask`, `shapely`, `pyproj`, `folium`
+- Dependencies (see `requirements.txt`): `flask`, `shapely`, `pyproj`, `folium`,
+  `pymongo`
+- A running **MongoDB** on `127.0.0.1:27017` for persistence (optional: the app
+  auto-falls back to per-run pickle files in `uploads/` if MongoDB is down).
+  Override with `MONGO_URI` / `MONGO_DB` env vars (defaults
+  `mongodb://127.0.0.1:27017` / `farm_simulator`).
 
 ## Setup & run
 
@@ -58,8 +64,11 @@ Open <http://127.0.0.1:8501>.
    suggestions.
 3. Pick a config → you get the overview with zones, valves and pipes, plus a
    page per sector.
-4. An upload stays available across server restarts via `uploads/<token>.pkl`.
-   Old files are kept until cleaned manually.
+4. Every run is persisted — plan + all generated maps (basin, config
+   previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
+   pickles as fallback). **Recover a past run** from the **Load** tab (first
+   tab): it lists the saved name + token, and one click restores the complete
+   page with the saved maps (`GET /load/<token>`).
 5. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
    (longitude/latitude) — both stay in sync live. Press **Apply** to save:
    `POST /basin/<token>` re-runs sector ordering, zones, valves and piping and,
@@ -89,19 +98,32 @@ terrain) and its generator `make_test_kml.py`.
 ## Project layout
 
 ```
-app.py                     Flask routes, WORKS cache + uploads/<token>.pkl persistence
+app.py                     Flask routes; persistence via core/storage (MongoDB, pickle fallback)
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing
   engine.py                pipeline: basin, sectorise, zones, valves, pipes
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
+  storage.py               MongoStore / FileStore (get_store()); saves plan + all maps
   i18n.py                  EN/AR dictionaries + t/bt/btcfg/css helpers
 templates/                 base, index (+ _upload_result partial), config, sector (Tailwind CSS CDN)
 static/fonts/              VIP RAWY REGULAR REGULAR.TTF (Arabic)
 samples/                   test KML + generator
-uploads/                   runtime: uploaded raw files + <token>.pkl plans
+uploads/                   runtime: uploaded raw files (+ <token>.db pickle fallback)
 ```
+
+## Persistence
+
+- `core/storage.get_store()` returns a `MongoStore` when MongoDB is reachable,
+  otherwise a `FileStore` (per-token pickles in `uploads/<token>.db`; old
+  `<token>.pkl` files are migrated on read).
+- Every stored record holds `name`, `updated_at`, `plan` (pickled) plus
+  `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` (per-config keys are
+  stringified for BSON). Routes persist at upload, on basin **Apply**, and when
+  overview/sector maps are generated (they are also reused instead of
+  recomputed once saved). The web UI lists/loads runs via the **Load** tab
+  (`GET /load`, `GET /load/<token>`).
 
 ## Architecture notes
 

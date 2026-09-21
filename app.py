@@ -4,16 +4,16 @@ Upload a KML/CSV of the land boundaries + water point, then get:
 basin, sectorisations, zonage, valves and the piping layout.
 """
 import os
-import pickle
 import uuid
 
 from flask import Flask, abort, jsonify, render_template, request
 
-from core import engine, i18n, mapper, parser
+from core import engine, i18n, mapper, parser, storage
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+STORE = storage.get_store()
 
 
 def app_version():
@@ -36,7 +36,10 @@ app.jinja_env.globals.update(
     version=app_version(),
 )
 
-WORKS = {}  # token -> analyse() result
+
+@app.context_processor
+def inject_runs():
+    return {"runs": STORE.list_runs()}
 
 
 @app.route("/")
@@ -68,18 +71,45 @@ def upload():
             os.remove(dest)
         return render_template("index.html", error=i18n.err(str(exc)))
 
-    WORKS[token] = plan
-    with open(os.path.join(UPLOAD_DIR, token + ".pkl"), "wb") as fh:
-        pickle.dump(plan, fh)
     cfg_maps = {}
     for cfg in plan["configs"]:
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
+    basin_map = mapper.map_basin(plan)
+    STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
     return render_template(
         "index.html",
         token=token,
         plan=plan,
         cfg_maps=cfg_maps,
-        basin_map=mapper.map_basin(plan),
+        basin_map=basin_map,
+    )
+
+
+@app.route("/load")
+def load_runs():
+    return render_template("index.html")
+
+
+@app.route("/load/<token>")
+def load_run(token):
+    doc = STORE.load(token)
+    if doc is None:
+        abort(404)
+    plan = doc["plan"]
+    cfg_maps = doc.get("cfg_maps") or {}
+    basin_map = doc.get("basin_map")
+    if not basin_map or not cfg_maps:
+        cfg_maps = {}
+        for cfg in plan["configs"]:
+            cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
+        basin_map = mapper.map_basin(plan)
+        STORE.save_maps(token, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+    return render_template(
+        "index.html",
+        token=token,
+        plan=plan,
+        cfg_maps=cfg_maps,
+        basin_map=basin_map,
     )
 
 
@@ -95,15 +125,13 @@ def edit_basin(token):
     else:
         ok, msg = engine.set_basin(plan, lon, lat)
 
-    if ok:
-        WORKS[token] = plan
-        with open(os.path.join(UPLOAD_DIR, token + ".pkl"), "wb") as fh:
-            pickle.dump(plan, fh)
-
     cfg_maps = {}
     for cfg in plan["configs"]:
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
     basin_map = mapper.map_basin(plan)
+
+    if ok:
+        STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify(
@@ -135,10 +163,22 @@ def view_config(token, cfgid):
     plan = get_plan(token)
     cfg = get_config(plan, cfgid)
     engine.extend(plan, cfgid)
-    ov = mapper.map_config_overview(plan, cfg)
-    per_sector = {}
+
+    doc = STORE.load(token)
+    ov_maps = dict((doc or {}).get("overview_maps") or {})
+    sector_maps = dict((doc or {}).get("sector_maps") or {})
+
+    ov = ov_maps.get(cfgid)
+    if ov is None:
+        ov = mapper.map_config_overview(plan, cfg)
+        ov_maps[cfgid] = ov
+    per_sector = dict(sector_maps.get(cfgid) or {})
     for s in cfg["sectors"]:
-        per_sector[s["name"]] = mapper.map_sector(plan, cfg, s)
+        if s["name"] not in per_sector:
+            per_sector[s["name"]] = mapper.map_sector(plan, cfg, s)
+    sector_maps[cfgid] = per_sector
+
+    STORE.save_maps(token, {"overview_maps": ov_maps, "sector_maps": sector_maps})
     return render_template(
         "config.html",
         token=token, plan=plan, cfg=cfg,
@@ -155,7 +195,17 @@ def sector_detail(token, cfgid, sidx):
     sector = next((s for s in cfg["sectors"] if s["idx"] == sidx), None)
     if sector is None:
         abort(404)
-    detail = mapper.map_sector(plan, cfg, sector)
+
+    doc = STORE.load(token)
+    sector_maps = dict((doc or {}).get("sector_maps") or {})
+    per_sector = dict(sector_maps.get(cfgid) or {})
+    detail = per_sector.get(sector["name"])
+    if detail is None:
+        detail = mapper.map_sector(plan, cfg, sector)
+        per_sector[sector["name"]] = detail
+        sector_maps[cfgid] = per_sector
+        STORE.save_maps(token, {"sector_maps": sector_maps})
+
     return render_template(
         "sector.html",
         token=token, plan=plan, cfg=cfg,
@@ -165,16 +215,10 @@ def sector_detail(token, cfgid, sidx):
 
 
 def get_plan(token):
-    plan = WORKS.get(token)
-    if plan is not None:
-        return plan
-    fp = os.path.join(UPLOAD_DIR, token + ".pkl")
-    if os.path.exists(fp):
-        with open(fp, "rb") as fh:
-            plan = pickle.load(fh)
-        WORKS[token] = plan
-        return plan
-    abort(404)
+    plan = STORE.get_plan(token)
+    if plan is None:
+        abort(404)
+    return plan
 
 
 def get_config(plan, cfgid):

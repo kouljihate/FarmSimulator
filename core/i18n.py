@@ -44,6 +44,9 @@ EN = {
     "MINORS": "minors 32 mm",
 
     # index
+    "LOAD_TITLE": "Load a saved run",
+    "LOAD": "Load",
+    "LOAD_EMPTY": "No saved runs yet - upload a file first, the maps and results are saved automatically.",
     "UPLOAD_TITLE": "1. Upload your land",
     "UPLOAD_CTRL_TEXT": "Choose a KML or CSV file from Google Maps (boundaries + water point).",
     "UPLOAD_BTN": "Analyse the plot",
@@ -133,6 +136,9 @@ AR = {
     "MAJORS": "فرعيات رئيسية 50 مم",
     "MINORS": "فرعيات 32 مم",
 
+    "LOAD_TITLE": "تحميل نتيجة محفوظة",
+    "LOAD": "تحميل",
+    "LOAD_EMPTY": "لا توجد نتائج محفوظة بعد - ارفع ملفاً أولاً، وتُحفظ الخرائط والنتائج تلقائياً.",
     "UPLOAD_TITLE": "1. رفع قطعة أرضك",
     "UPLOAD_CTRL_TEXT": "اختر ملف KML أو CSV من خرائط جوجل (الحدود + مصدر الماء).",
     "UPLOAD_BTN": "تحليل الأرض",
