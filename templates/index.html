@@ -209,21 +209,203 @@
     if (attempt < 40) setTimeout(function () { withSectorMap(frame, fn, attempt + 1); }, 100);
   }
 
+  var sel = {}, drawMode = {}, editMode = {}, mergeFrom = {}, editIdxOf = {};
+  var TOKEN = null;
+  (function () {
+    var al = document.querySelector('a[href^="/view/"]');
+    if (al) TOKEN = al.getAttribute('href').split('/')[2];
+    else {
+      var ll = document.querySelector('a[href^="/load/"]');
+      if (ll) TOKEN = ll.getAttribute('href').split('/')[2];
+    }
+  })();
+
+  function iframeFor(cfg) {
+    var s = document.getElementById('sectors-result');
+    return s && s.querySelector('iframe.map[data-cfg="' + cfg + '"]');
+  }
+  function statusNode(cfg) {
+    var s = document.getElementById('sectors-result');
+    return s && s.querySelector('.sector-status[data-cfg="' + cfg + '"]');
+  }
+  function chipName(cfg, idx) {
+    var s = document.getElementById('sectors-result');
+    var c = s && s.querySelector('.sector-chip[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+    return c ? c.textContent : '';
+  }
+  function setStatus(cfg, key) {
+    var st = statusNode(cfg);
+    if (st && st.dataset[key]) st.textContent = st.dataset[key];
+  }
+  function needsSel(cfg) {
+    if (sel[cfg] != null) return true;
+    setStatus(cfg, 'tneed');
+    return false;
+  }
+  function pickBtn(cfg, op) {
+    var s = document.getElementById('sectors-result');
+    return s && s.querySelector('.tool-btn[data-cfg="' + cfg + '"][data-op="' + op + '"]');
+  }
+  function resetTool(cfg, op) {
+    if (!op || op === 'add') {
+      drawMode[cfg] = false;
+      var ab = pickBtn(cfg, 'add');
+      if (ab) { ab.textContent = ab.dataset.label; ab.classList.remove('armed'); }
+    }
+    if (!op || op === 'edit') {
+      editMode[cfg] = false;
+      editIdxOf[cfg] = null;
+      var eb = pickBtn(cfg, 'edit');
+      if (eb) { eb.textContent = eb.dataset.label; eb.classList.remove('armed'); }
+    }
+    if (!op) {
+      mergeFrom[cfg] = null;
+      var mb = pickBtn(cfg, 'merge');
+      if (mb) mb.classList.remove('armed');
+    }
+    setStatus(cfg, 'tsel');
+  }
+
+  function applySectorOp(cfg, action, extra) {
+    if (!TOKEN) return;
+    setStatus(cfg, 'tsaving');
+    var body = extra || {};
+    body.action = action;
+    var req = new XMLHttpRequest();
+    req.open('POST', '/sectors/' + TOKEN + '/' + cfg + '/action');
+    req.setRequestHeader('Content-Type', 'application/json');
+    req.onload = function () {
+      if (req.status !== 200) return;
+      var data;
+      try { data = JSON.parse(req.responseText); } catch (x) { return; }
+      if (!data.ok) { if (data.error) showError(data.error); resetTool(cfg, null); return; }
+      hideError();
+      var sp = document.getElementById('sectors-result');
+      if (sp && data.sectors) sp.innerHTML = data.sectors;
+      sel[cfg] = null; drawMode[cfg] = false; editMode[cfg] = false; mergeFrom[cfg] = null;
+    };
+    req.send(JSON.stringify(body));
+  }
+
   document.addEventListener('click', function (e) {
     var chip = e.target && e.target.closest ? e.target.closest('.sector-chip') : null;
     if (!chip) return;
     var cfg = chip.getAttribute('data-cfg');
     var idx = parseInt(chip.getAttribute('data-idx'), 10);
+    if (mergeFrom[cfg] != null) {
+      applySectorOp(cfg, 'merge', { idx: mergeFrom[cfg], idx2: idx });
+      mergeFrom[cfg] = null;
+      var mb = pickBtn(cfg, 'merge');
+      if (mb) mb.classList.remove('armed');
+      return;
+    }
+    sel[cfg] = idx;
     syncSectorChip(cfg, idx);
-    var s = document.getElementById('sectors-result');
-    var frame = s && s.querySelector('iframe.map[data-cfg="' + cfg + '"]');
+    var st = statusNode(cfg);
+    if (st) st.textContent = chipName(cfg, idx);
+    var frame = iframeFor(cfg);
     if (frame) withSectorMap(frame, function (w) { w.selectSector(idx); });
+  });
+
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('.tool-btn') : null;
+    if (!b) return;
+    var cfg = b.getAttribute('data-cfg');
+    var op = b.getAttribute('data-op');
+    var st = statusNode(cfg);
+    if (op === 'add') {
+      if (!drawMode[cfg]) {
+        withSectorMap(iframeFor(cfg), function (w) { w.startDraw(); });
+        drawMode[cfg] = true;
+        b.textContent = st.dataset.tfin;
+        b.classList.add('armed');
+        setStatus(cfg, 'tdraw');
+      } else {
+        withSectorMap(iframeFor(cfg), function (w) { w.finishDraw(); });
+      }
+      return;
+    }
+    if (op === 'edit') {
+      if (!editMode[cfg]) {
+        if (!needsSel(cfg)) return;
+        var idx = sel[cfg];
+        var fr = iframeFor(cfg);
+        sel[cfg] = idx;
+        fetch('/sectors/' + TOKEN + '/' + cfg + '/' + idx + '/coords')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || !d.ok || !d.ring || d.ring.length < 4) { setStatus(cfg, 'tneed'); return; }
+            withSectorMap(fr, function (w) { w.startEdit(idx, d.ring); });
+            editMode[cfg] = true;
+            editIdxOf[cfg] = idx;
+            b.textContent = st.dataset.tfin;
+            b.classList.add('armed');
+            setStatus(cfg, 'tedit');
+          })
+          .catch(function () { setStatus(cfg, 'tneed'); });
+      } else {
+        withSectorMap(iframeFor(cfg), function (w) { w.finishEdit(); });
+      }
+      return;
+    }
+    if (op === 'rename') {
+      if (!needsSel(cfg)) return;
+      var nm = prompt(st.dataset.trename + ' ' + chipName(cfg, sel[cfg]));
+      if (nm && nm.trim()) applySectorOp(cfg, 'rename', { idx: sel[cfg], name: nm.trim() });
+      return;
+    }
+    if (op === 'remove') {
+      if (!needsSel(cfg)) return;
+      if (confirm(st.dataset.tremove + ' ' + chipName(cfg, sel[cfg]) + '?')) {
+        applySectorOp(cfg, 'remove', { idx: sel[cfg] });
+      }
+      return;
+    }
+    if (op === 'merge') {
+      if (!needsSel(cfg)) return;
+      if (mergeFrom[cfg] == null) {
+        mergeFrom[cfg] = sel[cfg];
+        b.classList.add('armed');
+        setStatus(cfg, 'tmerge');
+      } else {
+        applySectorOp(cfg, 'merge', { idx: mergeFrom[cfg], idx2: sel[cfg] });
+        mergeFrom[cfg] = null;
+        b.classList.remove('armed');
+      }
+      return;
+    }
   });
 
   window.addEventListener('message', function (e) {
     if (!e.data || !e.data.type) return;
+    var cfg = e.data.cfg;
     if (e.data.type === 'sector-select') {
-      syncSectorChip(e.data.cfg, e.data.idx);
+      syncSectorChip(cfg, e.data.idx);
+      if (cfg != null) {
+        sel[cfg] = e.data.idx;
+        var st = statusNode(cfg);
+        if (st) st.textContent = chipName(cfg, e.data.idx);
+      }
+      return;
+    }
+    if (e.data.type === 'sector-draw') {
+      resetTool(cfg, 'add');
+      applySectorOp(cfg, 'add', { ring: e.data.ring });
+      return;
+    }
+    if (e.data.type === 'sector-edit') {
+      resetTool(cfg, 'edit');
+      applySectorOp(cfg, 'edit', { idx: e.data.idx, ring: e.data.ring });
+      return;
+    }
+    if (e.data.type === 'sector-cancel') {
+      resetTool(cfg, null);
+      return;
+    }
+    if (e.data.type === 'sector-draw-start' && cfg != null) {
+      var b = pickBtn(cfg, 'add');
+      var st = statusNode(cfg);
+      if (b && st) b.textContent = st.dataset.tfin;
       return;
     }
     if (e.data.type !== 'basin-marker-drag') return;

@@ -112,7 +112,11 @@ def sweep_split(poly, angle_deg, n_parts):
         cl, cr = xs[i], xs[i + 1]
         box = Polygon([(cl - 1e-6, -_BIG), (cr, -_BIG), (cr, _BIG), (cl - 1e-6, _BIG)])
         piece = fp.intersection(box)
-        if piece.area > 1e-6:
+        if piece.geom_type != "Polygon" and piece.geom_type != "MultiPolygon":
+            subs = list(piece.geoms) if hasattr(piece, "geoms") else [piece]
+            polys = [g for g in subs if g.geom_type == "Polygon" and g.area > 0]
+            piece = max(polys, key=lambda g: g.area) if polys else None
+        if piece is not None and piece.area > 1e-6:
             pieces.append(affine_transform(piece, inv))
     return pieces
 

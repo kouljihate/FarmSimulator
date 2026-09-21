@@ -246,6 +246,67 @@ def _sector_select_js(cfg):
     ) + "</script>"
 
 
+def _sector_manage_js(cfg):
+    """Script that powers sector drawing and boundary editing on the preview
+    maps.
+
+    Exposes `startDraw/cancelDraw/finishDraw` (click to build a new sector
+    polygon, finish posts `{type:'sector-draw', cfg, ring}`) and
+    `startEdit(idx, ring)/cancelEdit/finishEdit` (draggable vertex handles,
+    finish posts `{type:'sector-edit', cfg, idx, ring}`). Escape cancels either
+    mode (posts `{type:'sector-cancel', cfg}`). Messages go to `window.top`
+    (the map lives one extra folium iframe deep).
+    """
+    cfgid = cfg["id"]
+    js = (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp)return;var CFG=" + str(cfgid) + ";"
+        "var drawMode=false,editMode=false,editIdx=null,verts=[],layers=[];"
+        "function rmAll(){for(var i=0;i<layers.length;i++){try{if(layers[i])mp.removeLayer(layers[i]);}catch(x){}}"
+        "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x){}layers=[];}"
+        "function post(type,extra){var o={type:type,cfg:CFG};for(var k in extra)o[k]=extra[k];"
+        "try{window.top.postMessage(o,'*');}catch(x){}}"
+        "function ring(){var rr=[];for(var i=0;i<verts.length;i++)rr.push([verts[i].lng,verts[i].lat]);"
+        "if(verts.length>1)rr.push(rr[0]);return rr;}"
+        "function drawPoly(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
+        "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x){}"
+        "layers['poly']=loc.length>2?L.polygon(loc,{color:'#ffd700',weight:2,fillColor:'#ffd700',fillOpacity:.25}):null;"
+        "if(layers['poly'])layers['poly'].addTo(mp);}"
+        "function onDrawClick(e){"
+        "var m=L.circleMarker(e.latlng,{radius:5,color:'#ffd700',weight:2,fill:true,fillColor:'#fff',fillOpacity:1});"
+        "m.addTo(mp);layers.push(m);verts.push(e.latlng);drawPoly();}"
+        "window.startDraw=function(){if(drawMode)return;drawMode=true;verts=[];rmAll();"
+        "mp.on('click',onDrawClick);post('sector-draw-start',{});};"
+        "window.finishDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;"
+        "var r=ring();rmAll();verts=[];if(r.length>=4)post('sector-draw',{ring:r});};"
+        "window.cancelDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;rmAll();verts=[];"
+        "post('sector-cancel',{});};"
+        "window.startEdit=function(idx,ring){if(drawMode)window.cancelDraw();if(editMode)return;editMode=true;editIdx=idx;"
+        "rmAll();verts=[];var loc=[];"
+        "for(var i=0;i<ring.length;i++){"
+        "if(!ring[i]||ring[i].length<2)continue;"
+        "var ll=L.latLng(ring[i][1],ring[i][0]);"
+        "if(verts.length&&ll.equals(verts[verts.length-1]))continue;"
+        "loc.push([ll.lat,ll.lng]);verts.push(ll);"
+        "var m=L.marker(ll,{draggable:true});m.addTo(mp);layers.push(m);"
+        "m.on('drag',function(){vertMoved();});}"
+        "layers['poly']=L.polygon(loc,{color:'#ffd700',weight:3,fillColor:'#22d3ee',fillOpacity:.18}).addTo(mp);"
+        "post('sector-edit-start',{idx:idx});};"
+        "function vertMoved(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
+        "if(layers['poly'])layers['poly'].setLatLngs(loc);}"
+        "window.finishEdit=function(){if(!editMode)return;editMode=false;var r=ring();var was=editIdx;"
+        "rmAll();verts=[];editIdx=null;if(r.length>=4)post('sector-edit',{idx:was,ring:r});};"
+        "window.cancelEdit=function(){if(!editMode)return;editMode=false;rmAll();verts=[];editIdx=null;"
+        "post('sector-cancel',{});};"
+        "window.addEventListener('keydown',function(e){"
+        "if(e.key==='Escape'){if(drawMode)window.cancelDraw();else if(editMode)window.cancelEdit();}});"
+        "});"
+    )
+    return "<script>" + js + "</script>"
+
+
 def map_config_preview(plan, cfg):
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
@@ -254,6 +315,7 @@ def map_config_preview(plan, cfg):
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 16)
     m.get_root().html.add_child(folium.Element(_sector_select_js(cfg)))
+    m.get_root().html.add_child(folium.Element(_sector_manage_js(cfg)))
     return to_html(m)
 
 

@@ -90,6 +90,34 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    folium iframe) to call `selectSector`, polling until the map is ready.
    `load_run` regenerates config preview maps that lack `selectSector`
    (old saved runs). i18n: `SECTOR_SELECT` (EN+AR).
+- **Sector management** (v0.8.0): each config card has a **taller map**
+   (`iframe.map.tall`, 560 px) and a toolbar of `tool-btn` buttons with
+   `data-op` = `add | edit | rename | merge | remove` plus a status line.
+   `core/engine.py` exposes `apply_sector_op(plan, cfg, op, idx, idx2, name,
+   ring)` → rebuilds the sector chain/entries via `recompute_sectors` (re-sorts
+   by distance to basin, keeps custom non-`S\d+` names) and the full
+   zones/valves/pipes pipeline. Rules: rename rejects `S<digits>` only; remove
+   needs ≥ 2 sectors; add/edit need a valid ring inside the land (≥ 90 % of
+   area, ≥ 60 m²) — add **carves** the new polygon out of every existing sector
+   (`difference`); merge unions two sectors keeping the first's name.
+   `core/mapper._sector_manage_js(cfg)` adds draw/edit tools (`startDraw`,
+   `startEdit(idx, ring)` that rewires vertex drags, `finishDraw/finishEdit`,
+   Escape = cancel) posting `sector-draw` / `sector-edit` / `sector-cancel`
+   (+ `sector-draw-start` / `sector-edit-start`) to `window.top`.
+   Routes: `GET /sectors/<token>/<cfgid>/<idx>/coords` (returns the closed
+   ring) and `POST /sectors/<token>/<cfgid>/action` (JSON `{action, idx, idx2,
+   name, ring}`) → applies the op, regenerates `cfg_maps`, persists via
+   `STORE.save`, clears the stale `overview_maps`/`sector_maps` for that cfg,
+   returns `{ok, error?, sectors}` (the `_sectors_result.html` fragment
+   `index.html` swaps into `#sectors-result`). Draw flow in the live map is
+   Leaflet `L.Polygon` with editable-drag vertices (dash-array guides).
+   `sweep_split` in `core/geo.py` now coalesces slivers so pieces are pure
+   (Multi)Polygons (folium/neumann: GeometryCollection pieces had `.boundary =
+   None` and crashed `nearest_points` in `extend_config`).
+   i18n keys (EN+AR): `MANAGE, SECTOR_ADD, SECTOR_EDIT, SECTOR_RENAME,
+   SECTOR_MERGE, SECTOR_REMOVE, SELECT_HINT, SELECT_NEEDED, MERGE_PICK,
+   DRAW_HINT, EDIT_HINT, FINISH, CANCEL, SECTOR_NEEDS_NAME, SECTOR_RENAMED,
+   SAVING, MERGED_OK, REMOVED_OK, ADDED_OK, EDITED_OK`.
   The **Basin placement card body is split 80% / 20%** on lg
   (`lg:grid-cols-[4fr_1fr]`): first column = info grid + basin map, second
   column = the X/Y + Apply form.
@@ -222,3 +250,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    chip → highlight in map; click a sector in map → activate its chip).
 8. v0.7.3: sector buttons spread on one row (`justify-between`) with the neon
    theme.
+9. v0.8.0: **full sector management** — Add (draw), Edit (drag vertices),
+   Rename, Merge, Remove per config, all rebuilding the pipeline and maps
+   in place (AJAX fragment swap), with taller maps; fixed a `sweep_split`
+   crash on GeometryCollection zone pieces.

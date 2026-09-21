@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.7.3 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.8.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -62,19 +62,27 @@ Open <http://127.0.0.1:8501>.
    the same page: the **Basin tab** gets an Upload Result card (basin info +
    full-width map), and the **Sectors tab** shows the 3 sectorisation
    suggestions as full-width stacked map cards (one column, edge-to-edge).
-   Each config card has a set of **circular sector buttons** (S1, S2, …)
-   spread evenly across one row (neon theme, same as the tab/card styling):
-   clicking one highlights the matching sector in that card's map (yellow
-   outline + fill), and clicking a sector inside the map activates its button
-   too — preparing for sector-boundary edits.
-3. Pick a config → you get the overview with zones, valves and pipes, plus a
+Each config card has a set of **circular sector buttons** (S1, S2, …)
+    spread evenly across one row (neon theme, same as the tab/card styling):
+    clicking one highlights the matching sector in that card's map (yellow
+    outline + fill), and clicking a sector inside the map activates its button
+    too.
+3. **Manage sectors** — each config card now has a taller map and a toolbar:
+   **Add** (draw the new sector boundary on the map, then *Done*),
+   **Edit** (drag the vertices of a selected sector, then *Done*),
+   **Rename**, **Merge** (pick two sectors), **Remove**. Every edit rebuilds
+   the sector chain, zones, valves and piping for that config and re-renders
+   its map in place (`GET /sectors/<token>/<cfgid>/<idx>/coords`,
+   `POST /sectors/<token>/<cfgid>/action`); the result is persisted so a
+   reload keeps it.
+4. Pick a config → you get the overview with zones, valves and pipes, plus a
    page per sector.
-4. Every run is persisted — plan + all generated maps (basin, config
+5. Every run is persisted — plan + all generated maps (basin, config
    previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
    pickles as fallback). **Recover a past run** from the **Load** tab (first
    tab): it lists the saved name + token, and one click restores the complete
    page with the saved maps (`GET /load/<token>`).
-5. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
+6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
    (longitude/latitude) — both stay in sync live. Press **Apply** to save:
    `POST /basin/<token>` re-runs sector ordering, zones, valves and piping and,
    via an AJAX response, updates the Basin map and the **Sectors** maps
@@ -107,7 +115,8 @@ app.py                     Flask routes; persistence via core/storage (MongoDB, 
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing
-  engine.py                pipeline: basin, sectorise, zones, valves, pipes
+  engine.py                pipeline: basin, sectorise, zones, valves, pipes + sector ops
+                 (apply_sector_op / recompute_sectors: rename, remove, merge, add, edit)
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
   storage.py               MongoStore / FileStore (get_store()); saves plan + all maps

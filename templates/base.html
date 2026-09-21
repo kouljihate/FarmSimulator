@@ -98,6 +98,7 @@
 
   iframe.map { width: 100%; height: 300px; border: 0; border-radius: .75rem; box-shadow: 0 0 22px rgba(34,211,238,.08); }
   iframe.map.big { height: 440px; }
+  iframe.map.tall { height: 560px; }
   main { padding-bottom: 3rem; }
   .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; box-shadow: 0 0 6px rgba(255,255,255,.35); }
 
@@ -124,6 +125,22 @@
     border-color: transparent;
     box-shadow: 0 0 18px rgba(139,92,246,.65);
   }
+
+  .tool-btn {
+    padding: .35rem .8rem;
+    border-radius: .6rem;
+    font-size: .75rem;
+    font-weight: 700;
+    color: #fff;
+    border: 1px solid rgba(34,211,238,.45);
+    background: rgba(34,211,238,.1);
+    transition: all .18s ease;
+    white-space: nowrap;
+  }
+  .tool-btn:hover { border-color: #22d3ee; background: rgba(34,211,238,.28); box-shadow: 0 0 12px rgba(34,211,238,.35); }
+  .tool-btn.armed { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 16px rgba(139,92,246,.6); }
+  .tool-btn-danger { border-color: rgba(248,113,113,.5); background: rgba(248,113,113,.12); }
+  .tool-btn-danger:hover { border-color: #f87171; background: rgba(248,113,113,.3); box-shadow: 0 0 12px rgba(248,113,113,.4); }
 </style>
 </head>
 <body class="min-h-screen font-sans antialiased" dir="ltr">

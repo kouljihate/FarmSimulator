@@ -162,6 +162,58 @@ def edit_basin(token):
     )
 
 
+@app.route("/sectors/<token>/<int:cfgid>/<int:sidx>/coords")
+def sector_coords(token, cfgid, sidx):
+    plan = get_plan(token)
+    cfg = get_config(plan, cfgid)
+    sector = next((s for s in cfg["sectors"] if s["idx"] == sidx), None)
+    if sector is None:
+        abort(404)
+    poly = sector["poly"]
+    if poly.geom_type == "MultiPolygon":
+        poly = max(poly.geoms, key=lambda g: g.area)
+    ring = [[round(float(x), 8), round(float(y), 8)] for x, y in poly.exterior.coords]
+    return jsonify(ok=True, idx=sidx, ring=ring)
+
+
+@app.route("/sectors/<token>/<int:cfgid>/action", methods=["POST"])
+def sector_action(token, cfgid):
+    plan = get_plan(token)
+    cfg = get_config(plan, cfgid)
+    data = request.get_json(silent=True) or {}
+    ok, msg = engine.apply_sector_op(
+        plan, cfg,
+        data.get("action", ""),
+        idx=data.get("idx"),
+        idx2=data.get("idx2"),
+        name=data.get("name"),
+        ring=data.get("ring"),
+    )
+    if not ok:
+        return jsonify(ok=False, error=i18n.err(msg))
+
+    cfg_maps = {}
+    for c in plan["configs"]:
+        cfg_maps[c["id"]] = mapper.map_config_preview(plan, c)
+    doc = STORE.load(token)
+    basin_map = (doc or {}).get("basin_map")
+    STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+
+    ov_maps = dict((doc or {}).get("overview_maps") or {})
+    sector_maps = dict((doc or {}).get("sector_maps") or {})
+    for key, store in ((cfgid, ov_maps), (str(cfgid), ov_maps),
+                       (cfgid, sector_maps), (str(cfgid), sector_maps)):
+        store.pop(key, None)
+    STORE.save_maps(token, {"overview_maps": ov_maps, "sector_maps": sector_maps})
+
+    return jsonify(
+        ok=True,
+        sectors=render_template(
+            "_sectors_result.html", token=token, plan=plan, cfg_maps=cfg_maps
+        ),
+    )
+
+
 @app.route("/view/<token>/<int:cfgid>")
 def view_config(token, cfgid):
     plan = get_plan(token)
@@ -247,4 +299,7 @@ BUILD_LEGEND = [
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8501, debug=True)
+    try:
+        app.run(host="127.0.0.1", port=8501, debug=True)
+    except KeyboardInterrupt:
+        print('Exiting...')

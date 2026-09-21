@@ -7,6 +7,8 @@ Pipeline (this first part):
   4. valves  -> one 50 mm valve at the first point of each zone
   5. piping  -> 90 mm principal, 50 mm majors, 32 mm minors
 """
+import re as _re
+
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.ops import nearest_points, unary_union
 from shapely.validation import make_valid
@@ -267,6 +269,8 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
 
         for zidx, pi in enumerate(order, start=1):
             zone_m = pieces[pi]
+            if zone_m is None or not zone_m.geom_type.startswith("Polygon"):
+                continue
             if zone_m.area <= 1e-6:
                 continue
             zone_ll = project.to_lonlat(zone_m)
@@ -495,3 +499,177 @@ def extend(plan, cfgid):
         raise ValueError("Unknown config")
     cfg = cfg[0]
     return extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
+
+
+# --------------------------------------------------------------------------- #
+# Manual sector management (add / edit / remove / merge / rename)
+# --------------------------------------------------------------------------- #
+def _is_default_sector_name(name):
+    return bool(name and _re.fullmatch(r"S\d+", name))
+
+
+def _find_sector(cfg, idx):
+    for s in cfg.get("sectors", []):
+        if s["idx"] == idx:
+            return s
+    return None
+
+
+def _poly_from_ring(ring):
+    """Build a valid (Multi)Polygon (lon/lat) from a closed vertex ring."""
+    try:
+        pts = [(float(x), float(y)) for x, y in ring]
+    except (TypeError, ValueError):
+        return None
+    if len(pts) < 4:
+        return None
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])
+    poly = Polygon(pts)
+    if poly.is_empty:
+        return None
+    if not poly.is_valid:
+        poly = make_valid(poly)
+    return poly if not poly.is_empty else None
+
+
+def recompute_sectors(plan, cfg, polys):
+    """Given (poly_m, custom_name) pairs, re-sort by distance to the basin,
+    rebuild the sector dicts (entry chain, zone angle) and recompute the whole
+    pipeline (zones, valves, pipes) for the config."""
+    proj = plan["_proj"]
+    order = sorted(
+        range(len(polys)),
+        key=lambda i: polys[i][0].centroid.distance(plan["_basin_m"]),
+    )
+    sectors = []
+    cur = plan["_basin_m"]
+    for rank, i in enumerate(order, start=1):
+        piece_m = polys[i][0]
+        name = polys[i][1] or ""
+        if piece_m.is_empty or piece_m.area <= 1e-6:
+            continue
+        if not piece_m.is_valid:
+            piece_m = make_valid(piece_m)
+        if piece_m.is_empty or piece_m.area <= 1e-6:
+            continue
+        poly_ll = proj.to_lonlat(piece_m)
+        entry = nearest_points(piece_m.boundary, Point(cur))[0]
+        sectors.append({
+            "idx": rank,
+            "name": (name if (name and not _is_default_sector_name(name))
+                     else "S{0:d}".format(rank)),
+            "poly_m": piece_m,
+            "poly": poly_ll,
+            "centroid": proj.to_lonlat(piece_m.centroid),
+            "area_m2": piece_m.area,
+            "entry": proj.to_lonlat(entry),
+            "entry_m": entry,
+            "zone_angle": main_axis_angle(piece_m) + 90.0,
+        })
+        cur = entry
+
+    cfg["sectors"] = sectors
+    cfg["n_sectors"] = len(sectors)
+    cfg["ready"] = False
+    for k in ("zones", "valves", "pipes"):
+        cfg.pop(k, None)
+    extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
+    return cfg
+
+
+def _current_polys(cfg):
+    return [(s["poly_m"], s.get("name")) for s in cfg["sectors"]]
+
+
+def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
+    """Apply one sector edit to a config in place. Returns (ok, message).
+
+    Supported ops: rename, remove, merge (idx+idx2), add (ring), edit (idx+ring).
+    After every operation the config's entries/zones/valves/pipes are rebuilt.
+    """
+    if op == "rename":
+        target = _find_sector(cfg, idx)
+        if target is None:
+            return False, "Sector not found."
+        nm = (name or "").strip()
+        if not nm:
+            return False, "Empty sector name."
+        if _is_default_sector_name(nm):
+            return False, "Pick a custom name (not S<number>)."
+        target["name"] = nm
+        recompute_sectors(plan, cfg, _current_polys(cfg))
+        return True, None
+
+    if op == "remove":
+        if len(cfg["sectors"]) <= 1:
+            return False, "Cannot remove the last sector."
+        if _find_sector(cfg, idx) is None:
+            return False, "Sector not found."
+        recompute_sectors(plan, cfg, [
+            (s["poly_m"], s.get("name"))
+            for s in cfg["sectors"] if s["idx"] != idx
+        ])
+        return True, None
+
+    if op == "merge":
+        a = _find_sector(cfg, idx)
+        b = _find_sector(cfg, idx2)
+        if a is None or b is None:
+            return False, "Select two sectors to merge."
+        merged = a["poly_m"].union(b["poly_m"])
+        if merged.is_empty:
+            return False, "Merge produced an empty sector."
+        if not merged.is_valid:
+            merged = make_valid(merged)
+        if merged.is_empty:
+            return False, "Merge produced an empty sector."
+        polys = [
+            (s["poly_m"], s.get("name"))
+            for s in cfg["sectors"] if s["idx"] not in (idx, idx2)
+        ]
+        polys.append((merged, a.get("name")))
+        recompute_sectors(plan, cfg, polys)
+        return True, None
+
+    if op in ("add", "edit"):
+        poly = _poly_from_ring(ring)
+        if poly is None:
+            return False, "Invalid polygon."
+        proj = plan["_proj"]
+        poly_m = proj.to_m(poly)
+        if not poly_m.is_valid:
+            poly_m = make_valid(poly_m)
+        if poly_m.is_empty or poly_m.area < 60.0:
+            return False, "Sector is too small (minimum ~60 m2)."
+        inside = poly_m.intersection(plan["_land_m"])
+        if inside.area < 0.9 * poly_m.area:
+            return False, "The sector must lie inside the land boundary."
+        piece_m = inside
+
+    if op == "add":
+        polys = []
+        for s in cfg["sectors"]:
+            rest = s["poly_m"].difference(piece_m)
+            if rest.is_empty:
+                continue
+            if not rest.is_valid:
+                rest = make_valid(rest)
+            if rest.area > 1e-4:
+                polys.append((rest, s.get("name")))
+        polys.append((piece_m, None))
+        recompute_sectors(plan, cfg, polys)
+        return True, None
+
+    if op == "edit":
+        target = _find_sector(cfg, idx)
+        if target is None:
+            return False, "Sector not found."
+        polys = [
+            (piece_m if s["idx"] == idx else s["poly_m"], s.get("name"))
+            for s in cfg["sectors"]
+        ]
+        recompute_sectors(plan, cfg, polys)
+        return True, None
+
+    return False, "Unknown operation."
