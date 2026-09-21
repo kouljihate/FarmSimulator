@@ -49,12 +49,13 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   zero `ArcGIS` / satellite / layer-control strings in map output.
 - Persistence: `/upload` saves `uploads/<token>.pkl` (pickle of the plan);
   `get_plan()` reloads from disk on cache miss so tokens survive restarts.
-- `/upload` re-renders `index.html` (same page) with the plan inside a
-  **"Upload Result" card** (`UPLOAD_RESULT_TITLE`) shown in the **Basin tab**
-  (id `upload-result-card`); the result markup lives in
-  `templates/_upload_result.html`. `result.html` was removed.
-  The sectorisation config maps bleed wider than their cards (`-mx-6` wrapper,
-  card `overflow-hidden` removed).
+- `/upload` re-renders `index.html` (same page). The **Basin tab** holds an
+  **"Upload Result" card** (`UPLOAD_RESULT_TITLE`, id `upload-result-card`,
+  header with no version) whose content lives in `templates/_basin_result.html`:
+  plan summary row, then a "Basin placement" card with the info texts in the
+  **first row** and a **full-width** basin map below it. The **Sectors tab**
+  holds `templates/_sectors_result.html` (sectorisation heading + config map
+  cards + legend); `result.html` / `_upload_result.html` were removed.
 - Default active tab: **Upload** when no result card exists, **Basin** once a
   plan was analysed (`upload-result-card` is present).
 - Bilingual: English left (Comfortaa), Arabic right (VIP RAWY Regular in

@@ -1,0 +1,34 @@
+<div class="glass mb-5 flex flex-wrap items-center gap-3 rounded-2xl p-5">
+  <h1 class="text-xl font-bold text-white">{{ plan.name }}</h1>
+  <span class="rounded-full bg-white/10 px-3 py-1 text-base font-medium text-white/80">{{ "{:,.0f}".format(plan.land_area_m2) }} m<sup>2</sup></span>
+  <span class="text-sm text-white/55">{{ t('WATER_POINT') }}: {{ "%.6f"|format(plan.water.lon) }}, {{ "%.6f"|format(plan.water.lat) }}</span>
+</div>
+
+<div class="glass overflow-hidden rounded-2xl">
+  <div class="glass-head px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('BASIN_TITLE') }}</h2></div>
+  <div class="space-y-4 p-5">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('BASIN_REC') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}</div>
+      </div>
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('DIST_WATER') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "{:,.0f}".format(plan.basin.dist_water_m) }} m</div>
+      </div>
+      {% if plan.basin.z is not none %}
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('ELEVATION') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.z) }} m</div>
+      </div>
+      {% endif %}
+      {% if plan.basin.max_elev %}
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('MAX_ELEV_IN') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.max_elev.z) }} m</div>
+      </div>
+      {% endif %}
+    </div>
+    <iframe class="map big" width="100%" height="460" srcdoc="{{ basin_map|e }}"></iframe>
+  </div>
+</div>
