@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Config {{ cfg.name }} - {{ plan.name }}{% endblock %}
+{% block content %}
+
+<nav class="mb-4 flex items-center gap-2 text-sm text-gray-500">
+  <a href="/" class="text-accent hover:underline">{{ t('NEW_UPLOAD') }}</a>
+  <span class="text-gray-300">/</span>
+  <span class="font-semibold text-gray-800">{{ plan.name }} - {{ cfg.name }}</span>
+</nav>
+
+<h1 class="text-2xl font-bold">{{ t('CFG_TITLE') }} - {{ btcfg(cfg.name) }}</h1>
+<p class="text-gray-500">
+  {{ cfg.n_sectors }} {{ t('SECTORS') }} · {{ t('CFG_SUB') }}
+  {{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}
+</p>
+
+<div class="mt-4 mb-5 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
+    <h2 class="text-lg font-semibold">{{ t('FULL_MAP') }}</h2>
+    <span class="text-sm text-gray-500">
+      {{ t('PRINCIPAL_90') }}: {{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m ·
+      {{ cfg.pipes.majors|length }} {{ t('MAJORS') }} ·
+      {{ cfg.pipes.minors|length }} {{ t('MINORS') }} ·
+      {{ cfg.valves|length }} {{ t('VALVES') }}
+    </span>
+  </div>
+  <div class="p-5">
+    <iframe class="map big" width="100%" height="440" srcdoc="{{ overview|e }}"></iframe>
+  </div>
+</div>
+
+<h2 class="mt-8 mb-3 text-xl font-bold">{{ t('SELECT_SECTOR') }}</h2>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for s in cfg.sectors %}
+  <div class="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+    <div class="flex flex-1 flex-col p-5">
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">{{ s.name }}</h3>
+        <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
+      </div>
+      <div class="mb-2 text-sm text-gray-500">{{ s.zones|length }} {{ t('ZONES') }}</div>
+      <iframe class="map mb-2" srcdoc="{{ per_sector[s.name]|e }}"></iframe>
+      <a class="mt-auto block w-full rounded-lg bg-accent px-4 py-2.5 text-center font-semibold text-white hover:bg-accent/90" href="/sector/{{ token }}/{{ cfg.id }}/{{ s.idx }}">{{ t('OPEN') }} {{ s.name }}</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mt-5 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+  <div class="border-b border-gray-100 px-5 py-3"><h3 class="text-base font-semibold">{{ t('LEGEND') }}</h3></div>
+  <div class="flex flex-wrap gap-3 p-5 text-sm">
+    <span><span class="sw" style="background:#333"></span>{{ t('LG_BOUNDARY') }}</span>
+    <span><span class="sw" style="background:#ff7f0e"></span>{{ t('LG_ZONES') }}</span>
+    <span><span class="sw" style="background:#0b8a6f"></span>{{ t('LG_P90') }}</span>
+    <span><span class="sw" style="background:#377eb8"></span>{{ t('LG_P50') }}</span>
+    <span><span class="sw" style="background:#4daf4a"></span>{{ t('LG_P32') }}</span>
+    <span><span class="sw" style="background:red"></span>{{ t('LG_VALVE') }}</span>
+    <span><span class="sw" style="background:brown"></span>{{ t('LG_BASIN') }}</span>
+    <span><span class="sw" style="background:blue"></span>{{ t('LG_WATER') }}</span>
+  </div>
+</div>
+
+{% endblock %}

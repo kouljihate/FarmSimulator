@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Test parcel - Algiers 3 ha</name>
+    <Style id="b">
+      <LineStyle><color>ff2f6fa1</color><width>3</width></LineStyle>
+      <PolyStyle><color>2e2f6fa1</color></PolyStyle>
+    </Style>
+    <Placemark>
+      <name>Parcel boundary</name>
+      <styleUrl>#b</styleUrl>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>3.0500000,36.7500000,120.05 3.0507848,36.7500898,125.01 3.0516817,36.7496856,121.91 3.0523544,36.7499102,124.25 3.0529710,36.7504042,127.27 3.0528028,36.7510780,129.89 3.0521302,36.7515720,130.82 3.0513454,36.7519314,131.00 3.0506727,36.7517068,128.80 3.0501682,36.7511678,125.57 3.0499103,36.7506288,122.78 3.0500000,36.7500000,120.05</coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    <Placemark>
+      <name>Water point</name>
+      <Point><coordinates>3.0513454,36.7495958,0</coordinates></Point>
+    </Placemark>
+  </Document>
+</kml>

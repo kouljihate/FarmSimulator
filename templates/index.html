@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+  <div>{{ error|safe }} <small class="text-red-500">error</small></div>
+</div>
+{% endif %}
+
+<div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+  <div class="flex flex-wrap gap-1 border-b border-gray-200 bg-gray-50 px-2">
+    <button type="button" class="tab-btn" data-tab-target="tab-part1">Part 1</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-tab2">Tab 2</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-tab3">Tab 3</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-tab4">Tab 4</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-tab5">Tab 5</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-tab6">Tab 6</button>
+  </div>
+
+  <div class="p-5">
+    <div class="tab-panel" id="tab-part1">
+      <div class="mb-4">
+        <div class="rounded-xl border border-gray-100 bg-white">
+          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('UPLOAD_TITLE') }}</h2></div>
+          <div class="p-5">
+            <form method="post" action="/upload" enctype="multipart/form-data">
+              <div class="mb-3">
+                <input type="file" name="file" accept=".kml,.kmz,.csv,.txt"
+                       class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-primary/90" required>
+                <div class="mt-1 text-sm text-gray-500">{{ t('UPLOAD_CTRL_TEXT') }}</div>
+              </div>
+              <button type="submit"
+                      class="inline-flex items-center justify-center rounded-lg bg-accent px-6 py-2.5 font-semibold text-white hover:bg-accent/90">{{ t('UPLOAD_BTN') }}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-gray-100 bg-white">
+          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('FORMATS_TITLE') }}</h2></div>
+          <div class="p-5">
+            <ul class="list-disc space-y-2 pl-5">
+              <li>{{ t('FMT_KML') }}</li>
+              <li>{{ t('FMT_CSV') }}</li>
+              <li>{{ t('FMT_WKT') }}</li>
+            </ul>
+            <div class="mt-3 rounded-lg bg-gray-100 p-3 text-sm text-gray-600">{{ t('ELEV_NOTE') }}</div>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-100 bg-white">
+          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('WHAT_TITLE') }}</h2></div>
+          <div class="p-5">
+            <ol class="list-decimal space-y-1 pl-5">
+              <li>{{ t('STEP_BASIN') }}</li>
+              <li>{{ t('STEP_SECTORS') }}</li>
+              <li>{{ t('STEP_ZONES') }}</li>
+              <li>{{ t('STEP_VALVES') }}</li>
+              <li>{{ t('STEP_PIPES') }}</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% for n in range(2, 7) %}
+    <div class="tab-panel" id="tab-tab{{ n }}">
+      <h2 class="text-lg font-semibold">Tab {{ n }}</h2>
+      <p class="mt-1 text-gray-500">Coming soon</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function () {
+  var btns = document.querySelectorAll('.tab-btn');
+  var panels = document.querySelectorAll('.tab-panel');
+  function activate(btn) {
+    btns.forEach(function (b) { b.classList.toggle('active-tab', b === btn); });
+    panels.forEach(function (p) { p.classList.toggle('active', p.id === btn.getAttribute('data-tab-target')); });
+  }
+  btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
+  activate(document.querySelector('[data-tab-target="tab-part1"]'));
+})();
+</script>
+
+{% endblock %}
