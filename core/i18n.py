@@ -55,6 +55,13 @@ EN = {
     "MAJORS": "majors 50 mm",
     "MINORS": "minors 32 mm",
 
+    # sector accordion
+    "SECTOR_NAME": "Name",
+    "CENTROID": "Centroid",
+    "ENTRY_POINT": "Entry Point",
+    "ZONE_ANGLE": "Zone Angle",
+    "ZONES_COUNT": "Zones",
+
     # index
     "LOAD_TITLE": "Load a saved run",
     "LOAD": "Load",
@@ -183,6 +190,13 @@ AR = {
     "VALVES": "صمامات",
     "MAJORS": "فرعيات رئيسية 50 مم",
     "MINORS": "فرعيات 32 مم",
+
+    # sector accordion
+    "SECTOR_NAME": "الاسم",
+    "CENTROID": "المركز",
+    "ENTRY_POINT": "نقطة الدخول",
+    "ZONE_ANGLE": "زاوية التقسيم",
+    "ZONES_COUNT": "المناطق",
 
     "LOAD_TITLE": "تحميل نتيجة محفوظة",
     "LOAD": "تحميل",

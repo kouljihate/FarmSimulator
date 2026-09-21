@@ -130,6 +130,15 @@
     box-shadow: 0 0 16px rgba(139,92,246,.6);
   }
 
+  .sector-accordion {
+    background:
+      radial-gradient(120% 120% at 0% 0%, rgba(34,211,238,.08), transparent 50%),
+      radial-gradient(120% 120% at 100% 100%, rgba(139,92,246,.1), transparent 50%),
+      rgba(255,255,255,.04);
+    transition: max-height .3s ease, opacity .25s ease;
+  }
+  .sector-accordion.hidden { display: none; }
+
   .tool-btn {
     padding: .35rem .8rem;
     border-radius: .9rem;

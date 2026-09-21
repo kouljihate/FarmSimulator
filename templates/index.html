@@ -313,6 +313,8 @@
     } else if (sel[cfg] == idx) {
       sel[cfg] = null;
     }
+    var acc = document.querySelector('.sector-accordion[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+    if (acc) acc.classList.toggle('hidden', !box.checked);
     var st = statusNode(cfg);
     if (st) st.textContent = box.value;
     var frame = iframeFor(cfg);

@@ -20,6 +20,35 @@
           {% endfor %}
         </div>
       </div>
+      {% for s in cfg.sectors %}
+      <div class="sector-accordion hidden mb-2 overflow-hidden rounded-xl border border-white/10 bg-white/5" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}">
+        <div class="grid grid-cols-3 gap-x-4 gap-y-1.5 px-4 py-3 text-xs">
+          <span class="font-semibold text-white/50">{{ t('SECTOR_NAME') }}</span>
+          <span class="text-center font-semibold text-white">{{ s.name }}</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('SECTOR_NAME')[1] }}</span>
+
+          <span class="font-semibold text-white/50">{{ t('AREA') }}</span>
+          <span class="text-center text-white">{{ "{:,.0f}".format(s.area_m2) }} m&sup2;</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('AREA')[1] }}</span>
+
+          <span class="font-semibold text-white/50">{{ t('CENTROID') }}</span>
+          <span class="text-center text-white">{{ "%.4f"|format(s.centroid.y) }}, {{ "%.4f"|format(s.centroid.x) }}</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('CENTROID')[1] }}</span>
+
+          <span class="font-semibold text-white/50">{{ t('ENTRY_POINT') }}</span>
+          <span class="text-center text-white">{{ "%.4f"|format(s.entry.y) }}, {{ "%.4f"|format(s.entry.x) }}</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('ENTRY_POINT')[1] }}</span>
+
+          <span class="font-semibold text-white/50">{{ t('ZONE_ANGLE') }}</span>
+          <span class="text-center text-white">{{ "%.1f"|format(s.zone_angle) }}&deg;</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('ZONE_ANGLE')[1] }}</span>
+
+          <span class="font-semibold text-white/50">{{ t('ZONES_COUNT') }}</span>
+          <span class="text-center text-white">{{ s.get('zones', [])|length }}</span>
+          <span class="text-end font-semibold text-white/50" style="font-family:'VIP RAWY Regular',sans-serif;direction:rtl">{{ tl('ZONES_COUNT')[1] }}</span>
+        </div>
+      </div>
+      {% endfor %}
       <div class="-mx-5 mb-2 flex flex-wrap items-center justify-between border-y border-white/10 bg-white/5 px-5 py-2.5">
         <span class="text-xs font-semibold uppercase tracking-wide text-white/50">{{ tl('MANAGE')[0] }}</span>
         <div class="flex flex-wrap items-center gap-2">
