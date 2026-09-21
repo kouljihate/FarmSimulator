@@ -65,8 +65,8 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   theme**: neon cyan/violet/fuchsia gradients, glassmorphism cards (`.glass`),
   gradient glow buttons (`.glow-btn`), grid + radial background, Comfortaa (EN)
   + VIP RAWY Regular (AR) fonts — one `tailwind.config` block, fonts kept as-is.
-- Home page has a **centred pill tab bar**: **Part 1** (upload flow) + **Tab
-  2..Tab 6** placeholders. Tab switching is a small vanilla-JS snippet in
+- Home page has a **centred pill tab bar**: **Part 1** (upload flow) + **Part
+  2..Part 6** placeholders. Tab switching is a small vanilla-JS snippet in
   `index.html`; styles live in `base.html` (`.tab-btn`, `.tab-panel`).
   The "Analyse the plot" button is wider than its card (`-mx-6` bleed).
 - "Accepted formats" and "What Part 1 produces" cards render the body as **two

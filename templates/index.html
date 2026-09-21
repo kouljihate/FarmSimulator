@@ -10,11 +10,11 @@
 <div class="mb-4 flex justify-center pt-1">
   <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
     <button type="button" class="tab-btn" data-tab-target="tab-part1">Part 1</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-tab2">Tab 2</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-tab3">Tab 3</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-tab4">Tab 4</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-tab5">Tab 5</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-tab6">Tab 6</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-part2">Part 2</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-part3">Part 3</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-part4">Part 4</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-part5">Part 5</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-part6">Part 6</button>
   </div>
 </div>
 
@@ -96,9 +96,9 @@
     </div>
 
     {% for n in range(2, 7) %}
-    <div class="tab-panel" id="tab-tab{{ n }}">
+    <div class="tab-panel" id="tab-part{{ n }}">
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Tab {{ n }}</h2>
+        <h2 class="text-lg font-semibold text-white">Part {{ n }}</h2>
         <p class="mt-1 text-white/50">Coming soon</p>
       </div>
     </div>
