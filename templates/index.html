@@ -252,13 +252,13 @@
     if (!op || op === 'add') {
       drawMode[cfg] = false;
       var ab = pickBtn(cfg, 'add');
-      if (ab) { ab.textContent = ab.dataset.label; ab.classList.remove('armed'); }
+      if (ab) { if (ab.dataset.label) ab.innerHTML = ab.dataset.label; ab.classList.remove('armed'); }
     }
     if (!op || op === 'edit') {
       editMode[cfg] = false;
       editIdxOf[cfg] = null;
       var eb = pickBtn(cfg, 'edit');
-      if (eb) { eb.textContent = eb.dataset.label; eb.classList.remove('armed'); }
+      if (eb) { if (eb.dataset.label) eb.innerHTML = eb.dataset.label; eb.classList.remove('armed'); }
     }
     if (!op) {
       mergeFrom[cfg] = null;
@@ -318,6 +318,7 @@
     var st = statusNode(cfg);
     if (op === 'add') {
       if (!drawMode[cfg]) {
+        if (!b.dataset.label) b.dataset.label = b.innerHTML;
         withSectorMap(iframeFor(cfg), function (w) { w.startDraw(); });
         drawMode[cfg] = true;
         b.textContent = st.dataset.tfin;
@@ -338,6 +339,7 @@
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (!d || !d.ok || !d.ring || d.ring.length < 4) { setStatus(cfg, 'tneed'); return; }
+            if (!b.dataset.label) b.dataset.label = b.innerHTML;
             withSectorMap(fr, function (w) { w.startEdit(idx, d.ring); });
             editMode[cfg] = true;
             editIdxOf[cfg] = idx;

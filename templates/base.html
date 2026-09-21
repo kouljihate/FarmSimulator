@@ -105,8 +105,8 @@
   .sector-check {
     display: inline-flex;
     align-items: center;
-    gap: .35rem;
-    padding: .3rem .65rem;
+    justify-content: center;
+    padding: .3rem .8rem;
     border-radius: .6rem;
     border: 1px solid rgba(139,92,246,.55);
     background: linear-gradient(135deg, rgba(34,211,238,.22), rgba(139,92,246,.32));
@@ -119,20 +119,7 @@
     box-shadow: 0 0 10px rgba(139,92,246,.25);
   }
   .sector-check:hover { border-color: #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,.45); transform: translateY(-1px); }
-  .sector-chk {
-    appearance: none;
-    -webkit-appearance: none;
-    width: .95rem;
-    height: .95rem;
-    flex-shrink: 0;
-    border-radius: .3rem;
-    border: 1px solid rgba(255,255,255,.55);
-    background: rgba(0,0,0,.3);
-    cursor: pointer;
-    transition: all .15s ease;
-  }
-  .sector-chk:checked { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 8px rgba(34,211,238,.8); }
-  .sector-chk:checked::after { content: '\2713'; display: block; text-align: center; font-size: .7rem; line-height: .95rem; color: #fff; }
+  .sector-chk { display: none; }
   .sector-check:has(.sector-chk:checked) {
     border-color: transparent;
     background: linear-gradient(135deg, #22d3ee, #8b5cf6);
@@ -141,7 +128,7 @@
 
   .tool-btn {
     padding: .35rem .8rem;
-    border-radius: .6rem;
+    border-radius: .9rem;
     font-size: .75rem;
     font-weight: 700;
     color: #fff;
@@ -150,6 +137,9 @@
     transition: all .18s ease;
     white-space: nowrap;
   }
+  .tool-btn .bv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1.1; }
+  .tool-btn .bv .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .82rem; text-align: center; }
+  .tool-btn .bv .en { font-size: .6rem; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.72); }
   .tool-btn:hover { border-color: #22d3ee; background: rgba(34,211,238,.28); box-shadow: 0 0 12px rgba(34,211,238,.35); }
   .tool-btn.armed { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 16px rgba(139,92,246,.6); }
   .tool-btn-danger { border-color: rgba(248,113,113,.5); background: rgba(248,113,113,.12); }

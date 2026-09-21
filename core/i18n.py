@@ -318,6 +318,23 @@ def btcfg(en):
     return bt(en, config_ar(en))
 
 
+def bv(key):
+    """Vertical bilingual for compact buttons: Arabic on top, English below."""
+    en = EN[key]
+    ar = AR.get(key, en)
+    return Markup(
+        '<span class="bv"><span class="ar">{ar}</span>'
+        '<span class="en">{en}</span></span>'.format(en=esc(en), ar=esc(ar))
+    )
+
+
+def ts(key):
+    """Plain (no markup) bilingual line for JS-set status text."""
+    en = EN[key]
+    ar = AR.get(key, en)
+    return "{en} | {ar}".format(en=esc(en), ar=esc(ar))
+
+
 def t(key, **kw):
     en = EN[key].format(**kw)
     ar = AR.get(key, key).format(**kw)

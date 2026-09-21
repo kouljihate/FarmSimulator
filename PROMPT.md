@@ -76,11 +76,15 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    In the **Sectorisation card the config cards are single-column full-width**
    (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
    Each config card shows **sector checkboxes** (`sector-check` label +
-   `sector-chk` input, `data-cfg`/`data-idx`, name in `value`) grouped across
-   one row (`flex-wrap justify-center`), neon themed (checked label = solid
-   gradient + glow via `.sector-check:has(.sector-chk:checked)`). **Multiple
-   boxes can be checked at once**; all checked sectors are highlighted in the
-   map, and clicking a sector *in* the map toggles its checkbox. The preview
+   hidden `sector-chk` input, `data-cfg`/`data-idx`, name in `value`)
+   grouped across one row (`flex-wrap justify-center`), neon themed, labelled
+   **just `S1`, `S2`, …** (the native checkbox square is `display:none`;
+   a checked pill glows via `.sector-check:has(.sector-chk:checked)`).
+   **Multiple boxes can be checked at once**; all checked sectors are
+   highlighted in the map, and clicking a sector *in* the map toggles its
+   checkbox. The toolbar (`tool-btn`, rounded, two stacked lines via
+   `bv(key)` = Arabic on top + English below; `ts(key)` feeds plain bilingual
+   `data-t*` status texts) holds Add/Edit/Rename/Merge/Remove. The preview
    maps are interactive, built by `mapper._sector_select_js(cfg)`: sector
    polygons are drawn directly with Leaflet (a `sector` option tags each;
    folium drops unknown options) and carry a `sticky` tooltip;
@@ -262,3 +266,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    (`sector-check`/`sector-chk`); multiple sectors can be checked/highlighted
    at once, map clicks toggle checkboxes, and Merge uses any two checked
    sectors.
+11. v0.9.1: checkbox pills now show only the name (`S1`), and the sector
+   tools are rounded two-row buttons (Arabic on top, English below) via the
+   new `bv`/`ts` i18n helpers; button labels are captured in JS at arm time
+   (no more server `data-label` markup).
