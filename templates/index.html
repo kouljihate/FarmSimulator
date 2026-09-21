@@ -86,11 +86,9 @@
 
     <div class="tab-panel" id="tab-basin">
       {% if plan %}
-      <div class="overflow-hidden rounded-3xl glass" id="upload-result-card">
-        <div class="glass-head px-6 py-4">
-          <h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2>
-        </div>
-        <div class="p-5 md:p-6">
+      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" id="upload-result-card">
+        <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2></div>
+        <div class="space-y-4 p-5 md:p-6">
           {% include "_basin_result.html" %}
         </div>
       </div>
@@ -104,8 +102,9 @@
 
     <div class="tab-panel" id="tab-sectors">
       {% if plan %}
-      <div class="overflow-hidden rounded-3xl glass">
-        <div class="p-5 md:p-6">
+      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('SECTOR_TITLE') }}</h2></div>
+        <div class="space-y-4 p-5 md:p-6">
           {% include "_sectors_result.html" %}
         </div>
       </div>

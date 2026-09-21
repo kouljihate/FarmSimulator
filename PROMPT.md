@@ -69,6 +69,10 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   theme**: neon cyan/violet/fuchsia gradients, glassmorphism cards (`.glass`),
   gradient glow buttons (`.glow-btn`), grid + radial background, Comfortaa (EN)
   + VIP RAWY Regular (AR) fonts — one `tailwind.config` block, fonts kept as-is.
+  `.glass`/`.glass-head` are reserved for chrome (navbar, shared outer card,
+  footer); **every tab content card** uses the flat Upload-tab style
+  `rounded-2xl border border-white/10 bg-white/5` with
+  `border-b border-white/10 px-5 py-3` headers — applied uniformly in all tabs.
 - Home page has a **centred pill tab bar**: **Upload, Basin, Sectors, Zones,
   Valve, Pipes, Final Result** (pipeline stages; the last six are placeholders).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
