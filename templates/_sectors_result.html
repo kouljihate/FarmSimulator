@@ -6,11 +6,11 @@
 
 <div class="mt-4 grid grid-cols-1 gap-4">
   {% for cfg in plan.configs %}
-  <div class="flex h-full flex-col rounded-2xl border border-white/10 bg-white/5">
+  <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5">
     <div class="flex flex-1 flex-col p-5">
       <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
       <div class="mb-3 flex items-center gap-3 text-sm text-white/60">
-        <span class="shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
+        <span class="inl shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
         <div class="flex flex-1 flex-wrap items-center justify-center gap-1.5">
           {% for s in cfg.sectors %}
           <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ s.name }}">
@@ -20,21 +20,21 @@
           {% endfor %}
         </div>
       </div>
-      <div class="-mx-6 mb-2 flex flex-wrap items-center gap-2 border-y border-white/10 bg-white/5 px-5 py-2.5">
+      <div class="-mx-5 mb-2 flex flex-wrap items-center gap-2 border-y border-white/10 bg-white/5 px-5 py-2.5">
         <span class="text-xs font-semibold uppercase tracking-wide text-white/50">{{ t('MANAGE') }}</span>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="add">{{ bv('SECTOR_ADD') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="edit">{{ bv('SECTOR_EDIT') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="rename">{{ bv('SECTOR_RENAME') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="merge">{{ bv('SECTOR_MERGE') }}</button>
         <button type="button" class="tool-btn tool-btn-danger" data-cfg="{{ cfg.id }}" data-op="remove">{{ bv('SECTOR_REMOVE') }}</button>
-        <span class="ml-auto truncate text-xs font-semibold text-cyan-200/80 sector-status" data-cfg="{{ cfg.id }}"
+        <span class="inl ml-auto truncate text-xs font-semibold text-cyan-200/80 sector-status" data-cfg="{{ cfg.id }}"
               data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
               data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
               data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
               data-tcancel="{{ ts('CANCEL') }}" data-trename="{{ ts('SECTOR_RENAME') }}"
               data-tremove="{{ ts('SECTOR_REMOVE') }}" data-tsaving="{{ ts('SAVING') }}">{{ t('SELECT_HINT') }}</span>
       </div>
-      <div class="-mx-6 mb-2">
+      <div class="-mx-5 mb-2">
         <iframe class="map tall" data-cfg="{{ cfg.id }}" srcdoc="{{ cfg_maps[cfg.id]|e }}"></iframe>
       </div>
       <a class="glow-btn mt-auto block w-full rounded-xl px-4 py-2.5 text-center font-semibold" href="/view/{{ token }}/{{ cfg.id }}">{{ t('USE_CONFIG') }}</a>
@@ -45,7 +45,7 @@
 
 <div class="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
   <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('LEGEND') }}</h3></div>
-  <div class="flex flex-wrap gap-3 p-5 text-sm text-white/70">
+  <div class="legend flex flex-wrap gap-3 p-5 text-sm text-white/70">
     <span><span class="sw" style="background:#333"></span>{{ t('LG_BOUNDARY') }}</span>
     <span><span class="sw" style="background:#1f77b4"></span>{{ t('LG_SECTOR') }}</span>
     <span><span class="sw" style="background:brown"></span>{{ t('LG_BASIN') }}</span>

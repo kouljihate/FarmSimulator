@@ -1,7 +1,7 @@
 <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5">
   <h1 class="text-xl font-bold text-white">{{ plan.name }}</h1>
   <span class="rounded-full bg-white/10 px-3 py-1 text-base font-medium text-white/80">{{ "{:,.0f}".format(plan.land_area_m2) }} m<sup>2</sup></span>
-  <span class="text-sm text-white/55">{{ t('WATER_POINT') }}: {{ "%.6f"|format(plan.water.lon) }}, {{ "%.6f"|format(plan.water.lat) }}</span>
+  <span class="inl text-sm text-white/55">{{ t('WATER_POINT') }}: {{ "%.6f"|format(plan.water.lon) }}, {{ "%.6f"|format(plan.water.lat) }}</span>
 </div>
 
 <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">

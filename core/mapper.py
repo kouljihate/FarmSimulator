@@ -355,11 +355,10 @@ def _sector_color_map(cfg):
 
 def map_sector(plan, cfg, sector):
     lay = Layers()
-    zonemap = {z["idx"]: z for z in sector.get("zones", [])}
-    for i in range(1, len(zonemap) + 1):
-        z = zonemap[i]
+    zones = sorted(sector.get("zones", []), key=lambda z: z["idx"])
+    for i, z in enumerate(zones):
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
-                    _ZONE_COLORS[(i - 1) % len(_ZONE_COLORS)], 0.18, weight=2)
+                    _ZONE_COLORS[i % len(_ZONE_COLORS)], 0.18, weight=2)
 
     pr = cfg["pipes"]["principal"]
     lay.line(pr["line"], _ti("principal"), "#0b8a6f", 4)

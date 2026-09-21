@@ -133,7 +133,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
   plan was analysed (`upload-result-card` is present).
 - Bilingual: English left (Comfortaa), Arabic right (VIP RAWY Regular in
   `static/fonts/`). Text goes through `core/i18n.py` helpers registered as
-  Jinja globals in `app.py`: `t`, `bt`, `btcfg`, `i18n_css`. Map tooltips use
+  Jinja globals in `app.py`: `t`, `bt`, `btcfg`, `bi`, `i18n_css`. Map tooltips use
   inline-styled spans via `i18n.bl_style/map_tip`. Errors via `i18n.err(msg)`
   (automatically chooses EN/AR). Templates: `base/index/result/config/sector`,
   Bootswatch Flatly CDN.
@@ -149,12 +149,18 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 - Home page has a **centred pill tab bar**: **Load, Upload, Basin, Sectors,
   Zones, Valve, Pipes, Final Result** (pipeline stages; placeholders that show
   `t('UPLOAD_FIRST')` = "Upload First a File (csv/kml)" when nothing was
-  uploaded yet).
+  uploaded yet). Tab buttons use `bi(key)` for bilingual text (EN + AR inline).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
   `base.html` (`.tab-btn`, `.tab-panel`). Default (active) tab: **Upload**
   when no result card exists, **Basin** once a plan was analysed
   (`#upload-result-card` is present).
   The "Analyse the plot" button is wider than its card (`-mx-6` bleed).
+- Config headings show bilingual Arabic translations of the base name via
+  `btcfg()` → `config_ar()`: "Balanced grid" → "شبكة متوازنة",
+  "Mosaic (mixed cell sizes)" → "فسيفساء (خلايا بأحجام مختلفة)",
+  "Fine (smaller cells)" → "دقيق (خلايا أصغر)",
+  "Existing sectors" → "قطاعات موجودة". The count suffix is localised
+  ("(N cells)" → "(N خلايا)", "(N polygons)" → "(N مضلّعات)").
 - "Accepted formats" and "What Part 1 produces" cards render the body as **two
   columns: English left, Arabic right** (via `tl(key)` = `(en, ar)` plain-text
   pairs; Arabic column is `dir=rtl` with the VIP RAWY family).
@@ -286,6 +292,18 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    for confirm-rename, `.danger` red for remove). JS now sets
    `modalOk.className = 'sector-modal-btn primary|danger'`.
 15. v0.9.5: **remove/merge/edit no longer renumber the other sectors** —
-   `recompute_sectors` keeps every existing name as-is (only a brand-new
-   sector gets a name: the next free `S{max+1}` via `_sector_num`, avoiding
-   duplicates after preserved-names edits).
+    `recompute_sectors` keeps every existing name as-is (only a brand-new
+    sector gets a name: the next free `S{max+1}` via `_sector_num`, avoiding
+    duplicates after preserved-names edits).
+16. v0.9.6: **UI polish** — fixed extra `</div>` in `index.html` that broke
+    tab padding; fixed `-mx-6` bleed to `-mx-5` + `overflow-hidden` on config
+    cards; added bilingual tab labels (`bi(key)` inline helper) for all 8 tabs;
+    bilingual placeholder headings for future tabs (Zones, Valve, Pipes, Final
+    Result) and "error" label; added `ZONES_TITLE` key for sector.html;
+    bilingual config names via `config_ar()` (Balanced grid → شبكة متوازنة,
+    Mosaic → فسيفساء, Fine → دقيق, Existing sectors → قطاعات موجودة) with
+    localised count suffixes (cells → خلايا, polygons → مضلّعات); fixed
+    `STEP_SECTORS` (up to 5 → 3); inline `.di` / `.legend` CSS fixes to prevent
+    tall stacked legends/info lines; fixed `map_sector` KeyError on
+    non-contiguous zone indices (robust colouring by position); engine zones
+    now numbered contiguously per sector even when a sliver piece is dropped.

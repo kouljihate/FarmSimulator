@@ -3,7 +3,7 @@
 
 {% if error %}
 <div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur">
-  <div>{{ error|safe }} <small class="text-red-300/70">error</small></div>
+  <div>{{ error|safe }} <small class="text-red-300/70">{{ bi('ERROR_LABEL') }}</small></div>
 </div>
 {% else %}
 <div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur" style="display:none"></div>
@@ -11,14 +11,14 @@
 
 <div class="mb-4 flex justify-center pt-1">
   <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
-    <button type="button" class="tab-btn" data-tab-target="tab-load">Load</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-upload">Upload</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-basin">Basin</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-sectors">Sectors</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-zones">Zones</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-valve">Valve</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-pipes">Pipes</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-final">Final Result</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-load">{{ bi('TAB_LOAD') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-upload">{{ bi('TAB_UPLOAD') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-basin">{{ bi('TAB_BASIN') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-sectors">{{ bi('TAB_SECTORS') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-zones">{{ bi('TAB_ZONES') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-valve">{{ bi('TAB_VALVE') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-pipes">{{ bi('TAB_PIPES') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-final">{{ bi('TAB_FINAL') }}</button>
   </div>
 </div>
 
@@ -45,7 +45,7 @@
       </div>
       {% else %}
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Load</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_LOAD') }}</h2>
         <p class="mt-1 text-white/50">{{ t('LOAD_EMPTY') }}</p>
       </div>
       {% endif %}
@@ -111,7 +111,6 @@
       </div>
 
     </div>
-    </div>
 
     <div class="tab-panel" id="tab-basin">
       {% if plan %}
@@ -123,7 +122,7 @@
       </div>
       {% else %}
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Basin</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_BASIN') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
       {% endif %}
@@ -139,7 +138,7 @@
       </div>
       {% else %}
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Sectors</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_SECTORS') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
       {% endif %}
@@ -147,28 +146,28 @@
 
     <div class="tab-panel" id="tab-zones">
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Zones</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_ZONES') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-valve">
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Valve</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_VALVE') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-pipes">
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Pipes</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_PIPES') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-final">
       <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">Final Result</h2>
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_FINAL') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>

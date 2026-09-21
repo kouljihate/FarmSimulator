@@ -267,12 +267,14 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         pieces = sweep_split(sector_m, scan_angle, N_ZONES)
         order = _zone_order(sector, pieces, basin_m, scan_angle)
 
-        for zidx, pi in enumerate(order, start=1):
+        zidx = 0
+        for pi in order:
             zone_m = pieces[pi]
             if zone_m is None or not zone_m.geom_type.startswith("Polygon"):
                 continue
             if zone_m.area <= 1e-6:
                 continue
+            zidx += 1
             zone_ll = project.to_lonlat(zone_m)
             # valve on the zone boundary closest to the upstream entry
             valve_m = nearest_points(zone_m.boundary, Point(sector["entry_m"]))[0]

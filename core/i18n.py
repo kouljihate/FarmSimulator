@@ -19,6 +19,18 @@ AR_FONT = "'VIP RAWY Regular', 'Rawy', 'Tahoma', 'Segoe UI', sans-serif"
 # Dictionaries: templates use t('KEY', ...)
 # --------------------------------------------------------------------------- #
 EN = {
+    # tabs
+    "TAB_LOAD": "Load",
+    "TAB_UPLOAD": "Upload",
+    "TAB_BASIN": "Basin",
+    "TAB_SECTORS": "Sectors",
+    "TAB_ZONES": "Zones",
+    "TAB_VALVE": "Valve",
+    "TAB_PIPES": "Pipes",
+    "TAB_FINAL": "Final Result",
+    "ZONES_TITLE": "Zones",
+    "ERROR_LABEL": "error",
+
     # nav / misc
     "MODEL_NAME": "Farm Simulator",
     "MODEL_NAME_AR_EXTRA": "محاكي المزرعة",
@@ -84,7 +96,7 @@ EN = {
     "ELEV_NOTE": "Elevation is read from the KML altitude when present. Without it, the basin is placed at the most favourable point near the water entry.",
     "WHAT_TITLE": "What Part 1 produces",
     "STEP_BASIN": "Basin - best spot near the water point at a favourable elevation.",
-    "STEP_SECTORS": "Sectorisation - up to 5 config maps, every sector \u2264 10,000 m\u00b2, named S1, S2, \u2026",
+    "STEP_SECTORS": "Sectorisation - 3 config maps, every sector \u2264 10,000 m\u00b2, named S1, S2, \u2026",
     "STEP_ZONES": "Zonage - each sector splits into 3 equal zones Z1, Z2, Z3.",
     "STEP_VALVES": "Valves - one 50 mm valve on the first point of each zone.",
     "STEP_PIPES": "Piping - 90 mm principal from the max elevation through the basin; 50 mm majors to each zone valve; 32 mm minors from each valve to the zone supply point.",
@@ -138,6 +150,17 @@ EN = {
 }
 
 AR = {
+    "TAB_LOAD": "تحميل",
+    "TAB_UPLOAD": "رفع",
+    "TAB_BASIN": "الحوض",
+    "TAB_SECTORS": "القطاعات",
+    "TAB_ZONES": "المناطق",
+    "TAB_VALVE": "الصمام",
+    "TAB_PIPES": "الأنابيب",
+    "TAB_FINAL": "النتيجة النهائية",
+    "ZONES_TITLE": "المناطق",
+    "ERROR_LABEL": "خطأ",
+
     "MODEL_NAME": "محاكي المزرعة",
     "MODEL_NAME_AR_EXTRA": "محاكي المزرعة",
     "PART1": "الجزء الأول - شبكة الري",
@@ -201,7 +224,7 @@ AR = {
     "ELEV_NOTE": "يُقرأ الارتفاع من بيانات KML عند توفّره. بدونه، يُوضع الحوض في أفضل نقطة قرب مدخل الماء.",
     "WHAT_TITLE": "ماذا يُنتج الجزء الأول",
     "STEP_BASIN": "الحوض - أفضل موقع قرب مصدر الماء مع ارتفاع مناسب.",
-    "STEP_SECTORS": "القطاعيات - حتى 5 خرائط تخطيطات، كل قطاع \u2264 10,000 م\u00b2، وتسميته S1، S2، \u2026",
+    "STEP_SECTORS": "القطاعيات - 3 خرائط تخطيطات، كل قطاع \u2264 10,000 م\u00b2، وتسميته S1، S2، \u2026",
     "STEP_ZONES": "التقسيم - يُقسَّم كل قطاع إلى 3 مناطق متساوية Z1، Z2، Z3.",
     "STEP_VALVES": "الصمامات - صمام 50 مم عند أول نقطة في كل منطقة.",
     "STEP_PIPES": "الأنابيب - رئيسي 90 مم من أعلى ارتفاع عبر الحوض؛ فرعيات رئيسية 50 مم إلى كل صمام منطقة؛ فرعيات 32 مم من كل صمام إلى نقطة تزويد المنطقة.",
@@ -253,6 +276,10 @@ AR = {
 
 # config names produced by the engine -> Arabic
 CONFIG_NAMES = {
+    "Balanced grid": "شبكة متوازنة",
+    "Mosaic (mixed cell sizes)": "فسيفساء (خلايا بأحجام مختلفة)",
+    "Fine (smaller cells)": "دقيق (خلايا أصغر)",
+    "Existing sectors": "قطاعات موجودة",
     "East-West strips": "شرائح شرق-غرب",
     "North-South strips": "شرائح شمال-جنوب",
     "Diagonal NE-SW strip (45°)": "شرائح قطرية شمال-شرق/جنوب-غرب (45°)",
@@ -295,6 +322,11 @@ def esc(s):
 
 
 def config_ar(name):
+    for suffix, ar_suffix in ((" cells)", " خلايا)"), (" polygons)", " مضلّعات)")):
+        if name.endswith(suffix):
+            base, sep, count = name[:-(len(suffix))].rpartition(" (")
+            if sep and count.isdigit():
+                return "{0} ({1}{2}".format(config_ar(base), count, ar_suffix)
     return CONFIG_NAMES.get(name, name)
 
 
@@ -316,6 +348,16 @@ def bt(en, ar):
     return Markup(
         '<span class="di"><span class="en">{0}</span>'
         '<span class="ar">{1}</span></span>'.format(esc(en), esc(ar))
+    )
+
+
+def bi(key):
+    """Inline bilingual text (no flex wrapper) for centred or inline spots."""
+    en = EN[key]
+    ar = AR.get(key, en)
+    return Markup(
+        '<span class="en">{en}</span> <span class="ar">{ar}</span>'.format(
+            en=esc(en), ar=esc(ar))
     )
 
 

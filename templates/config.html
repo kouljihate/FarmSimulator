@@ -9,7 +9,7 @@
 </nav>
 
 <h1 class="text-2xl font-bold text-white">{{ t('CFG_TITLE') }} - {{ btcfg(cfg.name) }}</h1>
-<p class="text-white/60">
+<p class="inl text-white/60">
   {{ cfg.n_sectors }} {{ t('SECTORS') }} · {{ t('CFG_SUB') }}
   {{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}
 </p>
@@ -17,7 +17,7 @@
 <div class="glass mt-4 mb-5 overflow-hidden rounded-2xl">
   <div class="glass-head flex flex-wrap items-center justify-between gap-2 px-5 py-3">
     <h2 class="text-lg font-semibold text-white">{{ t('FULL_MAP') }}</h2>
-    <span class="text-sm text-white/55">
+    <span class="inl text-sm text-white/55">
       {{ t('PRINCIPAL_90') }}: {{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m ·
       {{ cfg.pipes.majors|length }} {{ t('MAJORS') }} ·
       {{ cfg.pipes.minors|length }} {{ t('MINORS') }} ·
@@ -38,7 +38,7 @@
         <h3 class="text-lg font-semibold text-white">{{ s.name }}</h3>
         <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-white/80">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
       </div>
-      <div class="mb-2 text-sm text-white/60">{{ s.zones|length }} {{ t('ZONES') }}</div>
+      <div class="inl mb-2 text-sm text-white/60">{{ s.zones|length }} {{ t('ZONES') }}</div>
       <iframe class="map mb-2" srcdoc="{{ per_sector[s.name]|e }}"></iframe>
       <a class="glow-btn mt-auto block w-full rounded-xl px-4 py-2.5 text-center font-semibold" href="/sector/{{ token }}/{{ cfg.id }}/{{ s.idx }}">{{ t('OPEN') }} {{ s.name }}</a>
     </div>
@@ -48,7 +48,7 @@
 
 <div class="glass mt-5 overflow-hidden rounded-2xl">
   <div class="glass-head px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('LEGEND') }}</h3></div>
-  <div class="flex flex-wrap gap-3 p-5 text-sm text-white/70">
+  <div class="legend flex flex-wrap gap-3 p-5 text-sm text-white/70">
     <span><span class="sw" style="background:#333"></span>{{ t('LG_BOUNDARY') }}</span>
     <span><span class="sw" style="background:#ff7f0e"></span>{{ t('LG_ZONES') }}</span>
     <span><span class="sw" style="background:#0b8a6f"></span>{{ t('LG_P90') }}</span>

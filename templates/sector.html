@@ -11,7 +11,7 @@
 </nav>
 
 <h1 class="text-2xl font-bold text-white">{{ sector.name }} - {{ plan.name }}</h1>
-<p class="text-white/60">
+<p class="inl text-white/60">
   {{ "{:,.0f}".format(sector.area_m2) }} m<sup>2</sup> ·
   {{ t('SPLIT_INFO', n=sector.zones|length) }}
 </p>
@@ -28,7 +28,7 @@
 
   <div class="space-y-3">
     <div class="glass overflow-hidden rounded-2xl">
-      <div class="glass-head px-5 py-3"><h3 class="text-base font-semibold text-white">Zones</h3></div>
+      <div class="glass-head px-5 py-3"><h3 class="text-base font-semibold text-white">{{ bi('ZONES_TITLE') }}</h3></div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-white/75">
           <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
@@ -89,7 +89,7 @@
 
     <div class="glass overflow-hidden rounded-2xl">
       <div class="glass-head px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('LEGEND') }}</h3></div>
-      <div class="flex flex-wrap gap-3 p-5 text-sm text-white/70">
+      <div class="legend flex flex-wrap gap-3 p-5 text-sm text-white/70">
         <span><span class="sw" style="background:#ff7f0e"></span>Z1</span>
         <span><span class="sw" style="background:#2ca02c"></span>Z2</span>
         <span><span class="sw" style="background:#d62728"></span>Z3</span>
