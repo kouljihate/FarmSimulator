@@ -69,6 +69,9 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - Home header shows only the bilingual app name: **Farm Simulator** (left) +
   **محاكي المزرعة** (right). Browser tab title carries the Part 1 title
   (`Farm Simulator - Part 1 - irrigation network`).
+- Arabic font sizes are fixed in `i18n.css`: **16 px** for Arabic inside
+  headings (h1..h5), **14 px** for every other Arabic text. The navbar Arabic
+  brand is 16 px (`text-base`).
 
 ## Delivery workflow — do this on EVERY prompt
 
