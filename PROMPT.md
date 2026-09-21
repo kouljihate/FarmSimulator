@@ -42,12 +42,16 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   `≥ 100 m²`, and (c) jointly cover `≥ 50 %` of the land, they are used as the
   sectors directly (`_existing_config`, config named `Existing sectors (N
   polygons)`), and `plan['existing_sectors']=True`. No suggestions are built.
-  The result page then shows the "EXISTING_TITLE/SUB" heading.
+  The home page then shows the "EXISTING_TITLE/SUB" heading (inside the
+  Upload Result card).
 - **Maps are OSM-only** (requirement 1): `core/mapper.py` `_render_base` uses
   `tiles="OpenStreetMap"`, no satellite tiles, no `LayerControl`. There must be
   zero `ArcGIS` / satellite / layer-control strings in map output.
 - Persistence: `/upload` saves `uploads/<token>.pkl` (pickle of the plan);
   `get_plan()` reloads from disk on cache miss so tokens survive restarts.
+- `/upload` re-renders `index.html` (same page) with the plan inside a
+  collapsible-free **"Upload Result" card** (`UPLOAD_RESULT_TITLE`); the result
+  markup lives in `templates/_upload_result.html`. `result.html` was removed.
 - Bilingual: English left (Comfortaa), Arabic right (VIP RAWY Regular in
   `static/fonts/`). Text goes through `core/i18n.py` helpers registered as
   Jinja globals in `app.py`: `t`, `bt`, `btcfg`, `i18n_css`. Map tooltips use

@@ -71,15 +71,11 @@ def upload():
     WORKS[token] = plan
     with open(os.path.join(UPLOAD_DIR, token + ".pkl"), "wb") as fh:
         pickle.dump(plan, fh)
-    return render_view(plan, token)
-
-
-def render_view(plan, token):
     cfg_maps = {}
     for cfg in plan["configs"]:
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
     return render_template(
-        "result.html",
+        "index.html",
         token=token,
         plan=plan,
         cfg_maps=cfg_maps,

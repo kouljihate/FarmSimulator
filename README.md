@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.3.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.4.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -52,7 +52,7 @@ Open <http://127.0.0.1:8501>.
 
 1. Click **New upload** and choose a `.kml` or `.csv` file.
 2. The app parses the land boundary and water point, then shows the basin +
-   3 sectorisation suggestions.
+   3 sectorisation suggestions in an **Upload Result card** on the same page.
 3. Pick a config → you get the overview with zones, valves and pipes, plus a
    page per sector.
 4. An upload stays available across server restarts via `uploads/<token>.pkl`.
@@ -88,7 +88,7 @@ core/
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
   i18n.py                  EN/AR dictionaries + t/bt/btcfg/css helpers
-templates/                 base, index, result, config, sector (Tailwind CSS CDN)
+templates/                 base, index (+ _upload_result partial), config, sector (Tailwind CSS CDN)
 static/fonts/              VIP RAWY REGULAR REGULAR.TTF (Arabic)
 samples/                   test KML + generator
 uploads/                   runtime: uploaded raw files + <token>.pkl plans
