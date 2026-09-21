@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.4.2 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.4.3 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -23,8 +23,9 @@ right. Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
 (right-aligned). The home page has a
-centred tab bar — **Part 1** (the upload flow) plus **Part 2 … Part 6**
-placeholders (future parts). The "Accepted formats" and "What Part 1 produces"
+centred tab bar: **Upload, Basin, Sectors, Zones, Valve, Pipes, Final Result**
+(the pipeline stages; last five are placeholders for future parts). The
+"Accepted formats" and "What Part 1 produces"
 cards split their content into two columns: English on the left, Arabic on the
 right.
 
