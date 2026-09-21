@@ -6,43 +6,50 @@
 
 <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
   <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('BASIN_TITLE') }}</h2></div>
-  <div class="space-y-4 p-6">
-    <div class="grid grid-cols-2 gap-3">
-      <div class="rounded-xl bg-white/5 p-3">
-        <div class="text-sm text-white/60">{{ t('BASIN_REC') }}</div>
-        <div class="mt-1 text-sm font-semibold text-white">{{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}</div>
+  <div class="p-6">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl bg-white/5 p-3">
+            <div class="text-sm text-white/60">{{ t('BASIN_REC') }}</div>
+            <div class="mt-1 text-sm font-semibold text-white">{{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}</div>
+          </div>
+          <div class="rounded-xl bg-white/5 p-3">
+            <div class="text-sm text-white/60">{{ t('DIST_WATER') }}</div>
+            <div class="mt-1 text-sm font-semibold text-white">{{ "{:,.0f}".format(plan.basin.dist_water_m) }} m</div>
+          </div>
+          {% if plan.basin.z is not none %}
+          <div class="rounded-xl bg-white/5 p-3">
+            <div class="text-sm text-white/60">{{ t('ELEVATION') }}</div>
+            <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.z) }} m</div>
+          </div>
+          {% endif %}
+          {% if plan.basin.max_elev %}
+          <div class="rounded-xl bg-white/5 p-3">
+            <div class="text-sm text-white/60">{{ t('MAX_ELEV_IN') }}</div>
+            <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.max_elev.z) }} m</div>
+          </div>
+          {% endif %}
+        </div>
+        <iframe class="map big" width="100%" height="460" srcdoc="{{ basin_map|e }}"></iframe>
       </div>
-      <div class="rounded-xl bg-white/5 p-3">
-        <div class="text-sm text-white/60">{{ t('DIST_WATER') }}</div>
-        <div class="mt-1 text-sm font-semibold text-white">{{ "{:,.0f}".format(plan.basin.dist_water_m) }} m</div>
-      </div>
-      {% if plan.basin.z is not none %}
-      <div class="rounded-xl bg-white/5 p-3">
-        <div class="text-sm text-white/60">{{ t('ELEVATION') }}</div>
-        <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.z) }} m</div>
-      </div>
-      {% endif %}
-      {% if plan.basin.max_elev %}
-      <div class="rounded-xl bg-white/5 p-3">
-        <div class="text-sm text-white/60">{{ t('MAX_ELEV_IN') }}</div>
-        <div class="mt-1 text-sm font-semibold text-white">{{ "%.1f"|format(plan.basin.max_elev.z) }} m</div>
-      </div>
-      {% endif %}
+      <form id="basin-form" method="post" action="/basin/{{ token }}"
+            class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+        <div class="grid w-full grid-cols-2 gap-3">
+          <div>
+            <label for="basin-lon" class="mb-1 block text-xs text-white/60">{{ t('LON') }}</label>
+            <input id="basin-lon" type="number" name="lon" step="0.000001" value="{{ "%.6f"|format(plan.basin.lon) }}"
+                   class="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
+          </div>
+          <div>
+            <label for="basin-lat" class="mb-1 block text-xs text-white/60">{{ t('LAT') }}</label>
+            <input id="basin-lat" type="number" name="lat" step="0.000001" value="{{ "%.6f"|format(plan.basin.lat) }}"
+                   class="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
+          </div>
+        </div>
+        <button type="submit" class="glow-btn w-full rounded-xl px-6 py-4 text-base font-bold">{{ t('APPLY') }}</button>
+        <p class="text-center text-xs text-white/50">{{ t('DRAG_HINT') }}</p>
+      </form>
     </div>
-    <form id="basin-form" method="post" action="/basin/{{ token }}" class="flex flex-wrap items-end gap-3">
-      <div>
-        <label for="basin-lon" class="mb-1 block text-xs text-white/60">{{ t('LON') }}</label>
-        <input id="basin-lon" type="number" name="lon" step="0.000001" value="{{ "%.6f"|format(plan.basin.lon) }}"
-               class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
-      </div>
-      <div>
-        <label for="basin-lat" class="mb-1 block text-xs text-white/60">{{ t('LAT') }}</label>
-        <input id="basin-lat" type="number" name="lat" step="0.000001" value="{{ "%.6f"|format(plan.basin.lat) }}"
-               class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
-      </div>
-      <button type="submit" class="glow-btn rounded-xl px-5 py-2 font-semibold">{{ t('APPLY') }}</button>
-      <p class="grow pb-0.5 text-xs text-white/50">{{ t('DRAG_HINT') }}</p>
-    </form>
-    <iframe class="map big" width="100%" height="460" srcdoc="{{ basin_map|e }}"></iframe>
   </div>
 </div>

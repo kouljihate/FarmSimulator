@@ -52,8 +52,10 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - `/upload` re-renders `index.html` (same page). The **Basin tab** holds an
   **"Upload Result" card** (`UPLOAD_RESULT_TITLE`, id `upload-result-card`,
   header with no version) whose content lives in `templates/_basin_result.html`:
-  plan summary row, then a "Basin placement" card with the info texts in the
-  **first row** and a **full-width** basin map below it. The **Sectors tab**
+  plan summary row, then a **Basin placement** card split into **2 columns on
+  lg**: left column = info texts (row 1) + full-width basin map (row 2); right
+  column = the X/Y lon/lat inputs + **Apply** button panel that spans the full
+  height of both rows (vertically centred). The **Sectors tab**
   holds `templates/_sectors_result.html` (sectorisation heading + config map
   cards + legend); `result.html` / `_upload_result.html` were removed.
 - Default active tab: **Upload** when no result card exists, **Basin** once a
