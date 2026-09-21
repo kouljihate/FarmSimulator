@@ -280,3 +280,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    plain `title`); fixed malformed bilingual-markup `title`/`data-*`
    attributes (must use `ts()`/`tsf()` plain helpers, set via
    `textContent`, never `t()` markup inside attribute values).
+14. v0.9.4: the rename/remove modal got the app theme — blurred backdrop,
+   `sector-modal-card` glass card with radial neon gradients + glow, neon
+   input focus, `sector-modal-btn` gradient buttons (`.primary` cyan/violet
+   for confirm-rename, `.danger` red for remove). JS now sets
+   `modalOk.className = 'sector-modal-btn primary|danger'`.

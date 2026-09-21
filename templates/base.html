@@ -144,6 +144,51 @@
   .tool-btn.armed { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 16px rgba(139,92,246,.6); }
   .tool-btn-danger { border-color: rgba(248,113,113,.5); background: rgba(248,113,113,.12); }
   .tool-btn-danger:hover { border-color: #f87171; background: rgba(248,113,113,.3); box-shadow: 0 0 12px rgba(248,113,113,.4); }
+
+  #sector-modal { background: rgba(3,7,18,.72); backdrop-filter: blur(6px); }
+  #sector-modal .sector-modal-card {
+    background:
+      radial-gradient(120% 120% at 0% 0%, rgba(34,211,238,.14), transparent 50%),
+      radial-gradient(120% 120% at 100% 100%, rgba(139,92,246,.18), transparent 50%),
+      rgba(13,21,36,.94);
+    border: 1px solid rgba(34,211,238,.35);
+    border-radius: 1rem;
+    box-shadow: 0 0 30px rgba(34,211,238,.18), 0 0 60px rgba(139,92,246,.14), 0 20px 40px rgba(0,0,0,.5);
+  }
+  #sector-modal .sector-modal-title {
+    color: #fff;
+    text-shadow: 0 0 12px rgba(34,211,238,.6);
+  }
+  #sector-modal input {
+    width: 100%;
+    border-radius: .75rem;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: #fff;
+    padding: .6rem .9rem;
+    outline: none;
+    transition: all .18s ease;
+  }
+  #sector-modal input::placeholder { color: rgba(226,232,240,.45); }
+  #sector-modal input:focus { border-color: #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,.45); background: rgba(34,211,238,.06); }
+  #sector-modal .sector-modal-msg { color: rgba(255,255,255,.72); }
+  #sector-modal .sector-modal-btn {
+    padding: .5rem 1.1rem;
+    border-radius: .9rem;
+    font-weight: 700;
+    font-size: .75rem;
+    color: #fff;
+    border: 1px solid rgba(34,211,238,.45);
+    background: linear-gradient(135deg, rgba(34,211,238,.2), rgba(139,92,246,.3));
+    transition: all .18s ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #sector-modal .sector-modal-btn:hover { box-shadow: 0 0 14px rgba(34,211,238,.5); transform: translateY(-1px); }
+  #sector-modal .sector-modal-btn.danger { border-color: rgba(248,113,113,.55); background: linear-gradient(135deg, rgba(248,113,113,.25), rgba(220,38,38,.35)); }
+  #sector-modal .sector-modal-btn.danger:hover { border-color: #f87171; box-shadow: 0 0 14px rgba(248,113,113,.5); }
+  #sector-modal .sector-modal-btn.primary { border-color: transparent; background: linear-gradient(135deg, #22d3ee, #8b5cf6); box-shadow: 0 0 16px rgba(139,92,246,.4); }
+  #sector-modal .sector-modal-btn.primary:hover { box-shadow: 0 0 20px rgba(139,92,246,.7); }
 </style>
 </head>
 <body class="min-h-screen font-sans antialiased" dir="ltr">
