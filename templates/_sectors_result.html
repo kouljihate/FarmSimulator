@@ -12,10 +12,10 @@
       <div class="mb-3 flex items-center gap-3 text-sm text-white/60">
         <span class="shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
         <div class="flex flex-1 flex-wrap items-center justify-center gap-1.5">
-          {% for s in cfg.sectors[:8] %}
-          <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ t('SECTOR_SELECT_MULTI') }}">
+          {% for s in cfg.sectors %}
+          <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ s.name }}">
             <input type="checkbox" class="sector-chk" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" value="{{ s.name }}">
-            <span>{{ s.name }}</span>
+            <span>S{{ loop.index }}</span>
           </label>
           {% endfor %}
         </div>

@@ -275,3 +275,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    rename has a new-name input, remove shows a "cannot be undone" message;
    both confirm/cancel/Enter/Escape/backdrop-click. New i18n keys
    `CONFIRM`, `NEW_NAME`, `REMOVE_ASK` + the `tsf(key, **kw)` helper.
+13. v0.9.3: checkbox labels are **strictly sequential `S1`, `S2`, …** (every
+   sector shown, label = `"S" + loop.index`, actual name kept in `value` +
+   plain `title`); fixed malformed bilingual-markup `title`/`data-*`
+   attributes (must use `ts()`/`tsf()` plain helpers, set via
+   `textContent`, never `t()` markup inside attribute values).

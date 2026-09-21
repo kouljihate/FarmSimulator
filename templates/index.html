@@ -177,8 +177,8 @@
 </div>
 
 <div id="sector-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" style="display:none"
-     data-title-rename="{{ t('SECTOR_RENAME') }}" data-title-remove="{{ t('SECTOR_REMOVE') }}"
-     data-ok-confirm="{{ t('CONFIRM') }}" data-ok-remove="{{ t('SECTOR_REMOVE') }}"
+     data-title-rename="{{ ts('SECTOR_RENAME') }}" data-title-remove="{{ ts('SECTOR_REMOVE') }}"
+     data-ok-confirm="{{ ts('CONFIRM') }}" data-ok-remove="{{ ts('SECTOR_REMOVE') }}"
      data-msg-remove="{{ tsf('REMOVE_ASK', name='__N__') }}" data-ph-new="{{ ts('NEW_NAME') }}">
   <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1524] p-6 shadow-2xl">
     <h3 id="sector-modal-title" class="mb-4 text-base font-semibold text-white"></h3>
@@ -402,13 +402,13 @@
   function openRenameModal(cfg, idx, curName) {
     if (!modal) return;
     modalMode = 'rename'; modalCfg = cfg; modalIdx = idx;
-    modalTitle.innerHTML = modal.dataset.titleRename;
+    modalTitle.textContent = modal.dataset.titleRename;
     modalMsg.style.display = 'none';
     modalMsg.textContent = '';
     modalName.style.display = '';
     modalName.value = curName;
     modalName.placeholder = modal.dataset.phNew;
-    modalOk.innerHTML = modal.dataset.okConfirm;
+    modalOk.textContent = modal.dataset.okConfirm;
     modalOk.classList.remove('tool-btn-danger');
     modal.style.display = 'flex';
     modalName.focus();
@@ -417,12 +417,12 @@
   function openRemoveModal(cfg, idx, curName) {
     if (!modal) return;
     modalMode = 'remove'; modalCfg = cfg; modalIdx = idx;
-    modalTitle.innerHTML = modal.dataset.titleRemove;
+    modalTitle.textContent = modal.dataset.titleRemove;
     modalName.style.display = 'none';
     modalName.value = '';
     modalMsg.style.display = '';
     modalMsg.textContent = (modal.dataset.msgRemove || '').replace('__N__', curName);
-    modalOk.innerHTML = modal.dataset.okRemove;
+    modalOk.textContent = modal.dataset.okRemove;
     modalOk.classList.add('tool-btn-danger');
     modal.style.display = 'flex';
   }
