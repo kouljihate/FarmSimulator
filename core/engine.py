@@ -508,6 +508,12 @@ def _is_default_sector_name(name):
     return bool(name and _re.fullmatch(r"S\d+", name))
 
 
+def _sector_num(name):
+    """Trailing numeric part of a sector name, for picking the next free one."""
+    m = _re.search(r"(\d+)\s*$", name or "")
+    return int(m.group(1)) if m else 0
+
+
 def _find_sector(cfg, idx):
     for s in cfg.get("sectors", []):
         if s["idx"] == idx:
@@ -557,8 +563,7 @@ def recompute_sectors(plan, cfg, polys):
         entry = nearest_points(piece_m.boundary, Point(cur))[0]
         sectors.append({
             "idx": rank,
-            "name": (name if (name and not _is_default_sector_name(name))
-                     else "S{0:d}".format(rank)),
+            "name": name or "S{0:d}".format(rank),
             "poly_m": piece_m,
             "poly": poly_ll,
             "centroid": proj.to_lonlat(piece_m.centroid),
@@ -648,6 +653,11 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         piece_m = inside
 
     if op == "add":
+        names = {s["name"] for s in cfg["sectors"]}
+        nxt = max([_sector_num(nm) for nm in names] + [0]) + 1
+        while "S{0}".format(nxt) in names:
+            nxt += 1
+        new_name = "S{0}".format(nxt)
         polys = []
         for s in cfg["sectors"]:
             rest = s["poly_m"].difference(piece_m)
@@ -657,7 +667,7 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
                 rest = make_valid(rest)
             if rest.area > 1e-4:
                 polys.append((rest, s.get("name")))
-        polys.append((piece_m, None))
+        polys.append((piece_m, new_name))
         recompute_sectors(plan, cfg, polys)
         return True, None
 

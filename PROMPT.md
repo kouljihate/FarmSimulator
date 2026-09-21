@@ -285,3 +285,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    input focus, `sector-modal-btn` gradient buttons (`.primary` cyan/violet
    for confirm-rename, `.danger` red for remove). JS now sets
    `modalOk.className = 'sector-modal-btn primary|danger'`.
+15. v0.9.5: **remove/merge/edit no longer renumber the other sectors** —
+   `recompute_sectors` keeps every existing name as-is (only a brand-new
+   sector gets a name: the next free `S{max+1}` via `_sector_num`, avoiding
+   duplicates after preserved-names edits).
