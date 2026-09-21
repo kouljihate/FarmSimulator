@@ -2,22 +2,22 @@
 {% block title %}Config {{ cfg.name }} - {{ plan.name }}{% endblock %}
 {% block content %}
 
-<nav class="mb-4 flex items-center gap-2 text-sm text-gray-500">
-  <a href="/" class="text-accent hover:underline">{{ t('NEW_UPLOAD') }}</a>
-  <span class="text-gray-300">/</span>
-  <span class="font-semibold text-gray-800">{{ plan.name }} - {{ cfg.name }}</span>
+<nav class="mb-5 flex items-center gap-2 text-sm text-white/60">
+  <a href="/" class="text-cyan-300 hover:underline">{{ t('NEW_UPLOAD') }}</a>
+  <span class="text-white/30">/</span>
+  <span class="font-semibold text-white">{{ plan.name }} - {{ cfg.name }}</span>
 </nav>
 
-<h1 class="text-2xl font-bold">{{ t('CFG_TITLE') }} - {{ btcfg(cfg.name) }}</h1>
-<p class="text-gray-500">
+<h1 class="text-2xl font-bold text-white">{{ t('CFG_TITLE') }} - {{ btcfg(cfg.name) }}</h1>
+<p class="text-white/60">
   {{ cfg.n_sectors }} {{ t('SECTORS') }} · {{ t('CFG_SUB') }}
   {{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}
 </p>
 
-<div class="mt-4 mb-5 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
-    <h2 class="text-lg font-semibold">{{ t('FULL_MAP') }}</h2>
-    <span class="text-sm text-gray-500">
+<div class="glass mt-4 mb-5 overflow-hidden rounded-2xl">
+  <div class="glass-head flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+    <h2 class="text-lg font-semibold text-white">{{ t('FULL_MAP') }}</h2>
+    <span class="text-sm text-white/55">
       {{ t('PRINCIPAL_90') }}: {{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m ·
       {{ cfg.pipes.majors|length }} {{ t('MAJORS') }} ·
       {{ cfg.pipes.minors|length }} {{ t('MINORS') }} ·
@@ -29,26 +29,26 @@
   </div>
 </div>
 
-<h2 class="mt-8 mb-3 text-xl font-bold">{{ t('SELECT_SECTOR') }}</h2>
+<h2 class="mt-8 mb-3 text-xl font-bold text-white">{{ t('SELECT_SECTOR') }}</h2>
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
   {% for s in cfg.sectors %}
-  <div class="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+  <div class="glass flex h-full flex-col overflow-hidden rounded-2xl">
     <div class="flex flex-1 flex-col p-5">
       <div class="mb-2 flex items-center justify-between">
-        <h3 class="text-lg font-semibold">{{ s.name }}</h3>
-        <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
+        <h3 class="text-lg font-semibold text-white">{{ s.name }}</h3>
+        <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-white/80">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
       </div>
-      <div class="mb-2 text-sm text-gray-500">{{ s.zones|length }} {{ t('ZONES') }}</div>
+      <div class="mb-2 text-sm text-white/60">{{ s.zones|length }} {{ t('ZONES') }}</div>
       <iframe class="map mb-2" srcdoc="{{ per_sector[s.name]|e }}"></iframe>
-      <a class="mt-auto block w-full rounded-lg bg-accent px-4 py-2.5 text-center font-semibold text-white hover:bg-accent/90" href="/sector/{{ token }}/{{ cfg.id }}/{{ s.idx }}">{{ t('OPEN') }} {{ s.name }}</a>
+      <a class="glow-btn mt-auto block w-full rounded-xl px-4 py-2.5 text-center font-semibold" href="/sector/{{ token }}/{{ cfg.id }}/{{ s.idx }}">{{ t('OPEN') }} {{ s.name }}</a>
     </div>
   </div>
   {% endfor %}
 </div>
 
-<div class="mt-5 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-  <div class="border-b border-gray-100 px-5 py-3"><h3 class="text-base font-semibold">{{ t('LEGEND') }}</h3></div>
-  <div class="flex flex-wrap gap-3 p-5 text-sm">
+<div class="glass mt-5 overflow-hidden rounded-2xl">
+  <div class="glass-head px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('LEGEND') }}</h3></div>
+  <div class="flex flex-wrap gap-3 p-5 text-sm text-white/70">
     <span><span class="sw" style="background:#333"></span>{{ t('LG_BOUNDARY') }}</span>
     <span><span class="sw" style="background:#ff7f0e"></span>{{ t('LG_ZONES') }}</span>
     <span><span class="sw" style="background:#0b8a6f"></span>{{ t('LG_P90') }}</span>

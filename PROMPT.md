@@ -55,12 +55,17 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   (automatically chooses EN/AR). Templates: `base/index/result/config/sector`,
   Bootswatch Flatly CDN.
 
-- Templared with **Tailwind CSS** (CDN in `base.html`, custom `primary`/`accent`
-  colors + fonts configured via `tailwind.config`); fonts kept as-is: Comfortaa
-  (EN) + VIP RAWY Regular (AR) in `static/fonts/`. The home page has a tab bar:
-  **Part 1** (upload flow) + **Tab 2..Tab 6** placeholders. Tab switching is a
-  small vanilla-JS snippet in `index.html`; the styles live in `base.html`
-  (`.tab-btn`, `.tab-panel`).
+- Templared with **Tailwind CSS** (CDN in `base.html`) with a **futuristic dark
+  theme**: neon cyan/violet/fuchsia gradients, glassmorphism cards (`.glass`),
+  gradient glow buttons (`.glow-btn`), grid + radial background, Comfortaa (EN)
+  + VIP RAWY Regular (AR) fonts — one `tailwind.config` block, fonts kept as-is.
+- Home page has a **centred pill tab bar**: **Part 1** (upload flow) + **Tab
+  2..Tab 6** placeholders. Tab switching is a small vanilla-JS snippet in
+  `index.html`; styles live in `base.html` (`.tab-btn`, `.tab-panel`).
+  The "Analyse the plot" button is wider than its card (`-mx-6` bleed).
+- "Accepted formats" and "What Part 1 produces" cards render the body as **two
+  columns: English left, Arabic right** (via `tl(key)` = `(en, ar)` plain-text
+  pairs; Arabic column is `dir=rtl` with the VIP RAWY family).
 - Home header shows only the bilingual app name: **Farm Simulator** (left) +
   **محاكي المزرعة** (right). Browser tab title carries the Part 1 title
   (`Farm Simulator - Part 1 - irrigation network`).

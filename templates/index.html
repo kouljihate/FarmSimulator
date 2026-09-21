@@ -2,13 +2,13 @@
 {% block content %}
 
 {% if error %}
-<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-  <div>{{ error|safe }} <small class="text-red-500">error</small></div>
+<div class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur">
+  <div>{{ error|safe }} <small class="text-red-300/70">error</small></div>
 </div>
 {% endif %}
 
-<div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-  <div class="flex flex-wrap gap-1 border-b border-gray-200 bg-gray-50 px-2">
+<div class="mb-4 flex justify-center pt-1">
+  <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
     <button type="button" class="tab-btn" data-tab-target="tab-part1">Part 1</button>
     <button type="button" class="tab-btn" data-tab-target="tab-tab2">Tab 2</button>
     <button type="button" class="tab-btn" data-tab-target="tab-tab3">Tab 3</button>
@@ -16,49 +16,66 @@
     <button type="button" class="tab-btn" data-tab-target="tab-tab5">Tab 5</button>
     <button type="button" class="tab-btn" data-tab-target="tab-tab6">Tab 6</button>
   </div>
+</div>
 
-  <div class="p-5">
+<div class="glass rounded-3xl">
+  <div class="p-6 md:p-8">
+
     <div class="tab-panel" id="tab-part1">
-      <div class="mb-4">
-        <div class="rounded-xl border border-gray-100 bg-white">
-          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('UPLOAD_TITLE') }}</h2></div>
-          <div class="p-5">
+      <div class="grid grid-cols-1 gap-4">
+        <div class="rounded-2xl border border-white/10 bg-white/5">
+          <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('UPLOAD_TITLE') }}</h2></div>
+          <div class="p-6">
             <form method="post" action="/upload" enctype="multipart/form-data">
               <div class="mb-3">
                 <input type="file" name="file" accept=".kml,.kmz,.csv,.txt"
-                       class="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-primary/90" required>
-                <div class="mt-1 text-sm text-gray-500">{{ t('UPLOAD_CTRL_TEXT') }}</div>
+                       class="block w-full cursor-pointer rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-sm text-white/80 placeholder-white/30 file:mr-3 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-cyan-500 file:to-violet-600 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:brightness-110" required>
+                <div class="mt-2 text-sm text-white/55">{{ t('UPLOAD_CTRL_TEXT') }}</div>
               </div>
-              <button type="submit"
-                      class="inline-flex items-center justify-center rounded-lg bg-accent px-6 py-2.5 font-semibold text-white hover:bg-accent/90">{{ t('UPLOAD_BTN') }}</button>
+              <div class="-mx-6 mt-6">
+                <button type="submit"
+                        class="glow-btn block w-full rounded-2xl px-6 py-4 text-lg font-bold tracking-wide shadow-lg">{{ t('UPLOAD_BTN') }}</button>
+              </div>
             </form>
           </div>
         </div>
-      </div>
 
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div class="rounded-xl border border-gray-100 bg-white">
-          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('FORMATS_TITLE') }}</h2></div>
-          <div class="p-5">
-            <ul class="list-disc space-y-2 pl-5">
-              <li>{{ t('FMT_KML') }}</li>
-              <li>{{ t('FMT_CSV') }}</li>
-              <li>{{ t('FMT_WKT') }}</li>
-            </ul>
-            <div class="mt-3 rounded-lg bg-gray-100 p-3 text-sm text-gray-600">{{ t('ELEV_NOTE') }}</div>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div class="rounded-2xl border border-white/10 bg-white/5">
+            <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('FORMATS_TITLE') }}</h2></div>
+            <div class="p-6">
+              <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div class="space-y-2">
+                  {% for k in ['FMT_KML', 'FMT_CSV', 'FMT_WKT'] %}
+                  <p class="text-sm leading-relaxed text-white/70">{{ tl(k)[0] }}</p>
+                  {% endfor %}
+                </div>
+                <div class="space-y-2 text-right" dir="rtl" style="font-family:'VIP RAWY Regular'">
+                  {% for k in ['FMT_KML', 'FMT_CSV', 'FMT_WKT'] %}
+                  <p class="text-sm leading-relaxed text-white/70">{{ tl(k)[1] }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="mt-4 rounded-xl bg-white/5 p-3 text-sm text-white/60">{{ t('ELEV_NOTE') }}</div>
+            </div>
           </div>
-        </div>
 
-        <div class="rounded-xl border border-gray-100 bg-white">
-          <div class="border-b border-gray-100 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('WHAT_TITLE') }}</h2></div>
-          <div class="p-5">
-            <ol class="list-decimal space-y-1 pl-5">
-              <li>{{ t('STEP_BASIN') }}</li>
-              <li>{{ t('STEP_SECTORS') }}</li>
-              <li>{{ t('STEP_ZONES') }}</li>
-              <li>{{ t('STEP_VALVES') }}</li>
-              <li>{{ t('STEP_PIPES') }}</li>
-            </ol>
+          <div class="rounded-2xl border border-white/10 bg-white/5">
+            <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('WHAT_TITLE') }}</h2></div>
+            <div class="p-6">
+              <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div class="space-y-2">
+                  {% for k in ['STEP_BASIN', 'STEP_SECTORS', 'STEP_ZONES', 'STEP_VALVES', 'STEP_PIPES'] %}
+                  <p class="text-sm leading-relaxed text-white/70"><span class="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 align-middle"></span>{{ tl(k)[0] }}</p>
+                  {% endfor %}
+                </div>
+                <div class="space-y-2 text-right" dir="rtl" style="font-family:'VIP RAWY Regular'">
+                  {% for k in ['STEP_BASIN', 'STEP_SECTORS', 'STEP_ZONES', 'STEP_VALVES', 'STEP_PIPES'] %}
+                  <p class="text-sm leading-relaxed text-white/70"><span class="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-fuchsia-400 align-middle"></span>{{ tl(k)[1] }}</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -66,10 +83,13 @@
 
     {% for n in range(2, 7) %}
     <div class="tab-panel" id="tab-tab{{ n }}">
-      <h2 class="text-lg font-semibold">Tab {{ n }}</h2>
-      <p class="mt-1 text-gray-500">Coming soon</p>
+      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">Tab {{ n }}</h2>
+        <p class="mt-1 text-white/50">Coming soon</p>
+      </div>
     </div>
     {% endfor %}
+
   </div>
 </div>
 
