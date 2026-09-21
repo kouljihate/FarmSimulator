@@ -15,24 +15,27 @@
           {% for s in cfg.sectors %}
           <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ s.name }}">
             <input type="checkbox" class="sector-chk" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" value="{{ s.name }}">
-            <span>S{{ loop.index }}</span>
+            <span class="max-w-20 truncate">{{ s.name }}</span>
           </label>
           {% endfor %}
         </div>
       </div>
       <div class="-mx-5 mb-2 flex flex-wrap items-center gap-2 border-y border-white/10 bg-white/5 px-5 py-2.5">
-        <span class="text-xs font-semibold uppercase tracking-wide text-white/50">{{ t('MANAGE') }}</span>
+        <span class="text-xs font-semibold uppercase tracking-wide text-white/50">{{ tl('MANAGE')[0] }}</span>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="add">{{ bv('SECTOR_ADD') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="edit">{{ bv('SECTOR_EDIT') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="rename">{{ bv('SECTOR_RENAME') }}</button>
         <button type="button" class="tool-btn" data-cfg="{{ cfg.id }}" data-op="merge">{{ bv('SECTOR_MERGE') }}</button>
         <button type="button" class="tool-btn tool-btn-danger" data-cfg="{{ cfg.id }}" data-op="remove">{{ bv('SECTOR_REMOVE') }}</button>
-        <span class="inl ml-auto truncate text-xs font-semibold text-cyan-200/80 sector-status" data-cfg="{{ cfg.id }}"
+        <div class="ml-auto flex shrink-0 items-center gap-3">
+          <span class="text-xs font-semibold text-white/50" style="font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl;">{{ tl('MANAGE')[1] }}</span>
+          <span class="inl truncate text-xs font-semibold text-cyan-200/80 sector-status" data-cfg="{{ cfg.id }}"
               data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
               data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
               data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
               data-tcancel="{{ ts('CANCEL') }}" data-trename="{{ ts('SECTOR_RENAME') }}"
               data-tremove="{{ ts('SECTOR_REMOVE') }}" data-tsaving="{{ ts('SAVING') }}">{{ t('SELECT_HINT') }}</span>
+        </div>
       </div>
       <div class="-mx-5 mb-2">
         <iframe class="map tall" data-cfg="{{ cfg.id }}" srcdoc="{{ cfg_maps[cfg.id]|e }}"></iframe>

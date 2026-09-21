@@ -67,9 +67,9 @@ Open <http://127.0.0.1:8501>.
    the same page: the **Basin tab** gets an Upload Result card (basin info +
    full-width map), and the **Sectors tab** shows the 3 sectorisation
    suggestions as full-width stacked map cards (one column, edge-to-edge).
-Each config card has a set of **sector checkboxes labelled sequentially
-    `S1`, `S2`, `S3`, …** (one per sector, neon pills, same theme as the
-    tabs; the underlying sector name stays in the tooltip/value).
+Each config card has a set of **sector checkboxes labelled with the actual
+    sector name** (including custom renames; neon pills, same theme as the
+    tabs; long names truncated with `max-w-20 truncate`).
     Checking one (or several)
     highlights the matching sector(s) in that card's map (yellow outline +
     fill), and clicking any sector inside the map toggles its checkbox —
@@ -78,7 +78,9 @@ Each config card has a set of **sector checkboxes labelled sequentially
    of **rounded two-row buttons** (Arabic on top, English below):
    **Add** (draw the new sector boundary on the map, then *Done*),
    **Edit** (drag the vertices of a selected sector, then *Done*),
-   **Rename**, **Merge** (check two sectors), **Remove**. **Rename** and
+   **Rename**, **Merge** (check two sectors), **Remove**. The toolbar header
+   shows **"Manage" on the left** and **"إدارة" on the right**, with the tool
+   buttons between them. **Rename** and
    **Remove** ask for confirmation in a small modal dialog — the modal header
    shows bilingual text (English left, Arabic right), the body and buttons
    show Arabic on top and English below. The modal matches the app theme
