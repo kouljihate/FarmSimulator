@@ -71,8 +71,10 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   lg**: left column = info texts (row 1) + full-width basin map (row 2); right
   column = the X/Y lon/lat inputs + **Apply** button panel that spans the full
   height of both rows (vertically centred). The **Sectors tab**
-  holds `templates/_sectors_result.html` (sectorisation heading + config map
-  cards + legend); `result.html` / `_upload_result.html` were removed.
+holds `templates/_sectors_result.html` (sectorisation heading + config map
+   cards + legend); `result.html` / `_upload_result.html` were removed.
+   In the **Sectorisation card the config cards are single-column full-width**
+   (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
   The **Basin placement card body is split 80% / 20%** on lg
   (`lg:grid-cols-[4fr_1fr]`): first column = info grid + basin map, second
   column = the X/Y + Apply form.
@@ -200,3 +202,4 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    unified flat theme, `UPLOAD_FIRST` placeholders, 80/20 basin card layout.
 5. v0.7.0: **MongoDB persistence** (`core/storage.py`), all maps saved with
    the plan, new **Load** tab (first) to list and restore saved runs.
+6. v0.7.1: Sectors tab config cards made single-column full-width maps.
