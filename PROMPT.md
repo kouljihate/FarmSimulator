@@ -270,3 +270,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
    tools are rounded two-row buttons (Arabic on top, English below) via the
    new `bv`/`ts` i18n helpers; button labels are captured in JS at arm time
    (no more server `data-label` markup).
+12. v0.9.2: **Rename** and **Remove** now open a small in-page modal
+   (`#sector-modal` in `index.html`) instead of `prompt()`/`confirm()` —
+   rename has a new-name input, remove shows a "cannot be undone" message;
+   both confirm/cancel/Enter/Escape/backdrop-click. New i18n keys
+   `CONFIRM`, `NEW_NAME`, `REMOVE_ASK` + the `tsf(key, **kw)` helper.

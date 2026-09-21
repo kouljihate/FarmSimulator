@@ -62,6 +62,9 @@ EN = {
     "EDIT_HINT": "Drag the yellow points, then press Done.",
     "FINISH": "Done",
     "CANCEL": "Cancel",
+    "CONFIRM": "Confirm",
+    "NEW_NAME": "New sector name",
+    "REMOVE_ASK": "Remove sector {name}? This action cannot be undone.",
     "SECTOR_NEEDS_NAME": "Sector",
     "SECTOR_RENAMED": "Sector renamed.",
     "SAVING": "Saving...",
@@ -176,6 +179,9 @@ AR = {
     "EDIT_HINT": "اسحب النقاط الصفراء ثم اضغط تم.",
     "FINISH": "تم",
     "CANCEL": "إلغاء",
+    "CONFIRM": "تأكيد",
+    "NEW_NAME": "اسم القطاع الجديد",
+    "REMOVE_ASK": "حذف القطاع {name}؟ لا يمكن التراجع عن هذا الإجراء.",
     "SECTOR_NEEDS_NAME": "قطاع",
     "SECTOR_RENAMED": "تمت إعادة تسمية القطاع.",
     "SAVING": "جارٍ الحفظ...",
@@ -332,6 +338,13 @@ def ts(key):
     """Plain (no markup) bilingual line for JS-set status text."""
     en = EN[key]
     ar = AR.get(key, en)
+    return "{en} | {ar}".format(en=esc(en), ar=esc(ar))
+
+
+def tsf(key, **kw):
+    """ts(key) with .format() applied (e.g. {name} -> sector name)."""
+    en = EN[key].format(**kw)
+    ar = AR.get(key, EN[key]).format(**kw)
     return "{en} | {ar}".format(en=esc(en), ar=esc(ar))
 
 
