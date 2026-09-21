@@ -308,7 +308,9 @@ def css():
         ".di { display: flex; justify-content: space-between; align-items: center;"
         " gap: 10px; flex-wrap: wrap; min-width: 0; }\n"
         ".di > .en { font-family: " + EN_FONT + "; direction: ltr; text-align: left; }\n"
-        ".di > .ar, .ar { font-family: " + AR_FONT + "; direction: rtl; text-align: right; font-size: 14px; }\n"
+        ".di > .ar, .ar { font-family: " + AR_FONT + "; direction: rtl; text-align: right; font-size: 16px; }\n"
         "body, .en { font-family: " + EN_FONT + "; }\n"
-        "h1 .di > .ar, h2 .di > .ar, h3 .di > .ar, h4 .di > .ar, h5 .di > .ar { font-size: 16px; }\n"
+        "h1 .di > .ar, h2 .di > .ar, h3 .di > .ar, h4 .di > .ar, h5 .di > .ar { font-size: 20px; }\n"
+        ".glass-head h1 .di > .ar, .glass-head h2 .di > .ar, .glass-head h3 .di > .ar,"
+        " .glass-head h4 .di > .ar, .glass-head h5 .di > .ar { font-size: 18px; }\n"
     )
