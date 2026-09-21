@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.5.4 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.6.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -60,6 +60,10 @@ Open <http://127.0.0.1:8501>.
    page per sector.
 4. An upload stays available across server restarts via `uploads/<token>.pkl`.
    Old files are kept until cleaned manually.
+5. **Move the basin**: in the Basin tab, edit the X/Y (longitude/latitude)
+   inputs and press **Apply**, or drag the brown marker directly on the map.
+   The app re-runs sector ordering, zones, valves and piping from the new
+   basin position (`POST /basin/<token>`).
 
 ### Accepted file formats
 
@@ -114,7 +118,7 @@ uploads/                   runtime: uploaded raw files + <token>.pkl plans
 
 | Object | Keys |
 | --- | --- |
-| `plan` | `name, all_boundaries, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, _proj, _basin_m` |
+| `plan` | `name, all_boundaries, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, _proj, _basin_m, _land_m` |
 | `config` | `id, name, angle, n_sectors, sectors, ready` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
 | `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, diameter_mm:50, len_m}), minors[]({zone, diameter_mm:32, len_m})` |

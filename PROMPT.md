@@ -112,13 +112,27 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 `plan`:
 `name, all_boundaries[{name,poly,is_land}], land (Polygon ll), land_area_m2,
 water{lon,lat}, basin{lon,lat,z,has_elev,max_elev,dist_water_m}, basin_m,
-max_elev_m, configs[], existing_sectors(bool), _proj (Projector), _basin_m`
+max_elev_m, configs[], existing_sectors(bool), _proj (Projector), _basin_m,
+_land_m`
 
 `config`: `id, name, angle, n_sectors, sectors[], ready` and after
 `engine.extend(plan, cid)`: `zones[], valves[], pipes`
 (`pipes = {principal:{diameter_mm:90, line, len_m},
             majors:[{zone,diameter_mm:50,line,len_m}],
             minors:[{zone,diameter_mm:32,line,len_m}]}`)
+
+Basin editing: `engine.set_basin(plan, lon, lat)` validates the point is
+inside the land (`_land_m.distance(pt) <= 1.0`), updates `basin`,
+`_basin_m`/`basin_m`, recomputes `dist_water_m` and re-runs `sectorise` /
+`_existing_config` (entries/ordering + zones/pipes then come from the new
+point). Route `POST /basin/<token>` (`app.py edit_basin`) re-renders the page
+with new `basin_map` + `cfg_maps` (pass all three even on the error path, and
+`error=` only via the standard `{% if error %}` block). The Basin map adds a
+**draggable** folium `Marker` and `mapper._drag_js` (injected via
+`folium.Element`) which posts `{type:'basin-marker-drag', lon, lat}` from the
+iframe to the parent; `index.html` listens, fills the X/Y inputs and
+auto-submits. i18n keys for the editor: `APPLY`, `LON`, `LAT`, `DRAG_HINT`,
+plus the `"Point is outside the land boundary."` error.
 
 `sector`: `idx (1-based), name (S{idx}), poly_m, poly (lonlat), centroid,
 area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)

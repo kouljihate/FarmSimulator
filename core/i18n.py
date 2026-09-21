@@ -67,6 +67,10 @@ EN = {
     "DIST_WATER": "distance from water point",
     "ELEVATION": "elevation",
     "MAX_ELEV_IN": "max elevation inside land",
+    "APPLY": "Apply",
+    "LON": "X / Longitude",
+    "LAT": "Y / Latitude",
+    "DRAG_HINT": "Drag the brown marker on the map, or edit the coordinates, then Apply to move the basin.",
     "SECTOR_TITLE": "2. Sectorisation - choose a config",
     "SECTOR_SUB": "Every config splits the land into sectors \u2264 10,000 m\u00b2. Pick the layout you like best.",
     "USE_CONFIG": "Use this config",
@@ -151,6 +155,10 @@ AR = {
     "DIST_WATER": "المسافة من مصدر الماء",
     "ELEVATION": "الارتفاع",
     "MAX_ELEV_IN": "أقصى ارتفاع داخل الأرض",
+    "APPLY": "تطبيق",
+    "LON": "X / خط الطول",
+    "LAT": "Y / خط العرض",
+    "DRAG_HINT": "اسحب العلامة البنية على الخريطة، أو عدّل الإحداثيات ثم اضغط تطبيق، لتغيير موقع الحوض.",
     "SECTOR_TITLE": "2. القطاعيات - اختر تخطيطًا",
     "SECTOR_SUB": "يقسّم كل تخطيط الأرض إلى قطاعات \u2264 10,000 م\u00b2. اختر الشكل الأنسب لك.",
     "USE_CONFIG": "استخدم هذا التخطيط",
@@ -214,6 +222,7 @@ MAP = {
 # errors raised by parser/engine -> bilingual page message
 ERRORS = {
     "No boundary polygon found in the upload.": "لم يُعثر على مضلع حدود في الملف.",
+    "Point is outside the land boundary.": "النقطة خارج حدود الأرض.",
     "No water point found. Mark it in your file (KML Point or CSV row with type \"water\").":
         "لم يُعثر على مصدر ماء. ضع علامة عليه في ملفك (نقطة KML أو سطر CSV نوعه water).",
     "Boundary polygon is empty after projection.": "مضلع الحدود فارغ بعد الإسقاط.",

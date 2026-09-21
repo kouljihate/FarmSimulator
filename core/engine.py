@@ -451,7 +451,41 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "existing_sectors": existing_sectors,
         "_proj": proj,
         "_basin_m": basin_m,
+        "_land_m": land_m,
     }
+
+
+def set_basin(plan, lon, lat):
+    """Move the basin to a user-provided lon/lat and re-derive everything that
+    depends on it (sector ordering/entries, zones, valves and piping).
+
+    Returns (ok, error) where error is None on success.
+    """
+    proj = plan["_proj"]
+    pt = proj.to_m(Point(lon, lat))
+    land_m = plan["_land_m"]
+    if land_m.is_empty or land_m.distance(pt) > 1.0:
+        return False, "Point is outside the land boundary."
+
+    water_ll = plan["water"]
+    water_m = proj.to_m(Point(water_ll["lon"], water_ll["lat"]))
+    basin = plan["basin"]
+    basin["lon"] = float(lon)
+    basin["lat"] = float(lat)
+    basin["dist_water_m"] = pt.distance(water_m)
+    plan["_basin_m"] = pt
+    plan["basin_m"] = pt
+
+    if plan.get("existing_sectors"):
+        extra = [{
+            "name": b["name"],
+            "polygon": b["poly"],
+        } for b in plan["all_boundaries"] if not b["is_land"]]
+        cfg = _existing_config(extra, land_m, proj, pt)
+        plan["configs"] = [cfg] if cfg else []
+    else:
+        plan["configs"] = sectorise(land_m, proj, pt)
+    return True, None
 
 
 def extend(plan, cfgid):

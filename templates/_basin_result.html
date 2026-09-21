@@ -29,6 +29,20 @@
       </div>
       {% endif %}
     </div>
+    <form id="basin-form" method="post" action="/basin/{{ token }}" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label for="basin-lon" class="mb-1 block text-xs text-white/60">{{ t('LON') }}</label>
+        <input id="basin-lon" type="number" name="lon" step="0.000001" value="{{ "%.6f"|format(plan.basin.lon) }}"
+               class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
+      </div>
+      <div>
+        <label for="basin-lat" class="mb-1 block text-xs text-white/60">{{ t('LAT') }}</label>
+        <input id="basin-lat" type="number" name="lat" step="0.000001" value="{{ "%.6f"|format(plan.basin.lat) }}"
+               class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80 placeholder-white/30">
+      </div>
+      <button type="submit" class="glow-btn rounded-xl px-5 py-2 font-semibold">{{ t('APPLY') }}</button>
+      <p class="grow pb-0.5 text-xs text-white/50">{{ t('DRAG_HINT') }}</p>
+    </form>
     <iframe class="map big" width="100%" height="460" srcdoc="{{ basin_map|e }}"></iframe>
   </div>
 </div>

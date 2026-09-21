@@ -157,6 +157,17 @@
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
   activate(document.querySelector('[data-tab-target="' + (document.getElementById('upload-result-card') ? 'tab-basin' : 'tab-upload') + '"]'));
+
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'basin-marker-drag') return;
+    var lon = document.getElementById('basin-lon');
+    var lat = document.getElementById('basin-lat');
+    if (!lon || !lat) return;
+    lon.value = Number(e.data.lon).toFixed(6);
+    lat.value = Number(e.data.lat).toFixed(6);
+    var f = document.getElementById('basin-form');
+    if (f) f.submit();
+  });
 })();
 </script>
 

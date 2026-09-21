@@ -83,6 +83,36 @@ def upload():
     )
 
 
+@app.route("/basin/<token>", methods=["POST"])
+def edit_basin(token):
+    plan = get_plan(token)
+    try:
+        lon = float(request.form.get("lon"))
+        lat = float(request.form.get("lat"))
+    except (TypeError, ValueError):
+        ok = False
+        msg = "Invalid coordinates."
+    else:
+        ok, msg = engine.set_basin(plan, lon, lat)
+
+    if ok:
+        WORKS[token] = plan
+        with open(os.path.join(UPLOAD_DIR, token + ".pkl"), "wb") as fh:
+            pickle.dump(plan, fh)
+
+    cfg_maps = {}
+    for cfg in plan["configs"]:
+        cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
+    return render_template(
+        "index.html",
+        token=token,
+        plan=plan,
+        cfg_maps=cfg_maps,
+        basin_map=mapper.map_basin(plan),
+        error=i18n.err(msg) if not ok else None,
+    )
+
+
 @app.route("/view/<token>/<int:cfgid>")
 def view_config(token, cfgid):
     plan = get_plan(token)

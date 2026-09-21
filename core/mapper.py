@@ -146,6 +146,23 @@ def _marker(plan, lay, key, lon, lat, color, radius, **kw):
     lay.marker(lon, lat, _ti(key, **kw), color, radius=radius)
 
 
+def _drag_js(lon, lat):
+    """Script for the basin map: dragend on the draggable marker posts the new
+    lon/lat back to the parent page."""
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp)return;"
+        "mp.eachLayer(function(l){if(l&&l.getLatLng&&l.options&&l.options.draggable&&"
+        "Math.abs(l.getLatLng().lat-" + str(float(lat)) + ")<1e-5&&"
+        "Math.abs(l.getLatLng().lng-" + str(float(lon)) + ")<1e-5){"
+        "l.on('dragend',function(e){var p=e.target.getLatLng();"
+        "window.parent.postMessage({type:'basin-marker-drag',lon:p.lng,lat:p.lat},'*');});}});"
+        "});"
+    ) + "</script>"
+
+
 def map_basin(plan):
     lay = Layers()
     for b in plan["all_boundaries"]:
@@ -155,12 +172,21 @@ def map_basin(plan):
         else:
             lay.dashed(b["poly"], _bn(b["name"]), color="#777777", weight=1)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 11)
-    _marker(plan, lay, "basin_rec", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 13)
     me = plan["basin"].get("max_elev")
     if me:
         _marker(plan, lay, "maxelev", me["lon"], me["lat"], "green", 9, z=me["z"])
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    return to_html(build(lay, center, 16))
+    m = build(lay, center, 16)
+    tip = _ti("basin_rec")
+    folium.Marker(
+        [plan["basin"]["lat"], plan["basin"]["lon"]],
+        draggable=True,
+        icon=folium.Icon(color="darkred"),
+        popup=tip,
+        tooltip=tip,
+    ).add_to(m)
+    m.get_root().html.add_child(folium.Element(_drag_js(plan["basin"]["lon"], plan["basin"]["lat"])))
+    return to_html(m)
 
 
 _ZONE_COLORS = ["#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
