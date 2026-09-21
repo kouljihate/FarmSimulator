@@ -15,6 +15,15 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
+def app_version():
+    try:
+        with open(os.path.join(BASE, "VERSION"), encoding="utf-8") as fh:
+            return fh.read().strip()
+    except OSError:
+        return "?"
+
+
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
@@ -24,6 +33,7 @@ app.jinja_env.globals.update(
     bt=i18n.bt,
     btcfg=i18n.btcfg,
     i18n_css=i18n.css,
+    version=app_version(),
 )
 
 WORKS = {}  # token -> analyse() result

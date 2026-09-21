@@ -69,6 +69,9 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
 - Home header shows only the bilingual app name: **Farm Simulator** (left) +
   **محاكي المزرعة** (right). Browser tab title carries the Part 1 title
   (`Farm Simulator - Part 1 - irrigation network`).
+- A **fixed footer** (3 equal columns) shows the app name (left), the Part 1
+  tag (centre, bilingual) and the version (right-aligned). The version comes
+  from the `VERSION` file via the `version` Jinja global (`app.py`).
 - Arabic font sizes are fixed in `i18n.css`: **20 px** for titles (h1..h5
   Arabic), **18 px** for card headers (`.glass-head`) and for button/link
   Arabic, **16 px** for every other Arabic element. The navbar Arabic brand is
