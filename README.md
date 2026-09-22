@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.12.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.12.1 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -122,7 +122,8 @@ Each config card has a set of **sector checkboxes labelled with the actual
    tab): it lists each land name with its last-save date (`Last saved:
    YYYY-MM-DD HH:MM` via the `fmt_dt` Jinja global; token kept small below),
    newest first, and one click restores the complete
-   page with the saved maps (`POST /` `{op:load}`).
+   page with the saved maps (`POST /` `{op:load}`). Rows are 3 columns on
+   desktop: land name + token | centred last-save datetime | Load button.
 6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
     (longitude/latitude) — both stay in sync live. Press **Apply** to save:
     `POST /` `{op:basin}` re-runs sector ordering, zones, valves and piping and
