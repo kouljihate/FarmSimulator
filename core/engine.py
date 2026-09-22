@@ -370,6 +370,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         "minors": minors,
     }
     _apply_valve_customization(plan, cfg)
+    _number_valves(cfg)
     return cfg
 
 
@@ -589,6 +590,9 @@ def extend(plan, cfgid):
     if not cfg:
         raise ValueError("Unknown config")
     cfg = cfg[0]
+    if cfg.get("ready"):
+        _number_valves(cfg)
+        return cfg
     return extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
 
 
@@ -851,6 +855,7 @@ def _rebuild_valves_pipes(plan, cfg):
                     "majors": majors, "minors": minors}
     cfg["ready"] = True
     _apply_valve_customization(plan, cfg)
+    _number_valves(cfg)
     return cfg
 
 
@@ -862,6 +867,23 @@ def _valve_id(kind, sector, zone):
 
 def _valve_key(v):
     return (v.get("kind"), v.get("sector"), v.get("zone"))
+
+
+def _number_valves(cfg):
+    """Name valves: principal ``<sector>V1``, others ``<sector>V11…``."""
+    for v in cfg.get("valves") or []:
+        if not v.get("custom") and v.get("kind") == "principal" and v.get("sector"):
+            v["name"] = "{0}V1".format(v["sector"])
+    counters = {}
+    for v in cfg.get("valves") or []:
+        if not v.get("custom") and v.get("kind") == "principal":
+            continue
+        sec = v.get("sector")
+        if not sec:
+            continue
+        counters[sec] = max(counters.get(sec, 10), 10) + 1
+        v["name"] = "{0}V{1:d}".format(sec, counters[sec])
+    return cfg
 
 
 def _apply_valve_customization(plan, cfg):
@@ -1082,8 +1104,6 @@ def _move_zone_refs(cfg, old, new):
     for v in cfg.get("valves", []):
         if v.get("zone") == old:
             v["zone"] = new
-            if v.get("kind") == "secondary":
-                v["name"] = "Valve secondary {0}".format(new)
     for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
         if m.get("zone") == old:
             m["zone"] = new

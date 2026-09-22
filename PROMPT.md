@@ -293,7 +293,11 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
    `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
    point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
-   lon, lat, point, name}` (added valves get `id:C:<hex>` + `custom:true`;
+   lon, lat, point, name}` — display `name` is always principal `<sector>V1`
+   (S1V1) and secondaries `<sector>V11…` (S1V11, S1V12…; customs continue;
+   `_number_valves`, also
+   applied to already-ready configs in `extend`)
+   (added valves get `id:C:<hex>` + `custom:true`;
    moved valves get `moved:true`). Per-config manual state:
    `valve_overrides{(kind,sector,zone):[lon,lat]}`, `removed_valves[[kind,sector,zone]]`,
    `custom_valves[]`, re-applied by `_apply_valve_customization` at the end of
@@ -573,3 +577,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     secondary valves, zoom 17) in map and table; staged-drag + Save flow
     unchanged; `{op:overview}` takes `sector`, i18n keys renamed to
     `VALVE_SECTOR_FILTER, VALVE_ALL_SECTORS` (EN+AR).
+49. v0.26.0: **valve names S1V1** — `_number_valves` names principal
+    `<sector>V1` and secondaries `<sector>V11…` (customs continue) after every
+    rebuild; `extend` renumbers already-ready configs so old runs migrate on
+    next load; zone ops no longer touch valve names.
