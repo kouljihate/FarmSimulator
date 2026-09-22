@@ -12,7 +12,7 @@
       <div class="mb-3 flex items-center gap-3 text-sm text-white/60">
         <span class="inl shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
         <div class="flex flex-1 flex-wrap items-center justify-center gap-1.5">
-          {% for s in cfg.sectors %}
+          {% for s in cfg.sectors|natsort %}
           <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ s.name }}">
             <input type="checkbox" class="sector-chk" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" value="{{ s.name }}">
             <span class="max-w-20 truncate">{{ s.name }}</span>
@@ -20,7 +20,7 @@
           {% endfor %}
         </div>
       </div>
-      {% for s in cfg.sectors %}
+      {% for s in cfg.sectors|natsort %}
       <div class="sector-accordion hidden mb-2 overflow-hidden rounded-xl border border-white/10 bg-white/5" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}">
         <div class="grid grid-cols-3 gap-x-4 gap-y-1.5 px-4 py-3 text-xs">
           <span class="font-semibold text-white/50">{{ t('SECTOR_NAME') }}</span>

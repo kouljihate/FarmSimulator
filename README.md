@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.11.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.11.1 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -80,7 +80,9 @@ Each config card has a set of **sector checkboxes labelled with the actual
     breakdown (name, area, centroid, entry point, zone angle, zone count), and
     clicking any sector inside the map toggles its checkbox —
     multiple sectors can stay selected at once (map-driven toggles also
-    expand/collapse the matching accordion).
+    expand/collapse the matching accordion). Pills (and accordions) are always
+    shown sorted by name, A-Z case-insensitive with natural numbers (S2 before
+    S10), so a rename visibly re-orders the list.
 3. **Manage sectors** — each config card now has a taller map and a centred
     toolbar of **rounded two-row buttons** (Arabic on top, English below):
     **Add** (draw the new sector boundary on the map, then *Done*),

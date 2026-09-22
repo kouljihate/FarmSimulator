@@ -384,6 +384,10 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     key (`#sector-i18n` `data-tnet`); `applySectorOp` and basin submit surface
     missing-token / non-200 / bad-JSON / empty-fragment failures in the top
     error banner instead of silently doing nothing.
+23. v0.10.1: **Load list shows land name + last-save date** — each row shows
+    the plan name, `SAVED_AT` + `fmt_dt(run.updated_at)` (`YYYY-MM-DD HH:MM`,
+    new Jinja global in `app.py`; new i18n key `SAVED_AT` EN+AR), token kept
+    small; `FileStore.list_runs` now sorts newest-first like Mongo.
 24. v0.10.2: **rename accepts any unique name** — the `S<number>` restriction
     is dropped (uniqueness check + collision-skipping auto-naming make it
     unnecessary); only empty and duplicate names are rejected.
@@ -394,7 +398,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     **Use this config fills Zones/Valve/Pipes/Final tabs in the same page**;
     basin Apply fixed to swap the map via `srcdoc`; open overviews re-fetch
     after edits; Load rows carry pre-formatted `updated_str`.
-23. v0.10.1: **Load list shows land name + last-save date** — each row shows
-    the plan name, `SAVED_AT` + `fmt_dt(run.updated_at)` (`YYYY-MM-DD HH:MM`,
-    new Jinja global in `app.py`; new i18n key `SAVED_AT` EN+AR), token kept
-    small; `FileStore.list_runs` now sorts newest-first like Mongo.
+26. v0.11.1: **sector pills sorted A-Z** — `_sectors_result.html` loops
+    `cfg.sectors|natsort` (new Jinja filter in `app.py`: case-insensitive
+    natural sort) for pills and accordions, so renames re-order the list
+    (maps + Zones tab keep basin-distance/idx order).

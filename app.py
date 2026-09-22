@@ -6,6 +6,7 @@ is a POST to ``/`` returning JSON. Tab bodies are server-rendered HTML
 fragments injected in place - the browser never leaves ``/``.
 """
 import os
+import re
 import uuid
 from datetime import datetime
 
@@ -31,6 +32,14 @@ def fmt_dt(ts):
     if not ts:
         return "—"
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+
+
+def natsort(sectors):
+    """Sectors sorted by name, A-Z case-insensitive with natural numbers."""
+    def key(s):
+        return [int(t) if t.isdigit() else t.lower()
+                for t in re.split(r"(\d+)", s.get("name") or "")]
+    return sorted(sectors or [], key=key)
 
 
 def _pt(g):
@@ -122,6 +131,7 @@ app.jinja_env.globals.update(
     version=app_version(),
     fmt_dt=fmt_dt,
 )
+app.jinja_env.filters["natsort"] = natsort
 
 
 @app.context_processor
