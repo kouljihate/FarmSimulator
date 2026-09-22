@@ -562,3 +562,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     into the first remaining zone) via `zone_name2`/`zone_names`; new i18n keys
     `ZONE_SWAP, ZONE_MERGE, ZONE_ONE_NEED, ZONE_SWAP_NEED, ZONE_MERGE_NEED`
     (EN+AR) + swap/merge ERRORS.
+46. v0.24.1: **Open modal footer trimmed** — sector Add/Edit/Rename/Remove
+    buttons removed from the modal (Close stays); dead `armSectorTool` code
+    removed with them.

@@ -228,13 +228,7 @@
         <button type="button" id="zone-remove-btn" class="tool-btn tool-btn-danger">{{ bv('ZONE_REMOVE') }}</button>
       </div>
     </div>
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <button type="button" id="sector-detail-add" class="tool-btn">{{ bv('SECTOR_ADD') }}</button>
-        <button type="button" id="sector-detail-edit" class="tool-btn">{{ bv('SECTOR_EDIT') }}</button>
-        <button type="button" id="sector-detail-rename" class="tool-btn">{{ bv('SECTOR_RENAME') }}</button>
-        <button type="button" id="sector-detail-remove" class="tool-btn tool-btn-danger">{{ bv('SECTOR_REMOVE') }}</button>
-      </div>
+    <div class="flex flex-wrap items-center justify-end gap-3">
       <button type="button" id="sector-detail-close" class="sector-modal-btn">{{ bv('CLOSE') }}</button>
     </div>
   </div>
@@ -988,25 +982,6 @@
     });
     if (dModal) dModal.style.display = 'flex';
   }
-  function armSectorTool(cfg, idx, op) {
-    hideDetailModal();
-    goTab('tab-sectors');
-    if (op !== 'add') {
-      var s = document.getElementById('sectors-result');
-      var box = s && s.querySelector('.sector-chk[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
-      if (!box) { showError(terrHtml('tneed')); return; }
-      if (!box.checked) {
-        box.checked = true;
-        box.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }
-    var b = pickBtn(cfg, op);
-    if (b) b.click();
-  }
-  var dAdd = document.getElementById('sector-detail-add');
-  var dEdit = document.getElementById('sector-detail-edit');
-  var dRename = document.getElementById('sector-detail-rename');
-  var dRemove = document.getElementById('sector-detail-remove');
   var dClose = document.getElementById('sector-detail-close');
   var zTrace = document.getElementById('zone-trace-btn');
   var zSplit = document.getElementById('zone-split-btn');
@@ -1028,18 +1003,6 @@
     if (!box) return;
     var row = box.closest ? box.closest('.zone-row') : null;
     if (row) row.classList.toggle('zone-row-sel', box.checked);
-  });
-  if (dAdd) dAdd.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'add'); });
-  if (dEdit) dEdit.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'edit'); });
-  if (dRename) dRename.addEventListener('click', function () {
-    var nm = detailName();
-    hideDetailModal();
-    openRenameModal(dCfg, dIdx, nm);
-  });
-  if (dRemove) dRemove.addEventListener('click', function () {
-    var nm = detailName();
-    hideDetailModal();
-    openRemoveModal(dCfg, dIdx, nm);
   });
   if (dClose) dClose.addEventListener('click', hideDetailModal);
   if (dModal) dModal.addEventListener('click', function (e) { if (e.target === dModal) hideDetailModal(); });
