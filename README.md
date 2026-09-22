@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.13.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.13.2 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -143,6 +143,12 @@ Each config card has a set of **sector checkboxes labelled with the actual
     point, or the largest) + optional altitude `z` per vertex (used to pick a
     high basin spot);
   - a `Point` `Placemark` = the water source;
+  - the `description` field acts as the element **type** (same keywords as the
+    CSV `type` column: `water`, `point`, `source`, `puit`, `valve` → water;
+    boundary words like `boundary`, `parcel`, `parcelle`, `terrain` → land):
+    a water-described polygon contributes its centre as a water point, and a
+    land-described point is skipped as a mere label. Placemarks without a
+    description keep the default rule (polygons = boundaries, points = water);
   - extra polygons covering ≥ 50 % of the land are interpreted as an
     *existing sector layout* and used as-is.
 - **CSV/TXT**, header row with any of:

@@ -403,6 +403,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `cfg.sectors|natsort` (new Jinja filter in `app.py`: case-insensitive
     natural sort) for pills and accordions, so renames re-order the list
     (maps + Zones tab keep basin-distance/idx order).
+31. v0.13.2: **KML `description` is the element type** — shared word-based
+    matchers (`_is_water_type`: water/point/source/puit/valve/w,
+    `_is_land_type`: boundary/parcel/terrain… EN+FR+AR) in `core/parser.py`;
+    water-described polygons yield their centre as a water point, land-described
+    points are skipped as labels; description-less placemarks keep the old rule;
+    CSV `type` matching unified on the same helper.
 29. v0.13.0: **upload summary card in Upload tab** — new `_upload_card.html`
     partial (name, area, water, basin, per-config sector counts, `data-go-tab`
     button to Basin); returned as `upload_html` in the full payload, injected

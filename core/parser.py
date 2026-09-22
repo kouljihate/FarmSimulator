@@ -11,6 +11,7 @@ Result shape:
 """
 import csv
 import os
+import re
 import xml.etree.ElementTree as ET
 
 from shapely.geometry import Polygon
@@ -19,6 +20,27 @@ from shapely.validation import make_valid
 
 def _local(tag):
     return tag.rsplit("}", 1)[-1]
+
+
+_WATER_WORDS = {"water", "point", "source", "puit", "valve", "w"}
+_LAND_WORDS = {
+    "boundary", "boundaries", "land", "parcel", "plot", "field",
+    "polygon", "polygone", "ring", "sector", "sectors", "secteur",
+    "limite", "parcelle", "terrain", "champ", "foncier",
+    "حدود", "أرض", "قطعة",
+}
+
+
+def _words(text):
+    return set(re.split(r"\W+", (text or "").lower()))
+
+
+def _is_water_type(text):
+    return bool(_words(text) & _WATER_WORDS)
+
+
+def _is_land_type(text):
+    return bool(_words(text) & _LAND_WORDS)
 
 
 def _coords_from_text(text):
@@ -61,6 +83,8 @@ def parse_kml(path):
 
     def handle_placemark(pm, name_hint):
         name = (pm.findtext("{*}name") or name_hint or "Boundary").strip()
+        desc_el = pm.find("{*}description")
+        desc = "".join(desc_el.itertext()) if desc_el is not None else ""
         for child in pm.iter():
             tag = _local(child.tag)
             if tag == "Polygon":
@@ -68,8 +92,14 @@ def parse_kml(path):
                 if ring:
                     poly = _polygon_from_ring(ring)
                     if poly is not None:
-                        polygons.append({"name": name, "polygon": poly, "vertices_z": ring})
+                        if _is_water_type(desc):
+                            pt = poly.representative_point()
+                            water.append((pt.x, pt.y))
+                        else:
+                            polygons.append({"name": name, "polygon": poly, "vertices_z": ring})
             elif tag == "Point":
+                if _is_land_type(desc):
+                    continue
                 coords_el = child.find("{*}coordinates")
                 if coords_el is not None:
                     pts = _coords_from_text(coords_el.text or "")
@@ -166,9 +196,7 @@ def parse_csv(path):
         zt = cell("z")
         z = float(zt) if zt not in ("", "0") else None
 
-        if typ in ("water", "point", "source", "puit", "valve") or (
-            typ.startswith("w") and typ in ("w",)
-        ):
+        if _is_water_type(typ):
             water.append((lon, lat))
             continue
 
