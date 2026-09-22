@@ -99,9 +99,9 @@ token must return `ok:false`.
   (`resetOverview` clears them).   `config.html` / `sector.html` are gone
   (replaced by `_zones/_valves/_pipes/_other/_simulation/_final_result.html`
   partials).
-  **"Use this config" stays in the same page**: it fetches `{op:overview}`
-  and fills the Zones (per-sector maps + zone tables + **Confirm Zones**
-  button), Valve (principal 90 mm + secondary 32 mm tables), Pipes
+   **"Use this config" stays in the same page**: it fetches `{op:overview}`
+   and fills the Zones (per-sector maps + zone tables + **Confirm Zones**
+   button), Valve (sectors + zones + principal 90 mm + secondary 32 mm tables), Pipes
   (90/63/32), Other Elements (big map + add form + AI verdicts), Simulation
   (ROI form + AI proposal) and Final Result (full map + legend + report +
   Export PDF) tabs, then switches to Zones. Basin/sector edits silently re-fetch the open overview so
@@ -474,7 +474,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     Add/Edit/Rename/Merge/**Swap**/Remove.
 34. v0.16.0: **step maps** — Use this config draws no valves/pipes: Zones cards
     use `map_sector(..., valves=False, pipes=False)`; new `map_config_valves`
-    (sectors+valves) and `map_config_pipes` (sectors+piping) maps render in the
+    (sectors+zones+valves) and `map_config_pipes` (sectors+piping) maps render in the
     Valve/Pipes tabs; full map stays in Final; `maps_v=2` invalidates old cached
     sector artwork; `load` no longer re-saves (preserves cached maps).
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
@@ -513,3 +513,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 37. v0.19.0: **zone labels** — `mapper.map_sector` (Zones-tab maps) draws a
     permanent `DivIcon` badge with the zone name on each zone centroid
     (`_zone_label`, HTML-escaped), so names are visible without hovering.
+38. v0.20.0: **zones in Valve map** — `mapper.map_config_valves` now draws all
+    zones (orange polygons + permanent name labels) under sectors + valves, so
+    each secondary valve is visibly attached to its zone; `MAPS_V=4`
+    invalidates old cached valve artwork.

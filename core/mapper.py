@@ -357,13 +357,16 @@ def map_config_overview(plan, cfg):
 
 
 def map_config_valves(plan, cfg):
-    """Valve step map: sectors + both valve kinds (no piping)."""
+    """Valve step map: sectors + zones + both valve kinds (no piping)."""
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
     colors = _sector_color_map(cfg)
     for s in cfg["sectors"]:
         lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
                     colors[s["idx"]], 0.10, weight=2)
+    for z in cfg.get("zones", []):
+        lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
+                    "#ff7f0e", 0.08, weight=1)
     for v in cfg["valves"]:
         if v.get("kind") == "principal":
             lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
@@ -373,6 +376,14 @@ def map_config_valves(plan, cfg):
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 16)
+    for z in cfg.get("zones", []):
+        c = z.get("centroid")
+        if c is None:
+            continue
+        folium.map.Marker(
+            [c.y, c.x],
+            icon=folium.DivIcon(html=_zone_label(z["name"])),
+        ).add_to(m)
     m.get_root().html.add_child(folium.Element(_valve_pick_js()))
     return to_html(m)
 
