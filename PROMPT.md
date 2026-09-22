@@ -565,3 +565,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 46. v0.24.1: **Open modal footer trimmed** — sector Add/Edit/Rename/Remove
     buttons removed from the modal (Close stays); dead `armSectorTool` code
     removed with them.
+47. v0.24.2: **glow buttons follow the bv rule** — `.glow-btn .bv` CSS stacks
+    Arabic (row 1) over English (row 2) like `.tool-btn`, so Split (and Valve
+    Save) match the other buttons.
