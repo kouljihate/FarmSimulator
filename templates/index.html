@@ -64,6 +64,8 @@
           </div>
         </div>
 
+        <div id="upload-file-card" style="display:none"></div>
+
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div class="rounded-2xl border border-white/10 bg-white/5">
             <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('FORMATS_TITLE') }}</h2></div>
@@ -360,6 +362,11 @@
     if (sr) sr.innerHTML = payload.sectors_html || '';
     if (sc) sc.style.display = '';
     if (se) se.style.display = 'none';
+    var uc = document.getElementById('upload-file-card');
+    if (uc) {
+      uc.innerHTML = payload.upload_html || '';
+      uc.style.display = payload.upload_html ? '' : 'none';
+    }
     resetOverview();
     refreshRuns();
   }
@@ -433,7 +440,6 @@
         if (!data.ok) { apiFail(data); return; }
         hideError();
         setPlan(data);
-        goTab('tab-basin');
       }).catch(function () { if (btn) btn.disabled = false; showError(terrHtml('tnet')); });
     });
   }
@@ -458,6 +464,11 @@
     var ob = e.target && e.target.closest ? e.target.closest('.sector-open-btn') : null;
     if (ob) {
       openDetailModal(ob.getAttribute('data-cfg'), parseInt(ob.getAttribute('data-idx'), 10), ob.getAttribute('data-name'));
+      return;
+    }
+    var gb = e.target && e.target.closest ? e.target.closest('[data-go-tab]') : null;
+    if (gb) {
+      goTab(gb.getAttribute('data-go-tab'));
       return;
     }
   });

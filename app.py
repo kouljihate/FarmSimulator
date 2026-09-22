@@ -76,6 +76,7 @@ def plan_summary(plan):
     return {
         "name": plan.get("name", "Untitled plot"),
         "land_area_m2": plan.get("land_area_m2"),
+        "n_boundaries": len(plan.get("all_boundaries") or []),
         "water": dict(plan.get("water") or {}),
         "basin": _basin_summary(plan),
         "existing_sectors": bool(plan.get("existing_sectors")),
@@ -102,6 +103,7 @@ def _full_payload(token, plan):
                                       basin_map=basin_map),
         "sectors_html": render_template("_sectors_result.html", token=token, plan=plan,
                                         cfg_maps=cfg_maps),
+        "upload_html": render_template("_upload_card.html", plan=plan),
     }
 
 

@@ -402,6 +402,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `cfg.sectors|natsort` (new Jinja filter in `app.py`: case-insensitive
     natural sort) for pills and accordions, so renames re-order the list
     (maps + Zones tab keep basin-distance/idx order).
+29. v0.13.0: **upload summary card in Upload tab** — new `_upload_card.html`
+    partial (name, area, water, basin, per-config sector counts, `data-go-tab`
+    button to Basin); returned as `upload_html` in the full payload, injected
+    into `#upload-file-card`; upload stays on the Upload tab, load still jumps
+    to Basin; `plan_summary` gains `n_boundaries`.
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
     datetime | Load button (`sm:grid-cols-3`, stacked on mobile), in both the
     server rows and the JS `refreshRuns` builder.

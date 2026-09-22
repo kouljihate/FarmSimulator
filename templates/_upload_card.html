@@ -1,0 +1,27 @@
+<div class="overflow-hidden rounded-2xl border border-cyan-400/20 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2></div>
+  <div class="space-y-4 p-5 md:p-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <h3 class="text-xl font-bold text-white">{{ plan.name }}</h3>
+      <span class="rounded-full bg-white/10 px-3 py-1 text-base font-medium text-white/80">{{ "{:,.0f}".format(plan.land_area_m2) }} m<sup>2</sup></span>
+      <span class="inl text-sm text-white/55">{{ t('WATER_POINT') }}: {{ "%.6f"|format(plan.water.lon) }}, {{ "%.6f"|format(plan.water.lat) }}</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('BASIN_REC') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}</div>
+      </div>
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm text-white/60">{{ t('DIST_WATER') }}</div>
+        <div class="mt-1 text-sm font-semibold text-white">{{ "{:,.0f}".format(plan.basin.dist_water_m) }} m</div>
+      </div>
+      {% for cfg in plan.configs %}
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-sm font-semibold text-white">{{ btcfg(cfg.name) }}</div>
+        <div class="inl mt-1 text-sm text-white/60">{{ cfg.n_sectors }} {{ t('SECTORS') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="glow-btn block w-full rounded-2xl px-6 py-3 text-base font-bold tracking-wide" data-go-tab="tab-basin">&rarr; {{ bi('TAB_BASIN') }}</button>
+  </div>
+</div>
