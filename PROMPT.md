@@ -88,9 +88,9 @@ token must return `ok:false`.
 - **Single-URL SPA (v0.11.0, extended v0.17.0): the browser only uses `/`.**
   `GET /` renders the `index.html` shell (tab bar, upload form, empty panels,
   runs list). Everything else is `POST /`: multipart `file` = upload;
-  otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
-  basin | sector_coords | sector_action | zone_action | overview |
-  other_add | other_remove | sim_save`. Responses carry server-rendered
+   otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
+   basin | sector_coords | sector_action | zone_action | valve_action |
+   overview | other_add | other_remove | sim_save`. Responses carry server-rendered
   fragments (`basin_html`, `sectors_html`, `zones/valves/pipes/other/sim/
   final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
   with `updated_str`). Client state `S = {token, plan, cfgid}` in
@@ -291,9 +291,24 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
 `zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid`
 
-  `valve`: principal `{kind:principal, sector, diameter_mm:90, lon, lat,
-  point, name}` + secondary `{kind:secondary, sector, zone, diameter_mm:32,
-  lon, lat, point, name}`
+   `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
+   point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
+   lon, lat, point, name}` (added valves get `id:C:<hex>` + `custom:true`;
+   moved valves get `moved:true`). Per-config manual state:
+   `valve_overrides{(kind,sector,zone):[lon,lat]}`, `removed_valves[[kind,sector,zone]]`,
+   `custom_valves[]`, re-applied by `_apply_valve_customization` at the end of
+   every rebuild (moved secondary valves pull their 63/32 mm pipes along;
+   stale keys pruned; sector rename/swap migrate keys via `_rekey_sector`;
+   zone structural edits reset that sector's tweaks). Op `{op:valve_action}`
+   (`{cfgid, action: add|move|remove, valve_id, kind, lon, lat, sector, zone}`)
+   → `apply_valve_op`, same map-invalidation + overview-fragment pattern as
+   `zone_action`. Valve tab (`_valves_result.html`) shows X/Y per row with
+   Edit/Remove buttons + a management card (valve select, kind/sector/zone for
+   new, X/Y filled by map click via `mapper._valve_pick_js` → `valve-map-click`
+   → `#valve-lon/#valve-lat`); moved rows get `●`, added rows `*`. New i18n keys
+   `VALVE_MGMT, VALVE_MGMT_SUB, VALVE_TARGET, VALVE_NEW, VALVE_ADD, VALVE_MOVE,
+   VALVE_PICK` + errors `"Valve not found."`, `"The valve must lie inside the
+   land boundary."` (EN+AR).
 
 ## Conventions and constraints
 
@@ -493,3 +508,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     print CSS); new partials `_other_result` / `_simulation_result`;
     tab bar is Load/Upload/Basin/Sectors/Zones/Valve/Pipes/Other
     Elements/Simulation/Final Result.
+36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
+    the Valve tab (see data-model note above for the override-layer design).

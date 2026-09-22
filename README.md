@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.17.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.18.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -21,7 +21,12 @@ place. The browser never leaves `/`.
    with the **Confirm Zones** button at the end of the Zones tab — confirming
    reveals the valves.
 4. **Valves** — one principal **90 mm** valve at each sector entry plus one
-   secondary **32 mm** valve per zone.
+    secondary **32 mm** valve per zone. Every valve is manageable from the
+    **Valve** tab: per-row **Edit** (move the position) and **Remove**, plus an
+    **Add valve** form (principal/secondary, sector/zone attach, X/Y — click
+    the map to fill coordinates). Moved valves keep their position through
+    sector/zone/basin rebuilds (override layer); moved secondary valves pull
+    their 63/32 mm pipes along; removed valves stay removed.
 5. **Piping** — 90 mm principal pipe (basin → sector entries), **63 mm** major
    pipes (sector valve → each zone valve), 32 mm minor pipes (valve → zone
    supply point).
@@ -195,7 +200,7 @@ terrain) and its generator `make_test_kml.py`.
 ```
 app.py                     single-URL SPA backend: GET / shell, POST / JSON ops
                            (upload/load/list_runs/delete_run/basin/sector_coords/sector_action/
-                            zone_action/overview/other_add/other_remove/sim_save)
+                            zone_action/valve_action/overview/other_add/other_remove/sim_save)
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing
@@ -260,7 +265,7 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
 | Object | Keys |
 | --- | --- |
 | `plan` | `name, all_boundaries, boundaries[{name,description,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, other_elements[{id,kind,lon,lat,size,note,necessary,verdict,suggestion}], simulation{years,capex,annual_cost,annual_revenue,crop}, _proj, _basin_m, _land_m` |
-| `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed` + post-extend `zones, valves, pipes` |
+| `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed, valve_overrides{(kind,sector,zone):[lon,lat]}, removed_valves[], custom_valves[]` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
-| `valve` | principal: `{kind:principal, sector, diameter_mm:90, lon, lat, point, name}`; secondary: `{kind:secondary, sector, zone, diameter_mm:32, lon, lat, point, name}` |
+| `valve` | principal: `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat, point, name}`; secondary: `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32, lon, lat, point, name}` (+ `moved` when repositioned, `custom:true` for added valves) |
 | `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, sector, diameter_mm:63, len_m}), minors[]({zone, sector, diameter_mm:32, len_m})` |

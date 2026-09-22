@@ -371,7 +371,9 @@ def map_config_valves(plan, cfg):
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    return to_html(build(lay, center, 16))
+    m = build(lay, center, 16)
+    m.get_root().html.add_child(folium.Element(_valve_pick_js()))
+    return to_html(m)
 
 
 def map_config_pipes(plan, cfg):
@@ -420,6 +422,18 @@ def map_other_elements(plan, cfg):
     m = build(lay, center, 16)
     m.get_root().html.add_child(folium.Element(_other_pick_js()))
     return to_html(m)
+
+
+def _valve_pick_js():
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp)return;"
+        "mp.on('click',function(e){try{window.top.postMessage("
+        "{type:'valve-map-click',lon:e.latlng.lng,lat:e.latlng.lat},'*');}catch(x){}});"
+        "});"
+    ) + "</script>"
 
 
 def _other_pick_js():

@@ -8,6 +8,7 @@ Pipeline (this first part):
   5. piping  -> 90 mm principal, 63 mm majors, 32 mm minors
 """
 import re as _re
+import uuid as _uuid
 
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.ops import nearest_points, split as _shapely_split, unary_union
@@ -288,6 +289,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         entry_m = sector["entry_m"]
         entry_ll = project.to_lonlat(entry_m)
         valves.append({
+            "id": _valve_id("principal", sector["name"], sector["name"]),
             "kind": "principal",
             "sector": sector["name"],
             "zone": sector["name"],
@@ -331,6 +333,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             zones_all.append(zone)
 
             valve = {
+                "id": _valve_id("secondary", sector["name"], zone["name"]),
                 "kind": "secondary",
                 "sector": sector["name"],
                 "zone": zone["name"],
@@ -366,6 +369,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         "majors": majors,
         "minors": minors,
     }
+    _apply_valve_customization(plan, cfg)
     return cfg
 
 
@@ -689,7 +693,9 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
                  for s in cfg["sectors"] if s["idx"] != idx}
         if nm.lower() in taken:
             return False, "That sector name is already used. Pick a unique name."
+        old_nm = target["name"]
         target["name"] = nm
+        _rekey_sector(cfg, old_nm, nm)
         recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None
 
@@ -729,7 +735,11 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         b = _find_sector(cfg, idx2)
         if a is None or b is None or idx == idx2:
             return False, "Select two sectors to swap."
-        a["name"], b["name"] = b.get("name"), a.get("name")
+        nm_a, nm_b = a.get("name"), b.get("name")
+        a["name"], b["name"] = nm_b, nm_a
+        _rekey_sector(cfg, nm_a, "__swap_tmp__")
+        _rekey_sector(cfg, nm_b, nm_a)
+        _rekey_sector(cfg, "__swap_tmp__", nm_b)
         recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None
 
@@ -810,6 +820,7 @@ def _rebuild_valves_pipes(plan, cfg):
         entry_m = sector["entry_m"]
         entry_ll = proj.to_lonlat(entry_m)
         valves.append({
+            "id": _valve_id("principal", sector["name"], sector["name"]),
             "kind": "principal", "sector": sector["name"], "zone": sector["name"],
             "diameter_mm": 90, "lon": entry_ll.x, "lat": entry_ll.y,
             "point": entry_ll, "name": "Valve principal {0}".format(sector["name"]),
@@ -823,6 +834,7 @@ def _rebuild_valves_pipes(plan, cfg):
             minor_m = LineString([valve_m, target_m])
             z["centroid"] = proj.to_lonlat(target_m)
             valves.append({
+                "id": _valve_id("secondary", sector["name"], z["name"]),
                 "kind": "secondary", "sector": sector["name"], "zone": z["name"],
                 "diameter_mm": 32, "lon": valve_ll.x, "lat": valve_ll.y,
                 "point": valve_ll, "name": "Valve secondary {0}".format(z["name"]),
@@ -838,7 +850,232 @@ def _rebuild_valves_pipes(plan, cfg):
                                   "len_m": principal_m.length},
                     "majors": majors, "minors": minors}
     cfg["ready"] = True
+    _apply_valve_customization(plan, cfg)
     return cfg
+
+
+def _valve_id(kind, sector, zone):
+    if kind == "principal":
+        return "P:{0}".format(sector)
+    return "S:{0}".format(zone)
+
+
+def _valve_key(v):
+    return (v.get("kind"), v.get("sector"), v.get("zone"))
+
+
+def _apply_valve_customization(plan, cfg):
+    """Re-apply manual valve edits on top of freshly rebuilt valves/pipes.
+
+    Overrides/removals are keyed by (kind, sector, zone) so they survive the
+    rebuilds triggered by sector/zone/basin edits. Stale keys (valves that no
+    longer exist after a structural edit) are pruned. Moved secondary valves
+    pull their 63 mm major and 32 mm minor pipes along; a moved principal
+    valve is only a marker (the 90 mm principal still runs via entries).
+    """
+    proj = plan["_proj"]
+    ov = cfg.get("valve_overrides") or {}
+    removed = {tuple(r) for r in (cfg.get("removed_valves") or []) if r}
+    pipes = cfg.get("pipes") or {}
+    majors = {m.get("zone"): m for m in (pipes.get("majors") or [])}
+    minors = {m.get("zone"): m for m in (pipes.get("minors") or [])}
+    sectors = {s.get("name"): s for s in cfg.get("sectors", [])}
+    zones = {z.get("name"): z for z in cfg.get("zones", [])}
+
+    kept = []
+    for v in cfg.get("valves") or []:
+        key = _valve_key(v)
+        if key in removed:
+            if v.get("kind") != "principal":
+                majors.pop(v.get("zone"), None)
+                minors.pop(v.get("zone"), None)
+            continue
+        if key in ov:
+            try:
+                lon, lat = float(ov[key][0]), float(ov[key][1])
+            except (TypeError, ValueError, IndexError):
+                kept.append(v)
+                continue
+            v["lon"], v["lat"] = lon, lat
+            v["point"] = Point(lon, lat)
+            v["moved"] = True
+            if v.get("kind") != "principal":
+                sec = sectors.get(v.get("sector"))
+                zon = zones.get(v.get("zone"))
+                if sec is not None and zon is not None:
+                    valve_m = proj.to_m(Point(lon, lat))
+                    entry_m = sec["entry_m"]
+                    target_m = zon["poly_m"].centroid
+                    major_m = LineString([Point(entry_m), Point(valve_m)])
+                    minor_m = LineString([valve_m, target_m])
+                    if v.get("zone") in majors:
+                        majors[v["zone"]]["line"] = proj.to_lonlat(major_m)
+                        majors[v["zone"]]["len_m"] = major_m.length
+                    if v.get("zone") in minors:
+                        minors[v["zone"]]["line"] = proj.to_lonlat(minor_m)
+                        minors[v["zone"]]["len_m"] = minor_m.length
+        kept.append(v)
+    for c in cfg.get("custom_valves") or []:
+        kept.append({
+            "id": c.get("id"),
+            "kind": c.get("kind"), "sector": c.get("sector"), "zone": c.get("zone"),
+            "diameter_mm": c.get("diameter_mm", 32),
+            "lon": c.get("lon"), "lat": c.get("lat"),
+            "point": Point(c.get("lon"), c.get("lat")),
+            "name": c.get("name"), "custom": True,
+        })
+    cfg["valves"] = kept
+    pipes["majors"] = [majors[k] for k in list(majors)]
+    pipes["minors"] = [minors[k] for k in list(minors)]
+
+    alive = {_valve_key(v) for v in kept if not v.get("custom")}
+    cfg["valve_overrides"] = {k: v for k, v in ov.items() if tuple(k) in alive}
+    sec_names = {s.get("name") for s in cfg.get("sectors", [])}
+    zon_names = {z.get("name") for z in cfg.get("zones", [])}
+    still_there = []
+    for r in removed:
+        kind, sec, zon = tuple(r)
+        if sec not in sec_names:
+            continue
+        if kind != "principal" and zon not in zon_names:
+            continue
+        still_there.append(list(r))
+    cfg["removed_valves"] = still_there
+    return cfg
+
+
+def _rekey_sector(cfg, old, new):
+    """Migrate valve keys after a sector rename (or one side of a swap).
+
+    A sector rename regenerates that sector's zones as ``{new}-Z{k}``, so both
+    the sector and the ``{old}-`` zone prefix move to the new name.
+    """
+    pre_old, pre_new = old + "-", new + "-"
+    ov = cfg.get("valve_overrides") or {}
+    cfg["valve_overrides"] = {
+        ((k[0], new, pre_new + k[2][len(pre_old):])
+         if k[1] == old and k[2].startswith(pre_old) else
+         ((k[0], new, k[2]) if k[1] == old else k)): v
+        for k, v in ov.items()
+    }
+    cfg["removed_valves"] = [
+        ([r[0], new, pre_new + r[2][len(pre_old):]]
+         if r[1] == old and r[2].startswith(pre_old) else
+         ([r[0], new, r[2]] if r[1] == old else r))
+        for r in (cfg.get("removed_valves") or []) if r
+    ]
+    for c in cfg.get("custom_valves") or []:
+        if c.get("sector") == old:
+            c["sector"] = new
+        if (c.get("zone") or "").startswith(pre_old):
+            c["zone"] = pre_new + c["zone"][len(pre_old):]
+    return cfg
+
+
+def _rekey_valves(cfg, old_sector=None, new_sector=None,
+                  old_zone=None, new_zone=None, drop_sector=None):
+    ov = cfg.get("valve_overrides") or {}
+    removed = [tuple(r) for r in (cfg.get("removed_valves") or []) if r]
+    customs = cfg.get("custom_valves") or []
+
+    def swap_key(key):
+        kind, sec, zon = tuple(key)
+        if drop_sector is not None and sec == drop_sector:
+            return None
+        if old_sector is not None and sec == old_sector:
+            sec = new_sector
+        if old_zone is not None and zon == old_zone:
+            zon = new_zone
+        return (kind, sec, zon)
+
+    cfg["valve_overrides"] = {swap_key(k): v for k, v in ov.items()
+                              if swap_key(k) is not None}
+    cfg["removed_valves"] = [list(swap_key(r)) for r in removed
+                             if swap_key(r) is not None]
+    for c in customs:
+        if drop_sector is not None and c.get("sector") == drop_sector:
+            c["sector"] = None
+        elif old_sector is not None and c.get("sector") == old_sector:
+            c["sector"] = new_sector
+        if old_zone is not None and c.get("zone") == old_zone:
+            c["zone"] = new_zone
+    return cfg
+
+
+def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
+                   lon=None, lat=None, sector=None, zone=None):
+    """Add / move / remove a valve. Returns (ok, message).
+
+    Derived valves (one principal 90 mm per sector, one secondary 32 mm per
+    zone) keep their automatic placement unless moved: the new position is
+    stored in ``valve_overrides`` and re-applied after every rebuild, with
+    the 63/32 mm pipes following moved secondary valves. Added valves are
+    stored in ``custom_valves`` (markers only, no pipes).
+    """
+    if op == "move":
+        v = next((x for x in cfg.get("valves", []) if x.get("id") == valve_id), None)
+        if v is None:
+            return False, "Valve not found."
+        try:
+            lon_f, lat_f = float(lon), float(lat)
+        except (TypeError, ValueError):
+            return False, "Invalid coordinates."
+        if plan["_land_m"].distance(plan["_proj"].to_m(Point(lon_f, lat_f))) > 1.0:
+            return False, "The valve must lie inside the land boundary."
+        if v.get("custom"):
+            for c in cfg.get("custom_valves") or []:
+                if c.get("id") == valve_id:
+                    c["lon"], c["lat"] = lon_f, lat_f
+        else:
+            cfg.setdefault("valve_overrides", {})[_valve_key(v)] = [lon_f, lat_f]
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    if op == "add":
+        kind = (kind or "secondary").strip()
+        if kind not in ("principal", "secondary"):
+            kind = "secondary"
+        sec = next((s for s in cfg.get("sectors", []) if s.get("name") == sector), None)
+        if sec is None:
+            return False, "Sector not found."
+        zon_name = None
+        if kind == "secondary":
+            zon = next((z for z in sec.get("zones", []) if z.get("name") == zone), None)
+            if zon is None:
+                return False, "Zone not found."
+            zon_name = zon["name"]
+        try:
+            lon_f, lat_f = float(lon), float(lat)
+        except (TypeError, ValueError):
+            return False, "Invalid coordinates."
+        if plan["_land_m"].distance(plan["_proj"].to_m(Point(lon_f, lat_f))) > 1.0:
+            return False, "The valve must lie inside the land boundary."
+        vid = "C:{0}".format(_uuid.uuid4().hex[:8])
+        label = zon_name or sec["name"]
+        cfg.setdefault("custom_valves", []).append({
+            "id": vid, "kind": kind, "sector": sec["name"], "zone": label,
+            "diameter_mm": 90 if kind == "principal" else 32,
+            "lon": lon_f, "lat": lat_f,
+            "name": "Valve {0} {1}".format(kind, label),
+        })
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    if op == "remove":
+        v = next((x for x in cfg.get("valves", []) if x.get("id") == valve_id), None)
+        if v is None:
+            return False, "Valve not found."
+        if v.get("custom"):
+            cfg["custom_valves"] = [c for c in (cfg.get("custom_valves") or [])
+                                    if c.get("id") != valve_id]
+        else:
+            key = _valve_key(v)
+            cfg.setdefault("removed_valves", []).append(list(key))
+            (cfg.get("valve_overrides") or {}).pop(key, None)
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    return False, "Unknown operation."
 
 
 def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
@@ -871,6 +1108,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
             if m.get("zone") == old:
                 m["zone"] = nm
+        _rekey_valves(cfg, old_zone=old, new_zone=nm)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         return True, None

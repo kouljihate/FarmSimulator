@@ -244,7 +244,8 @@
      data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
      data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
      data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"
-     data-tnet="{{ ts('NETWORK_ERROR') }}" data-tswap="{{ ts('SWAP_NEED') }}"></div>
+     data-tnet="{{ ts('NETWORK_ERROR') }}" data-tswap="{{ ts('SWAP_NEED') }}"
+     data-tvalvepick="{{ ts('VALVE_PICK') }}"></div>
 
 <script>
 (function () {
@@ -467,6 +468,20 @@
     }).catch(function () { showError(terrHtml('tnet')); });
   }
 
+  function valveAction(cfgid, action, extra) {
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    var body = extra || {};
+    body.op = 'valve_action';
+    body.token = S.token;
+    body.cfgid = parseInt(cfgid, 10);
+    body.action = action;
+    api(body).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
+      hideError();
+      fillOverview(data, true);
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
   function refreshRuns() {
     api({ op: 'list_runs' }).then(function (data) {
       if (!data.ok || !data.runs) return;
@@ -558,6 +573,56 @@
         if (!data.ok) { apiFail(data); return; }
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
+    var vd = e.target && e.target.closest ? e.target.closest('.valve-del-btn') : null;
+    if (vd) {
+      if (!S.token) return;
+      valveAction(vd.getAttribute('data-cfg'), 'remove', { valve_id: vd.getAttribute('data-vid') });
+      return;
+    }
+    var ve = e.target && e.target.closest ? e.target.closest('.valve-edit-btn') : null;
+    if (ve) {
+      var vt = document.getElementById('valve-target');
+      var vlo = document.getElementById('valve-lon');
+      var vla = document.getElementById('valve-lat');
+      if (vt) vt.value = ve.getAttribute('data-vid');
+      if (vlo) vlo.value = ve.getAttribute('data-lon');
+      if (vla) vla.value = ve.getAttribute('data-lat');
+      hideError();
+      if (vt) vt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    var va = e.target && e.target.closest ? e.target.closest('#valve-add-btn') : null;
+    if (va) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var vk = document.getElementById('valve-kind');
+      var vs = document.getElementById('valve-sector');
+      var vz = document.getElementById('valve-zone');
+      var vlo2 = document.getElementById('valve-lon');
+      var vla2 = document.getElementById('valve-lat');
+      valveAction(va.getAttribute('data-cfg'), 'add', {
+        kind: vk ? vk.value : 'secondary',
+        sector: vs ? vs.value : '',
+        zone: vz ? vz.value : '',
+        lon: vlo2 ? parseFloat(vlo2.value) : NaN,
+        lat: vla2 ? parseFloat(vla2.value) : NaN
+      });
+      return;
+    }
+    var vm = e.target && e.target.closest ? e.target.closest('#valve-move-btn') : null;
+    if (vm) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var vt2 = document.getElementById('valve-target');
+      var vid = vt2 ? vt2.value : '';
+      if (!vid || vid === '__new__') { showError(terrHtml('tvalvepick')); return; }
+      var vlo3 = document.getElementById('valve-lon');
+      var vla3 = document.getElementById('valve-lat');
+      valveAction(vm.getAttribute('data-cfg'), 'move', {
+        valve_id: vid,
+        lon: vlo3 ? parseFloat(vlo3.value) : NaN,
+        lat: vla3 ? parseFloat(vla3.value) : NaN
+      });
       return;
     }
     var sa = e.target && e.target.closest ? e.target.closest('#sim-ai-btn') : null;
@@ -890,6 +955,13 @@
         zonePickCount += 2;
       }
       if (zonePickCount >= 4) setZonePick(false);
+      return;
+    }
+    if (e.data.type === 'valve-map-click') {
+      var lo = document.getElementById('valve-lon');
+      var la = document.getElementById('valve-lat');
+      if (lo) lo.value = Number(e.data.lon).toFixed(6);
+      if (la) la.value = Number(e.data.lat).toFixed(6);
       return;
     }
     if (e.data.type === 'other-map-click') {
