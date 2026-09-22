@@ -336,7 +336,6 @@ ERRORS = {
     "Please choose a KML or CSV file first.": "يرجى اختيار ملف KML أو CSV أولاً.",
     "Sector not found.": "القطاع غير موجود.",
     "Empty sector name.": "اسم القطاع فارغ.",
-    "Pick a custom name (not S<number>).": "اختر اسماً مخصصاً (وليس S متبوعاً برقم).",
     "That sector name is already used. Pick a unique name.": "هذا الاسم مستخدم بالفعل. اختر اسماً فريداً.",
     "Cannot remove the last sector.": "لا يمكن حذف القطاع الأخير.",
     "Select two sectors to merge.": "اختر قطاعين للدمج.",

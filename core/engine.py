@@ -506,10 +506,6 @@ def extend(plan, cfgid):
 # --------------------------------------------------------------------------- #
 # Manual sector management (add / edit / remove / merge / rename)
 # --------------------------------------------------------------------------- #
-def _is_default_sector_name(name):
-    return bool(name and _re.fullmatch(r"S\d+", name))
-
-
 def _sector_num(name):
     """Trailing numeric part of a sector name, for picking the next free one."""
     m = _re.search(r"(\d+)\s*$", name or "")
@@ -602,8 +598,6 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         nm = (name or "").strip()
         if not nm:
             return False, "Empty sector name."
-        if _is_default_sector_name(nm):
-            return False, "Pick a custom name (not S<number>)."
         taken = {s.get("name", "").strip().lower()
                  for s in cfg["sectors"] if s["idx"] != idx}
         if nm.lower() in taken:

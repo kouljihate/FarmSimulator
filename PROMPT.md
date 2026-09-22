@@ -119,8 +119,10 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    `core/engine.py` exposes `apply_sector_op(plan, cfg, op, idx, idx2, name,
    ring)` → rebuilds the sector chain/entries via `recompute_sectors` (re-sorts
    by distance to basin, keeps custom non-`S\d+` names) and the full
-    zones/valves/pipes pipeline. Rules: rename rejects `S<digits>` only; remove
-    needs ≥ 2 sectors; add/edit need a valid ring inside the land (≥ 90 % of
+    zones/valves/pipes pipeline. Rules: rename needs a non-empty name unique
+    among the other sectors (case-insensitive); any style is accepted, including
+    `S<number>` (auto-naming on add skips taken names, so no collision);
+    remove needs ≥ 2 sectors; add/edit need a valid ring inside the land (≥ 90 % of
     area, ≥ 60 m²) — add **carves** the new polygon out of every existing sector
     (`difference`); merge unions two sectors keeping the first's name.
     **Rename also rejects duplicate names** (case-insensitive match against the
@@ -363,6 +365,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     key (`#sector-i18n` `data-tnet`); `applySectorOp` and basin submit surface
     missing-token / non-200 / bad-JSON / empty-fragment failures in the top
     error banner instead of silently doing nothing.
+24. v0.10.2: **rename accepts any unique name** — the `S<number>` restriction
+    is dropped (uniqueness check + collision-skipping auto-naming make it
+    unnecessary); only empty and duplicate names are rejected.
 23. v0.10.1: **Load list shows land name + last-save date** — each row shows
     the plan name, `SAVED_AT` + `fmt_dt(run.updated_at)` (`YYYY-MM-DD HH:MM`,
     new Jinja global in `app.py`; new i18n key `SAVED_AT` EN+AR), token kept
