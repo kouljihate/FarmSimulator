@@ -20,7 +20,7 @@ UPLOAD_DIR = os.path.join(BASE, "uploads")
 STORE = storage.get_store()
 
 # Bump when cached map artwork changes shape: older stored maps are regenerated.
-MAPS_V = 4
+MAPS_V = 5
 
 
 def app_version():

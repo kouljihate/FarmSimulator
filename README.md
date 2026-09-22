@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.20.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.21.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -22,9 +22,13 @@ place. The browser never leaves `/`.
    with the **Confirm Zones** button at the end of the Zones tab — confirming
    reveals the valves.
 4. **Valves** — one principal **90 mm** valve at each sector entry plus one
-    secondary **32 mm** valve per zone. The Valve map shows sectors + all
-    zones (with name labels) + both valve kinds. Every valve is manageable from the
-    **Valve** tab: per-row **Edit** (move the position) and **Remove**, plus an
+    secondary **32 mm** valve per zone. The Valve tab shows a large 620 px map
+    with sectors + all zones (with name labels) + draggable valve markers:
+    clicking a marker selects it and shows its full info (name, kind, diameter,
+    sector, zone, X/Y) in the Selected-valve panel + form; dragging a marker
+    updates the info live on release and auto-saves the move. Every valve is
+    also manageable from the tables below: per-row **Edit** (fills the form +
+    info) and **Remove**, plus an
     **Add valve** form (principal/secondary, sector/zone attach, X/Y — click
     the map to fill coordinates). Moved valves keep their position through
     sector/zone/basin rebuilds (override layer); moved secondary valves pull

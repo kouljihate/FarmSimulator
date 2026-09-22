@@ -517,3 +517,13 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     zones (orange polygons + permanent name labels) under sectors + valves, so
     each secondary valve is visibly attached to its zone; `MAPS_V=4`
     invalidates old cached valve artwork.
+39. v0.21.0: **large draggable Valve map** — Valve map is now 620 px
+    (`iframe.map.valve-xl` + `#valve-map-frame`); valves are drawn by
+    `mapper._valve_manage_js` as draggable Leaflet markers (red = principal,
+    orange = secondary) with full-info popups; map posts `valve-select`
+    (click → fills form + Selected-valve panel) and `valve-drag`
+    (release → live form/panel update + auto `valve_action/move` persist with
+    selection restore); empty-map clicks still post `valve-map-click`;
+    `_valves_result.html` gained the Selected-valve panel (`#valve-info`) and
+    data-rich `#valve-target` options; new i18n keys `VALVE_DRAG_HINT,
+    VALVE_SELECTED, VALVE_INFO_EMPTY` (EN+AR); `MAPS_V=5`.

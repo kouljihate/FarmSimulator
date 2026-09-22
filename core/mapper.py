@@ -357,7 +357,7 @@ def map_config_overview(plan, cfg):
 
 
 def map_config_valves(plan, cfg):
-    """Valve step map: sectors + zones + both valve kinds (no piping)."""
+    """Valve step map: sectors + zones + draggable valves (no piping)."""
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
     colors = _sector_color_map(cfg)
@@ -367,11 +367,6 @@ def map_config_valves(plan, cfg):
     for z in cfg.get("zones", []):
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
                     "#ff7f0e", 0.08, weight=1)
-    for v in cfg["valves"]:
-        if v.get("kind") == "principal":
-            lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
-        else:
-            lay.marker(v["lon"], v["lat"], _ti("valve32", zone=v["zone"]), "orange", radius=6)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
@@ -384,7 +379,7 @@ def map_config_valves(plan, cfg):
             [c.y, c.x],
             icon=folium.DivIcon(html=_zone_label(z["name"])),
         ).add_to(m)
-    m.get_root().html.add_child(folium.Element(_valve_pick_js()))
+    m.get_root().html.add_child(folium.Element(_valve_manage_js(cfg)))
     return to_html(m)
 
 
@@ -434,6 +429,68 @@ def map_other_elements(plan, cfg):
     m = build(lay, center, 16)
     m.get_root().html.add_child(folium.Element(_other_pick_js()))
     return to_html(m)
+
+
+def _valve_manage_js(cfg):
+    """Script for the Valve step map.
+
+    Draws every valve as a draggable Leaflet marker (principal = big red,
+    secondary = orange). Clicking a marker posts
+    ``{type:'valve-select', cfg, valve: {...}}`` to the top window and opens a
+    popup with the full valve info; releasing a drag posts
+    ``{type:'valve-drag', cfg, valve_id, lon, lat}`` so the parent can update
+    the form live and persist the move. Clicks on empty map still post
+    ``{type:'valve-map-click', lon, lat}`` to fill new-valve coordinates.
+    """
+    import json
+    valves = []
+    for v in cfg.get("valves") or []:
+        valves.append({
+            "id": v.get("id"),
+            "name": v.get("name"),
+            "kind": v.get("kind"),
+            "sector": v.get("sector"),
+            "zone": v.get("zone"),
+            "diameter_mm": v.get("diameter_mm", 90 if v.get("kind") == "principal" else 32),
+            "lon": v.get("lon"),
+            "lat": v.get("lat"),
+        })
+    data = json.dumps(valves)
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp||!window.L)return;"
+        "var CFG=" + str(cfg["id"]) + ";"
+        "var VALVES=" + data + ";"
+        "function dot(v){return '<div class=\"valve-marker\" style=\"width:'"
+        "+(v.kind==='principal'?18:14)+'px;height:'+(v.kind==='principal'?18:14)+'px;'"
+        "+'border-radius:50%;background:'+(v.kind==='principal'?'red':'orange')+';'"
+        "+'border:3px solid #fff;box-shadow:0 0 10px '+(v.kind==='principal'?'red':'orange')+';'"
+        "+'cursor:grab;\"></div>';}"
+        "function infoHtml(v){return '<div style=\"font-family:Comfortaa,sans-serif;font-size:12px;color:#0b1220;line-height:1.5;min-width:170px;\">'"
+        "+'<b>'+String(v.name).replace(/[<>&]/g,'')+'</b><br>'"
+        "+'<span>'+v.kind+' - '+v.diameter_mm+' mm</span><br>'"
+        "+'<span>Sector: '+String(v.sector).replace(/[<>&]/g,'')+' | Zone: '+String(v.zone).replace(/[<>&]/g,'')+'</span><br>'"
+        "+'<span>X '+Number(v.lon).toFixed(6)+' / Y '+Number(v.lat).toFixed(6)+'</span></div>';}"
+        "function post(o){try{window.top.postMessage(o,'*');}catch(x){}}"
+        "VALVES.forEach(function(v){"
+        "var mk=L.marker([v.lat,v.lon],{draggable:true,"
+        "icon:L.divIcon({className:'',html:dot(v),iconSize:null})});"
+        "mk.addTo(mp);mk.bindTooltip(v.name,{sticky:true});mk.bindPopup(infoHtml(v));"
+        "mk.on('click',function(e){"
+        "try{if(e.originalEvent&&e.originalEvent.stopPropagation)e.originalEvent.stopPropagation();}catch(x){}"
+        "post({type:'valve-select',cfg:CFG,valve:v});mk.openPopup();});"
+        "mk.on('dragend',function(){var p=mk.getLatLng();v.lon=+p.lng.toFixed(6);v.lat=+p.lat.toFixed(6);"
+        "mk.setPopupContent(infoHtml(v));mk.openPopup();"
+        "post({type:'valve-drag',cfg:CFG,valve_id:v.id,lon:v.lon,lat:v.lat});});"
+        "});"
+        "mp.on('click',function(e){"
+        "try{var t=e.originalEvent&&e.originalEvent.target;"
+        "if(t&&t.closest&&t.closest('.valve-marker'))return;}catch(x){}"
+        "post({type:'valve-map-click',lon:e.latlng.lng,lat:e.latlng.lat});});"
+        "});"
+    ) + "</script>"
 
 
 def _valve_pick_js():
