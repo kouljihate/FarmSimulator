@@ -7,55 +7,83 @@
   </span>
 </div>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-  <div class="p-5">
-    <iframe class="map big" width="100%" height="440" srcdoc="{{ pipes_map|e }}"></iframe>
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('VALVE_SECTOR_FILTER') }}</h3></div>
+  <div class="flex flex-wrap items-end gap-3 p-5">
+    <div class="min-w-52 flex-1">
+      <label class="mb-1 block text-xs text-white/60">{{ t('SECTOR') }}</label>
+      <select id="pipes-sector-filter" data-cfg="{{ cfg.id }}" class="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+        <option value="">{{ tl('VALVE_ALL_SECTORS')[0] }} / {{ tl('VALVE_ALL_SECTORS')[1] }}</option>
+        {% for s in cfg.sectors %}
+        <option value="{{ s.name }}" {% if selected_pipe_sector == s.name %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
   </div>
 </div>
-<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-  <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-    <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('T_PRINCIPAL') }} - {{ t('D_90') }}</h3></div>
-    <div class="p-5 text-sm text-white/75">{{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m</div>
+<div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="p-5">
+    <iframe id="pipes-map-frame" data-cfg="{{ cfg.id }}" class="map valve-xl" width="100%" height="620" srcdoc="{{ pipes_map|e }}"></iframe>
+    <p class="mt-2 text-center text-xs text-white/50">{{ t('PIPE_CLICK_HINT') }}</p>
   </div>
-  <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-    <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('T_MAJOR') }} - 63 mm</h3></div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm text-white/75">
-        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
-          <tr>
-            <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
-            <th class="px-4 py-2 font-medium">{{ t('LENGTH') }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-white/10">
-          {% for maj in cfg.pipes.majors %}
-          <tr>
-            <td class="px-4 py-2 font-semibold text-white">{{ maj.zone }}</td>
-            <td class="px-4 py-2">{{ "{:,.0f}".format(maj.len_m) }} m</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+</div>
+<div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('PIPE_SELECTED') }}</h3></div>
+  <div class="p-5">
+    <div id="pipe-info" class="text-sm text-white/55">{{ t('PIPE_INFO_EMPTY') }}</div>
   </div>
-  <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-    <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('T_MINOR') }} - {{ t('D_32') }}</h3></div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm text-white/75">
-        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
-          <tr>
-            <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
-            <th class="px-4 py-2 font-medium">{{ t('LENGTH') }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-white/10">
-          {% for mn in cfg.pipes.minors %}
-          <tr>
-            <td class="px-4 py-2 font-semibold text-white">{{ mn.zone }}</td>
-            <td class="px-4 py-2">{{ "{:,.0f}".format(mn.len_m) }} m</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+</div>
+<div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('PIPES') }}</h3></div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-white/75">
+      <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+        <tr>
+          <th class="px-4 py-2 font-medium">{{ t('PIPE') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('DIAMETER') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('SECTOR') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('LENGTH') }}</th>
+          <th class="px-4 py-2 text-right font-medium">{{ t('ACTIONS') }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/10">
+        {% if not selected_pipe_sector %}
+        <tr data-pid="P" class="pipe-row">
+          <td class="px-4 py-2 font-semibold text-white">{{ t('T_PRINCIPAL') }}</td>
+          <td class="px-4 py-2">90 mm</td>
+          <td class="px-4 py-2">—</td>
+          <td class="px-4 py-2">—</td>
+          <td class="px-4 py-2">{{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m</td>
+          <td class="px-4 py-2 whitespace-nowrap text-right">
+            <button type="button" class="valve-circle-btn pipe-locate-btn" data-cfg="{{ cfg.id }}" data-pid="P" data-kind="principal" data-diam="90" data-sector="" data-zone="" data-len="{{ cfg.pipes.principal.len_m }}" title="{{ tl('LOCATE')[0] }} / {{ tl('LOCATE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+          </td>
+        </tr>
+        {% endif %}
+        {% for maj in cfg.pipes.majors %}{% if not selected_pipe_sector or maj.sector == selected_pipe_sector %}
+        <tr data-pid="M:{{ maj.zone }}" class="pipe-row">
+          <td class="px-4 py-2 font-semibold text-white">{{ t('T_MAJOR') }}</td>
+          <td class="px-4 py-2">63 mm</td>
+          <td class="px-4 py-2">{{ maj.sector }}</td>
+          <td class="px-4 py-2">{{ maj.zone }}</td>
+          <td class="px-4 py-2">{{ "{:,.0f}".format(maj.len_m) }} m</td>
+          <td class="px-4 py-2 whitespace-nowrap text-right">
+            <button type="button" class="valve-circle-btn pipe-locate-btn" data-cfg="{{ cfg.id }}" data-pid="M:{{ maj.zone }}" data-kind="major" data-diam="63" data-sector="{{ maj.sector }}" data-zone="{{ maj.zone }}" data-len="{{ maj.len_m }}" title="{{ tl('LOCATE')[0] }} / {{ tl('LOCATE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+          </td>
+        </tr>
+        {% endif %}{% endfor %}
+        {% for mn in cfg.pipes.minors %}{% if not selected_pipe_sector or mn.sector == selected_pipe_sector %}
+        <tr data-pid="m:{{ mn.zone }}" class="pipe-row">
+          <td class="px-4 py-2 font-semibold text-white">{{ t('T_MINOR') }}</td>
+          <td class="px-4 py-2">32 mm</td>
+          <td class="px-4 py-2">{{ mn.sector }}</td>
+          <td class="px-4 py-2">{{ mn.zone }}</td>
+          <td class="px-4 py-2">{{ "{:,.0f}".format(mn.len_m) }} m</td>
+          <td class="px-4 py-2 whitespace-nowrap text-right">
+            <button type="button" class="valve-circle-btn pipe-locate-btn" data-cfg="{{ cfg.id }}" data-pid="m:{{ mn.zone }}" data-kind="minor" data-diam="32" data-sector="{{ mn.sector }}" data-zone="{{ mn.zone }}" data-len="{{ mn.len_m }}" title="{{ tl('LOCATE')[0] }} / {{ tl('LOCATE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+          </td>
+        </tr>
+        {% endif %}{% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>

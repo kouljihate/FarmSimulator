@@ -581,3 +581,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `<sector>V1` and secondaries `<sector>V11…` (customs continue) after every
     rebuild; `extend` renumbers already-ready configs so old runs migrate on
     next load; zone ops no longer touch valve names.
+50. v0.27.0: **Pipes mirror Valves** — sector filter (`pipes-sector-filter`,
+    `{op:overview}` `psector`, `selected_pipe_sector`), large clickable pipes
+    map (`_pipe_manage_js`: JS-drawn polylines, `pipe-select` → info panel,
+    `focusPipe` locate), one unified pipes table with circle Locate buttons;
+    pipes stay derived (no move/remove — they follow valves); new i18n keys
+    `PIPE_SELECTED, PIPE_INFO_EMPTY, PIPE_CLICK_HINT, LOCATE, PIPES` (EN+AR).

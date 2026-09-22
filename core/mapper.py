@@ -395,24 +395,114 @@ def map_config_valves(plan, cfg, only_sector=None):
     return to_html(m)
 
 
-def map_config_pipes(plan, cfg):
-    """Pipes step map: sectors + piping 90/63/32 mm (no valves)."""
+def _pipe_paths(geom):
+    try:
+        if geom.geom_type == "MultiLineString":
+            return [[[y, x] for x, y in ls.coords] for ls in geom.geoms]
+        return [[[y, x] for x, y in geom.coords]]
+    except (AttributeError, TypeError):
+        return []
+
+
+def _pipe_manage_js(cfg, only_sector=None):
+    """Script for the Pipes step map.
+
+    Draws the principal 90 mm, major 63 mm and minor 32 mm pipes as clickable
+    Leaflet polylines. Clicking one posts
+    ``{type:'pipe-select', cfg, pipe: {...}}`` to the top window and opens a
+    popup with the full pipe info. With `only_sector`, only that sector's
+    pipes are drawn.
+    """
+    import json
+    pipes = []
+    pr = (cfg.get("pipes") or {}).get("principal")
+    if pr is not None and only_sector is None:
+        pipes.append({"pid": "P", "kind": "principal", "diameter_mm": 90,
+                      "sector": "", "zone": "",
+                      "len_m": pr.get("len_m", 0.0),
+                      "paths": _pipe_paths(pr.get("line")),
+                      "color": "#0b8a6f", "weight": 5, "dash": None})
+    for m in (cfg.get("pipes") or {}).get("majors", []) or []:
+        if only_sector is not None and m.get("sector") != only_sector:
+            continue
+        pipes.append({"pid": "M:" + str(m.get("zone")), "kind": "major",
+                      "diameter_mm": 63, "sector": m.get("sector"),
+                      "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
+                      "paths": _pipe_paths(m.get("line")),
+                      "color": "#377eb8", "weight": 3, "dash": None})
+    for m in (cfg.get("pipes") or {}).get("minors", []) or []:
+        if only_sector is not None and m.get("sector") != only_sector:
+            continue
+        pipes.append({"pid": "m:" + str(m.get("zone")), "kind": "minor",
+                      "diameter_mm": 32, "sector": m.get("sector"),
+                      "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
+                      "paths": _pipe_paths(m.get("line")),
+                      "color": "#4daf4a", "weight": 2, "dash": "4, 2"})
+    data = json.dumps(pipes)
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp||!window.L)return;"
+        "var CFG=" + str(cfg["id"]) + ";"
+        "var PIPES=" + data + ";"
+        "function infoHtml(p){return '<div style=\"font-family:Comfortaa,sans-serif;font-size:12px;color:#0b1220;line-height:1.5;min-width:150px;\">'"
+        "+'<b>'+p.kind+' - '+p.diameter_mm+' mm</b><br>'"
+        "+(p.zone?'<span>Zone: '+String(p.zone).replace(/[<>&]/g,'')+'</span><br>':'')"
+        "+'<span>'+Math.round(p.len_m).toLocaleString()+' m</span></div>';}"
+        "function post(o){try{window.top.postMessage(o,'*');}catch(x){}}"
+        "var marks={};"
+        "PIPES.forEach(function(p){"
+        "var ls=[];"
+        "p.paths.forEach(function(path){"
+        "if(path.length<2)return;"
+        "var pl=L.polyline(path,{color:p.color,weight:p.weight,opacity:.95,dashArray:p.dash});"
+        "pl.addTo(mp);ls.push(pl);"
+        "pl.bindTooltip(p.kind+' '+p.diameter_mm+' mm'+(p.zone?' - '+p.zone:''),{sticky:true});"
+        "pl.bindPopup(infoHtml(p));"
+        "pl.on('click',function(){post({type:'pipe-select',cfg:CFG,pipe:p});});"
+        "});"
+        "marks[p.pid]=ls;});"
+        "window.focusPipe=function(pid){var ls=marks[pid];if(!ls||!ls.length)return false;"
+        "try{var g=L.featureGroup(ls);mp.fitBounds(g.getBounds().pad(0.3));ls[0].openPopup();}catch(x){}"
+        "return true;};"
+        "});"
+    ) + "</script>"
+
+
+def map_config_pipes(plan, cfg, only_sector=None):
+    """Pipes step map: sectors + zones + clickable piping 90/63/32 mm."""
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
     colors = _sector_color_map(cfg)
-    for s in cfg["sectors"]:
+    secs = [s for s in cfg.get("sectors", [])
+            if only_sector is None or s.get("name") == only_sector]
+    for s in secs:
         lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
-                    colors[s["idx"]], 0.10, weight=2)
-    pr = cfg["pipes"]["principal"]
-    lay.line(pr["line"], _ti("principal"), "#0b8a6f", 5)
-    for maj in cfg["pipes"]["majors"]:
-        lay.line(maj["line"], _ti("major63", zone=maj["zone"]), "#377eb8", 3)
-    for mn in cfg["pipes"]["minors"]:
-        lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
+                    colors[s["idx"]], 0.18 if only_sector else 0.10,
+                    weight=3 if only_sector else 2)
+    zones = [z for s in secs for z in (s.get("zones", []) or [])]
+    for z in zones:
+        lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
+                    "#ff7f0e", 0.08, weight=1)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
-    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    return to_html(build(lay, center, 16))
+    if only_sector and secs:
+        c0 = secs[0]["centroid"]
+        center, zoom = [c0.y, c0.x], 17
+    else:
+        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 16
+    m = build(lay, center, zoom)
+    for z in zones:
+        c = z.get("centroid")
+        if c is None:
+            continue
+        folium.map.Marker(
+            [c.y, c.x],
+            icon=folium.DivIcon(html=_zone_label(z["name"])),
+        ).add_to(m)
+    m.get_root().html.add_child(folium.Element(_pipe_manage_js(cfg, only_sector)))
+    return to_html(m)
 
 
 def map_other_elements(plan, cfg):
