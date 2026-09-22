@@ -1,0 +1,38 @@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
+  <span class="inl text-sm text-white/60">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
+</div>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for s in cfg.sectors %}
+  <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+    <div class="flex flex-1 flex-col p-5">
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-white">{{ s.name }}</h3>
+        <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-white/80">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
+      </div>
+      <div class="inl mb-2 text-sm text-white/60">{{ s.zones|length }} {{ t('ZONES') }}</div>
+      <iframe class="map mb-2" srcdoc="{{ per_sector[s.name]|e }}"></iframe>
+      <div class="overflow-x-auto rounded-xl border border-white/10">
+        <table class="w-full text-sm text-white/75">
+          <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+            <tr>
+              <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
+              <th class="px-4 py-2 font-medium">{{ t('AREA') }}</th>
+              <th class="px-4 py-2 font-medium">{{ t('VALVE') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/10">
+            {% for z in s.zones %}
+            <tr>
+              <td class="px-4 py-2 font-semibold text-white">{{ z.name }}</td>
+              <td class="px-4 py-2">{{ "{:,.0f}".format(z.area_m2) }} m<sup>2</sup></td>
+              <td class="px-4 py-2">{{ t('D_50') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>

@@ -14,7 +14,7 @@ cd D:\Projects\opencode\FarmSimulator
 .\venv\Scripts\python.exe app.py        # -> http://127.0.0.1:8501
 ```
 
-Verify without the browser (use this every time you touch engine/parser/mapper):
+Verify without the browser (use this every time you touch engine/parser/mapper/app):
 
 ```powershell
 .\venv\Scripts\python.exe -X utf8 -c "from core import engine, parser; p=parser.load_file('samples/test_parcel.kml'); plan=engine.analyse(p); [print(c['name'], [round(s['area_m2'],1) for s in c['sectors']]) for c in plan['configs']]; engine.extend(plan,0); print('valves', len(plan['configs'][0]['valves']))"
@@ -23,8 +23,10 @@ Verify without the browser (use this every time you touch engine/parser/mapper):
 Expected: **exactly 3 configs**, every sector `≤ 10000 m²`, each config total
 `≈ 46019 m²`, and `engine.extend` yields 3 balanced zones per sector.
 
-Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid>`
-→ `GET /sector/<token>/<cfgid>/<sidx>`; unknown token must 404.
+Route smoke test (single URL — all `POST /`, all must be 200 with `ok:true`):
+upload (multipart `file`) → `{op:list_runs}` → `{op:load}` → `{op:basin}` →
+`{op:sector_action}` (rename) → `{op:sector_coords}` → `{op:overview}`;
+unknown token/op must return `ok:false`.
 
 ## Current state (all verified working)
 
@@ -52,19 +54,36 @@ Route smoke test (all must be 200): `POST /upload` → `GET /view/<token>/<cfgid
   `farm_simulator`, collection `plans`) is reachable, else a **`FileStore`**
   (per-token pickles in `uploads/<token>.db`; legacy `uploads/<token>.pkl`
   files are migrated to the store on read). API: `get_plan`, `load`,
-  `save(token, plan, maps)`, `save_maps(token, maps)`, `list_runs(limit)`.
-  A stored record holds `name`, `updated_at`, `plan` (pickled Binary) and the
+  `save(token, plan, maps)`, `save_maps(token, maps)`, `list_runs(limit)`
+  (newest-first in both stores). A stored record holds `name`, `updated_at`,
+  `plan` (pickled Binary) and the
   maps `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` — per-config
   dict keys are **stringified for BSON and cast back to int on read**
-  (`_encode`/`_decode`). Routes persist at `/upload`, on basin **Apply**
-  (`edit_basin`), and in `view_config`/`sector_detail` (overview + per-sector
-  maps are **reused from the store instead of recomputed** once saved).
-  The **Load** tab (first tab, `tab-load`) lists saved runs
-  (`context_processor` injects `runs=STORE.list_runs()`), and
-  `GET /load/<token>` restores a full page from the saved plan + saved maps
-  (recomputes only if missing). i18n keys: `LOAD_TITLE`, `LOAD`, `LOAD_EMPTY`
-  (EN+AR).
-- `/upload` re-renders `index.html` (same page). The **Basin tab** holds an
+  (`_encode`/`_decode`). Ops persist at upload/load, on basin **Apply**
+  (`op:basin`), on sector actions, and when overview/sector maps are generated
+  (they are **reused from the store instead of recomputed** once saved).
+  The **Load** tab (first tab, `tab-load`) lists saved runs with land name +
+  last-save date (`SAVED_AT` + `updated_str`, pre-formatted server-side;
+  `fmt_dt` Jinja global for the initial rows), and loading restores
+  Basin+Sectors tabs from the saved plan + saved maps
+  (recomputes only if missing). i18n keys: `LOAD_TITLE`, `LOAD`, `LOAD_EMPTY`,
+  `SAVED_AT` (EN+AR).
+- **Single-URL SPA (v0.11.0): the browser only uses `/`.** `GET /` renders the
+  `index.html` shell (tab bar, upload form, empty panels, runs list).
+  Everything else is `POST /`: multipart `file` = upload; otherwise JSON
+  `{op, …}` with `op` in `load | list_runs | basin | sector_coords |
+  sector_action | overview`. Responses carry server-rendered fragments
+  (`basin_html`, `sectors_html`, `zones/valves/pipes/final_html`) plus
+  JSON-safe summaries (`plan_summary()`, `runs[]` with `updated_str`).
+  Client state `S = {token, plan, cfgid}` in `index.html`; tab bodies are
+  injected in place, never navigated. `config.html` / `sector.html` are gone
+  (replaced by `_zones/_valves/_pipes/_final_result.html` partials).
+  **"Use this config" stays in the same page**: it fetches `{op:overview}`
+  and fills the Zones (per-sector maps + zone tables), Valve (valve table),
+  Pipes (majors/minors tables) and Final Result (full map + legend) tabs, then
+  switches to Zones. Basin/sector edits silently re-fetch the open overview so
+  all tabs stay in sync. Basin Apply updates the map via the iframe `srcdoc`
+  attribute (not `innerHTML` — that never re-rendered).
   **"Upload Result" card** (`UPLOAD_RESULT_TITLE`, id `upload-result-card`,
   header with no version) whose content lives in `templates/_basin_result.html`:
   plan summary row, then a **Basin placement** card split into **2 columns on
@@ -134,13 +153,14 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    `core/mapper._sector_manage_js(cfg)` adds draw/edit tools (`startDraw`,
    `startEdit(idx, ring)` that rewires vertex drags, `finishDraw/finishEdit`,
    Escape = cancel) posting `sector-draw` / `sector-edit` / `sector-cancel`
-   (+ `sector-draw-start` / `sector-edit-start`) to `window.top`.
-   Routes: `GET /sectors/<token>/<cfgid>/<idx>/coords` (returns the closed
-   ring) and `POST /sectors/<token>/<cfgid>/action` (JSON `{action, idx, idx2,
-   name, ring}`) → applies the op, regenerates `cfg_maps`, persists via
-   `STORE.save`, clears the stale `overview_maps`/`sector_maps` for that cfg,
-   returns `{ok, error?, sectors}` (the `_sectors_result.html` fragment
-   `index.html` swaps into `#sectors-result`). Draw flow in the live map is
+    (+ `sector-draw-start` / `sector-edit-start`) to `window.top`.
+    Ops: `{op:sector_coords}` (returns the closed ring) and
+    `{op:sector_action}` (JSON `{cfgid, action, idx, idx2,
+    name, ring}`) → applies the op, regenerates `cfg_maps`, persists via
+    `STORE.save`, clears the stale `overview_maps`/`sector_maps` for that cfg,
+    returns `{ok, error?, sectors_html, plan}` (the `_sectors_result.html`
+    fragment `index.html` swaps into `#sectors-result`; the client re-fetches
+    an open overview afterwards). Draw flow in the live map is
    Leaflet `L.Polygon` with editable-drag vertices (dash-array guides).
    `sweep_split` in `core/geo.py` now coalesces slivers so pieces are pure
    (Multi)Polygons (folium/neumann: GeometryCollection pieces had `.boundary =
@@ -228,10 +248,9 @@ Basin editing: `engine.set_basin(plan, lon, lat)` validates the point is
 inside the land (`_land_m.distance(pt) <= 1.0`), updates `basin`,
 `_basin_m`/`basin_m`, recomputes `dist_water_m` and re-runs `sectorise` /
 `_existing_config` (entries/ordering + zones/pipes then come from the new
-point). Route `POST /basin/<token>` (`app.py edit_basin`) accepts a plain form
-POST (full re-render) or an AJAX call (`X-Requested-With: XMLHttpRequest`;
-returns JSON `{ok, error_html, basin{lon,lat,dist_water_m}, basin_map,
-sectors(_sectors_result.html fragment)}`). `index.html` then swaps the
+point). Op `{op:basin}` (`{token, lon, lat}`) returns JSON `{ok, error_html?,
+basin{lon,lat,dist_water_m}, basin_map,
+sectors_html}`. `index.html` then swaps the
 `#basin-map-frame` srcdoc and `#sectors-result` innerHTML in place. The Basin
 map adds a **draggable** folium `Marker` and `mapper._drag_js` (injected via
 `folium.Element`) which exposes `window.basinSet(lon, lat)` (parent calls it
@@ -368,6 +387,13 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 24. v0.10.2: **rename accepts any unique name** — the `S<number>` restriction
     is dropped (uniqueness check + collision-skipping auto-naming make it
     unnecessary); only empty and duplicate names are rejected.
+25. v0.11.0: **single-URL SPA** — the browser only uses `/` (`GET` shell,
+    `POST` multipart upload or JSON `{op}`: `load/list_runs/basin/
+    sector_coords/sector_action/overview`); `config.html`/`sector.html` deleted,
+    replaced by `_zones/_valves/_pipes/_final_result.html` partials;
+    **Use this config fills Zones/Valve/Pipes/Final tabs in the same page**;
+    basin Apply fixed to swap the map via `srcdoc`; open overviews re-fetch
+    after edits; Load rows carry pre-formatted `updated_str`.
 23. v0.10.1: **Load list shows land name + last-save date** — each row shows
     the plan name, `SAVED_AT` + `fmt_dt(run.updated_at)` (`YYYY-MM-DD HH:MM`,
     new Jinja global in `app.py`; new i18n key `SAVED_AT` EN+AR), token kept

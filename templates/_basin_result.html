@@ -33,8 +33,7 @@
         </div>
         <iframe id="basin-map-frame" class="map big" width="100%" height="460" srcdoc="{{ basin_map|e }}"></iframe>
       </div>
-      <form id="basin-form" method="post" action="/basin/{{ token }}"
-            class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+      <form id="basin-form" class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
         <div class="grid w-full grid-cols-2 gap-3">
           <div>
             <label for="basin-lon" class="mb-1 block text-xs text-white/60">{{ t('LON') }}</label>

@@ -1,0 +1,52 @@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
+  <span class="inl text-sm text-white/55">
+    {{ t('PRINCIPAL_90') }}: {{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m ·
+    {{ cfg.pipes.majors|length }} {{ t('MAJORS') }} ·
+    {{ cfg.pipes.minors|length }} {{ t('MINORS') }}
+  </span>
+</div>
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+    <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('T_MAJOR') }} - {{ t('D_50') }}</h3></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-white/75">
+        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+          <tr>
+            <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
+            <th class="px-4 py-2 font-medium">{{ t('LENGTH') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          {% for maj in cfg.pipes.majors %}
+          <tr>
+            <td class="px-4 py-2 font-semibold text-white">{{ maj.zone }}</td>
+            <td class="px-4 py-2">{{ "{:,.0f}".format(maj.len_m) }} m</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+    <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('T_MINOR') }} - {{ t('D_32') }}</h3></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-white/75">
+        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+          <tr>
+            <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
+            <th class="px-4 py-2 font-medium">{{ t('LENGTH') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          {% for mn in cfg.pipes.minors %}
+          <tr>
+            <td class="px-4 py-2 font-semibold text-white">{{ mn.zone }}</td>
+            <td class="px-4 py-2">{{ "{:,.0f}".format(mn.len_m) }} m</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

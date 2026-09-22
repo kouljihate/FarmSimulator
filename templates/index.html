@@ -1,13 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% if error %}
-<div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur">
-  <div>{{ error|safe }} <small class="text-red-300/70">{{ bi('ERROR_LABEL') }}</small></div>
-</div>
-{% else %}
 <div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur" style="display:none"></div>
-{% endif %}
 
 <div class="mb-4 flex justify-center pt-1">
   <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
@@ -26,30 +20,27 @@
   <div class="p-6 md:p-8">
 
     <div class="tab-panel" id="tab-load">
-      {% if runs %}
-      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+      <div id="runs-card" class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" {% if not runs %}style="display:none"{% endif %}>
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('LOAD_TITLE') }}</h2></div>
         <div class="p-5 md:p-6">
-          <ul class="space-y-2">
+          <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-saved-at='{{ t('SAVED_AT') }}'>
             {% for run in runs %}
             <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 p-3">
               <div>
                 <div class="font-semibold text-white">{{ run.name }}</div>
-                <div class="text-sm text-white/50">{{ t('SAVED_AT') }}: {{ fmt_dt(run.updated_at) }}</div>
+                <div class="text-sm text-white/50">{{ t('SAVED_AT') }}: {{ run.updated_str }}</div>
                 <div class="text-xs text-white/30">{{ run.token }}</div>
               </div>
-              <a class="glow-btn rounded-xl px-4 py-2 font-semibold" href="/load/{{ run.token }}">{{ t('LOAD') }}</a>
+              <button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="{{ run.token }}">{{ t('LOAD') }}</button>
             </li>
             {% endfor %}
           </ul>
         </div>
       </div>
-      {% else %}
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="runs-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center" {% if runs %}style="display:none"{% endif %}>
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_LOAD') }}</h2>
         <p class="mt-1 text-white/50">{{ t('LOAD_EMPTY') }}</p>
       </div>
-      {% endif %}
     </div>
 
     <div class="tab-panel" id="tab-upload">
@@ -57,7 +48,7 @@
         <div class="rounded-2xl border border-white/10 bg-white/5">
           <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold">{{ t('UPLOAD_TITLE') }}</h2></div>
           <div class="p-6">
-            <form method="post" action="/upload" enctype="multipart/form-data">
+            <form id="upload-form" enctype="multipart/form-data">
               <div class="mb-3">
                 <input type="file" name="file" accept=".kml,.kmz,.csv,.txt"
                        class="block w-full cursor-pointer rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-sm text-white/80 placeholder-white/30 file:mr-3 file:rounded-xl file:border-0 file:bg-gradient-to-r file:from-cyan-500 file:to-violet-600 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:brightness-110" required>
@@ -114,60 +105,54 @@
     </div>
 
     <div class="tab-panel" id="tab-basin">
-      {% if plan %}
-      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" id="upload-result-card">
+      <div id="basin-card" class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" style="display:none">
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('UPLOAD_RESULT_TITLE') }}</h2></div>
-        <div class="space-y-4 p-5 md:p-6">
-          {% include "_basin_result.html" %}
-        </div>
+        <div class="space-y-4 p-5 md:p-6" id="basin-result"></div>
       </div>
-      {% else %}
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="basin-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_BASIN') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
-      {% endif %}
     </div>
 
     <div class="tab-panel" id="tab-sectors">
-      {% if plan %}
-      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+      <div id="sectors-card" class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" style="display:none">
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('SECTOR_TITLE') }}</h2></div>
-        <div class="space-y-4 p-5 md:p-6" id="sectors-result">
-          {% include "_sectors_result.html" %}
-        </div>
+        <div class="space-y-4 p-5 md:p-6" id="sectors-result"></div>
       </div>
-      {% else %}
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="sectors-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_SECTORS') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
-      {% endif %}
     </div>
 
     <div class="tab-panel" id="tab-zones">
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="zones-result"></div>
+      <div id="zones-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_ZONES') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-valve">
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="valves-result"></div>
+      <div id="valves-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_VALVE') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-pipes">
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="pipes-result"></div>
+      <div id="pipes-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_PIPES') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-final">
-      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+      <div id="final-result"></div>
+      <div id="final-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_FINAL') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
@@ -200,6 +185,8 @@
 
 <script>
 (function () {
+  var S = { token: null, plan: null, cfgid: null };
+
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
   function activate(btn) {
@@ -207,7 +194,31 @@
     panels.forEach(function (p) { p.classList.toggle('active', p.id === btn.getAttribute('data-tab-target')); });
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
-  activate(document.querySelector('[data-tab-target="' + (document.getElementById('upload-result-card') ? 'tab-basin' : 'tab-upload') + '"]'));
+  function goTab(id) {
+    var b = document.querySelector('.tab-btn[data-tab-target="' + id + '"]');
+    if (b) activate(b);
+  }
+  goTab('tab-upload');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function api(payload) {
+    return fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function apiFail(err) {
+    if (err && err.error_html) showError(err.error_html);
+    else if (err && err.error) showError(err.error);
+    else showError(terrHtml('tnet'));
+  }
 
   function checkedIdx(cfg) {
     var s = document.getElementById('sectors-result');
@@ -235,15 +246,6 @@
   }
 
   var sel = {}, drawMode = {}, editMode = {}, mergeFrom = {}, editIdxOf = {};
-  var TOKEN = null;
-  (function () {
-    var al = document.querySelector('a[href^="/view/"]');
-    if (al) TOKEN = al.getAttribute('href').split('/')[2];
-    else {
-      var ll = document.querySelector('a[href^="/load/"]');
-      if (ll) TOKEN = ll.getAttribute('href').split('/')[2];
-    }
-  })();
 
   function iframeFor(cfg) {
     var s = document.getElementById('sectors-result');
@@ -294,29 +296,146 @@
     }
     setStatus(cfg, 'tsel');
   }
+  function resetSectorState() {
+    sel = {}; drawMode = {}; editMode = {}; mergeFrom = {}; editIdxOf = {};
+  }
 
   function applySectorOp(cfg, action, extra) {
-    if (!TOKEN) { showError(terrHtml('tnet')); return; }
+    if (!S.token) { showError(terrHtml('tnet')); return; }
     setStatus(cfg, 'tsaving');
     var body = extra || {};
+    body.op = 'sector_action';
+    body.token = S.token;
+    body.cfgid = parseInt(cfg, 10);
     body.action = action;
-    var req = new XMLHttpRequest();
-    req.open('POST', '/sectors/' + TOKEN + '/' + cfg + '/action');
-    req.setRequestHeader('Content-Type', 'application/json');
-    req.onload = function () {
-      if (req.status !== 200) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
-      var data;
-      try { data = JSON.parse(req.responseText); } catch (x) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (req) { return req.json(); }).then(function (data) {
       if (!data.ok) { if (data.error) showError(data.error); else showError(terrHtml('tnet')); resetTool(cfg, null); return; }
-      if (!data.sectors) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
+      if (!data.sectors_html) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       hideError();
       var sp = document.getElementById('sectors-result');
-      if (sp && data.sectors) sp.innerHTML = data.sectors;
-      sel[cfg] = null; drawMode[cfg] = false; editMode[cfg] = false; mergeFrom[cfg] = null;
-    };
-    req.onerror = function () { showError(terrHtml('tnet')); resetTool(cfg, null); };
-    req.send(JSON.stringify(body));
+      if (sp) sp.innerHTML = data.sectors_html;
+      if (data.plan) S.plan = data.plan;
+      resetSectorState();
+      if (S.cfgid != null) loadOverview(S.cfgid, true);
+    }).catch(function () { showError(terrHtml('tnet')); resetTool(cfg, null); });
   }
+
+  function setPlan(payload) {
+    S.token = payload.token;
+    S.plan = payload.plan;
+    S.cfgid = null;
+    resetSectorState();
+    var bc = document.getElementById('basin-card');
+    var be = document.getElementById('basin-empty');
+    var br = document.getElementById('basin-result');
+    if (br) br.innerHTML = payload.basin_html || '';
+    if (bc) bc.style.display = '';
+    if (be) be.style.display = 'none';
+    var sc = document.getElementById('sectors-card');
+    var se = document.getElementById('sectors-empty');
+    var sr = document.getElementById('sectors-result');
+    if (sr) sr.innerHTML = payload.sectors_html || '';
+    if (sc) sc.style.display = '';
+    if (se) se.style.display = 'none';
+    resetOverview();
+    refreshRuns();
+  }
+
+  function resetOverview() {
+    S.cfgid = null;
+    var pairs = [['zones-result', 'zones-empty'], ['valves-result', 'valves-empty'],
+                 ['pipes-result', 'pipes-empty'], ['final-result', 'final-empty']];
+    pairs.forEach(function (p) {
+      var r = document.getElementById(p[0]);
+      var e = document.getElementById(p[1]);
+      if (r) r.innerHTML = '';
+      if (e) e.style.display = '';
+    });
+  }
+
+  function loadOverview(cfgid, silent) {
+    if (!S.token) return;
+    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10) }).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
+      S.cfgid = data.cfgid;
+      var map = [['zones-result', 'zones-empty', data.zones_html],
+                 ['valves-result', 'valves-empty', data.valves_html],
+                 ['pipes-result', 'pipes-empty', data.pipes_html],
+                 ['final-result', 'final-empty', data.final_html]];
+      map.forEach(function (m) {
+        var r = document.getElementById(m[0]);
+        var e = document.getElementById(m[1]);
+        if (r) r.innerHTML = m[2] || '';
+        if (e) e.style.display = 'none';
+      });
+      if (!silent) { hideError(); goTab('tab-zones'); }
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
+  function refreshRuns() {
+    api({ op: 'list_runs' }).then(function (data) {
+      if (!data.ok || !data.runs) return;
+      var list = document.getElementById('runs-list');
+      var card = document.getElementById('runs-card');
+      var empty = document.getElementById('runs-empty');
+      if (!list || !card || !empty) return;
+      var loadLabel = list.dataset.loadLabel || 'Load';
+      var savedAt = list.dataset.savedAt || '';
+      var html = '';
+      data.runs.forEach(function (r) {
+        html += '<li class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 p-3">'
+          + '<div><div class="font-semibold text-white">' + esc(r.name) + '</div>'
+          + '<div class="text-sm text-white/50">' + savedAt + ': ' + esc(r.updated_str || '') + '</div>'
+          + '<div class="text-xs text-white/30">' + esc(r.token) + '</div></div>'
+          + '<button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="'
+          + esc(r.token) + '">' + loadLabel + '</button></li>';
+      });
+      list.innerHTML = html;
+      var has = data.runs.length > 0;
+      card.style.display = has ? '' : 'none';
+      empty.style.display = has ? 'none' : '';
+    }).catch(function () {});
+  }
+
+  var uploadForm = document.getElementById('upload-form');
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      hideError();
+      var btn = uploadForm.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      fetch('/', { method: 'POST', body: new FormData(uploadForm) }).then(function (r) { return r.json(); }).then(function (data) {
+        if (btn) btn.disabled = false;
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        setPlan(data);
+        goTab('tab-basin');
+      }).catch(function () { if (btn) btn.disabled = false; showError(terrHtml('tnet')); });
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var lb = e.target && e.target.closest ? e.target.closest('[data-load-token]') : null;
+    if (lb) {
+      hideError();
+      api({ op: 'load', token: lb.getAttribute('data-load-token') }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        setPlan(data);
+        goTab('tab-basin');
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
+    var ub = e.target && e.target.closest ? e.target.closest('.use-config-btn') : null;
+    if (ub) {
+      loadOverview(ub.getAttribute('data-cfg'), false);
+      return;
+    }
+  });
 
   document.addEventListener('change', function (e) {
     var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
@@ -365,8 +484,7 @@
         var idx = sel[cfg];
         var fr = iframeFor(cfg);
         sel[cfg] = idx;
-        fetch('/sectors/' + TOKEN + '/' + cfg + '/' + idx + '/coords')
-          .then(function (r) { return r.json(); })
+        api({ op: 'sector_coords', token: S.token, cfgid: parseInt(cfg, 10), idx: idx })
           .then(function (d) {
             if (!d || !d.ok || !d.ring || d.ring.length < 4) { setStatus(cfg, 'tneed'); return; }
             if (!b.dataset.label) b.dataset.label = b.innerHTML;
@@ -413,11 +531,11 @@
   var modalMode = null, modalCfg = null, modalIdx = null;
 
   function modalH(text) {
-    var p = text.split(' | ');
+    var p = String(text).split(' | ');
     return '<span class="di"><span class="en">' + p[0] + '</span><span class="ar">' + (p[1] || p[0]) + '</span></span>';
   }
   function modalV(text) {
-    var p = text.split(' | ');
+    var p = String(text).split(' | ');
     return '<span class="bv"><span class="ar">' + (p[1] || p[0]) + '</span><span class="en">' + p[0] + '</span></span>';
   }
 
@@ -533,17 +651,16 @@
     } catch (x) {}
   }
 
-  var lonEl = document.getElementById('basin-lon');
-  var latEl = document.getElementById('basin-lat');
-  if (lonEl && latEl) {
-    function soil() {
+  document.addEventListener('input', function (e) {
+    if (e.target && (e.target.id === 'basin-lon' || e.target.id === 'basin-lat')) {
+      var lonEl = document.getElementById('basin-lon');
+      var latEl = document.getElementById('basin-lat');
+      if (!lonEl || !latEl) return;
       var lon = parseFloat(lonEl.value);
       var lat = parseFloat(latEl.value);
       if (isFinite(lon) && isFinite(lat)) basinSetMarker(lon, lat);
     }
-    lonEl.addEventListener('input', soil);
-    latEl.addEventListener('input', soil);
-  }
+  });
 
   function showError(html) {
     var e = document.getElementById('top-error');
@@ -562,35 +679,32 @@
     if (d) d.textContent = Math.round(dist).toLocaleString() + ' m';
   }
 
-  var basinForm = document.getElementById('basin-form');
-  if (basinForm) {
-    basinForm.addEventListener('submit', function (e) {
-      e.preventDefault();
+  document.addEventListener('submit', function (e) {
+    var form = e.target && e.target.id === 'basin-form' ? e.target : null;
+    if (!form) return;
+    e.preventDefault();
+    hideError();
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    var lonEl = document.getElementById('basin-lon');
+    var latEl = document.getElementById('basin-lat');
+    var lon = lonEl ? parseFloat(lonEl.value) : NaN;
+    var lat = latEl ? parseFloat(latEl.value) : NaN;
+    api({ op: 'basin', token: S.token, lon: lon, lat: lat }).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
       hideError();
-      var req = new XMLHttpRequest();
-      req.open('POST', basinForm.getAttribute('action'));
-      req.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-      req.onload = function () {
-        if (req.status !== 200) { showError(terrHtml('tnet')); return; }
-        var data;
-        try { data = JSON.parse(req.responseText); } catch (x) { showError(terrHtml('tnet')); return; }
-        if (!data.ok || data.error_html) {
-          if (data.error_html) showError(data.error_html);
-          else showError(terrHtml('tnet'));
-          return;
-        }
-        if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
-        if (latEl) latEl.value = data.basin.lat.toFixed(6);
-        setBasinInfo(data.basin.lon, data.basin.lat, data.basin.dist_water_m);
-        var bm = document.getElementById('basin-map-frame');
-        if (bm) bm.innerHTML = data.basin_map;
-        var sp = document.getElementById('sectors-result');
-        if (sp) sp.innerHTML = data.sectors;
-      };
-      req.onerror = function () { showError(terrHtml('tnet')); };
-      req.send(new FormData(basinForm));
-    });
-  }
+      if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
+      if (latEl) latEl.value = data.basin.lat.toFixed(6);
+      setBasinInfo(data.basin.lon, data.basin.lat, data.basin.dist_water_m);
+      var bm = document.getElementById('basin-map-frame');
+      if (bm) bm.setAttribute('srcdoc', data.basin_map);
+      var sp = document.getElementById('sectors-result');
+      if (sp) sp.innerHTML = data.sectors_html;
+      if (data.plan) S.plan = data.plan;
+      resetSectorState();
+      refreshRuns();
+      if (S.cfgid != null) loadOverview(S.cfgid, true);
+    }).catch(function () { showError(terrHtml('tnet')); });
+  });
 })();
 </script>
 

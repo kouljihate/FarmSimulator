@@ -1,0 +1,27 @@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
+  <span class="inl text-sm text-white/60">{{ cfg.valves|length }} {{ t('VALVES') }}</span>
+</div>
+<div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('VALVE') }}</h3></div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-white/75">
+      <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+        <tr>
+          <th class="px-4 py-2 font-medium">{{ t('ZONE') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('VALVE') }}</th>
+          <th class="px-4 py-2 font-medium">{{ t('DIAMETER') }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/10">
+        {% for v in cfg.valves %}
+        <tr>
+          <td class="px-4 py-2 font-semibold text-white">{{ v.zone }}</td>
+          <td class="px-4 py-2">{{ v.name }}</td>
+          <td class="px-4 py-2">{{ v.diameter_mm }} mm</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

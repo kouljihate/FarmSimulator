@@ -1,9 +1,13 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.10.2 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.11.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
-export (land boundary + water point) into a full **irrigation plan**:
+export (land boundary + water point) into a full **irrigation plan**.
+It is a **single-URL SPA**: everything lives on `/` — the shell page holds
+the tab bar and every interaction (upload, load, basin edits, sector ops,
+config overview) is a `POST /` returning JSON, with tab bodies injected in
+place. The browser never leaves `/`.
 
 1. **Basin placement** — the best spot near the water point, favouring higher
    elevation inside the land.
@@ -99,25 +103,26 @@ Each config card has a set of **sector checkboxes labelled with the actual
     name.     **Sector names must be unique**: renaming to an already-used name
     (case-insensitive) is rejected with a bilingual error, as are empty names.
     Any other name is accepted — including `S<number>`-style names. Every edit rebuilds
-   the sector chain, zones, valves and piping for that config and re-renders
-   its map in place (`GET /sectors/<token>/<cfgid>/<idx>/coords`,
-   `POST /sectors/<token>/<cfgid>/action`); the result is persisted so a
-   reload keeps it.
-4. Pick a config → you get the overview with zones, valves and pipes, plus a
-    page per sector.
+    the sector chain, zones, valves and piping for that config and re-renders
+    its map in place (`POST /` `{op:sector_coords}` / `{op:sector_action}`);
+    the result is persisted so a reload keeps it.
+4. Pick a config with **Use this config** → its detail loads **in the same
+    page** (no navigation): the **Zones** tab shows per-sector maps + zone
+    tables, the **Valve** tab lists every 50 mm valve, the **Pipes** tab lists
+    majors/minors, and **Final Result** shows the full overview map + legend.
 5. Every run is persisted — plan + all generated maps (basin, config
    previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
    pickles as fallback). **Recover a past run** from the **Load** tab (first
    tab): it lists each land name with its last-save date (`Last saved:
    YYYY-MM-DD HH:MM` via the `fmt_dt` Jinja global; token kept small below),
    newest first, and one click restores the complete
-   page with the saved maps (`GET /load/<token>`).
+   page with the saved maps (`POST /` `{op:load}`).
 6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
-   (longitude/latitude) — both stay in sync live. Press **Apply** to save:
-   `POST /basin/<token>` re-runs sector ordering, zones, valves and piping and,
-   via an AJAX response, updates the Basin map and the **Sectors** maps
-   in place, without reloading the page (falls back to a full render for
-   non-JS clients).
+    (longitude/latitude) — both stay in sync live. Press **Apply** to save:
+    `POST /` `{op:basin}` re-runs sector ordering, zones, valves and piping and
+    updates the Basin map (via the `srcdoc` attribute) and the **Sectors** maps
+    in place, without reloading the page. An open config overview is
+    silently re-fetched so Zones/Valve/Pipes/Final stay in sync.
 
 ### Accepted file formats
 
@@ -141,7 +146,8 @@ terrain) and its generator `make_test_kml.py`.
 ## Project layout
 
 ```
-app.py                     Flask routes; persistence via core/storage (MongoDB, pickle fallback)
+app.py                     single-URL SPA backend: GET / shell, POST / JSON ops
+                           (upload/load/list_runs/basin/sector_coords/sector_action/overview)
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing
@@ -151,7 +157,9 @@ core/
   mapper.py                folium map recipes (bilingual tooltips)
   storage.py               MongoStore / FileStore (get_store()); saves plan + all maps
   i18n.py                  EN/AR dictionaries + t/bt/btcfg/css helpers
-templates/                 base, index (+ _upload_result partial), config, sector (Tailwind CSS CDN)
+templates/                 base, index (SPA shell) + partials: _basin_result,
+                           _sectors_result, _zones_result, _valves_result,
+                           _pipes_result, _final_result (Tailwind CSS CDN)
 static/fonts/              VIP RAWY REGULAR REGULAR.TTF (Arabic)
 samples/                   test KML + generator
 uploads/                   runtime: uploaded raw files (+ <token>.db pickle fallback)
@@ -164,10 +172,20 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
   `<token>.pkl` files are migrated on read).
 - Every stored record holds `name`, `updated_at`, `plan` (pickled) plus
   `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` (per-config keys are
-  stringified for BSON). Routes persist at upload, on basin **Apply**, and when
-  overview/sector maps are generated (they are also reused instead of
-  recomputed once saved). The web UI lists/loads runs via the **Load** tab
-  (`GET /load`, `GET /load/<token>`).
+  stringified for BSON). Ops persist at upload/load, on basin **Apply**, on
+  sector actions, and when overview/sector maps are generated (they are also
+  reused instead of recomputed once saved). The web UI lists/loads runs via
+  the **Load** tab (`POST /` `{op:list_runs}` / `{op:load}`).
+
+## Single-URL SPA
+
+- The browser only ever uses `/`: `GET /` serves the shell (tab bar + empty
+  panels + saved-runs list); every interaction is a `POST /` — multipart with
+  a file for upload, otherwise JSON `{op, …}` — returning fragments and/or
+  plain-data summaries that the tab JS injects in place.
+- `plan_summary()` strips shapely objects down to JSON-safe dicts for the
+  client state; map HTML travels as strings (`basin_map`, per-config previews,
+  overview + per-sector maps).
 
 ## Architecture notes
 
