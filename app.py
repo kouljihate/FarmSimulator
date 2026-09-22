@@ -5,6 +5,7 @@ basin, sectorisations, zonage, valves and the piping layout.
 """
 import os
 import uuid
+from datetime import datetime
 
 from flask import Flask, abort, jsonify, render_template, request
 
@@ -39,6 +40,7 @@ app.jinja_env.globals.update(
     btcfg=i18n.btcfg,
     i18n_css=i18n.css,
     version=app_version(),
+    fmt_dt=lambda ts: datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else "—",
 )
 
 

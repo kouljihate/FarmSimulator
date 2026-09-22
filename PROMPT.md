@@ -363,3 +363,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     key (`#sector-i18n` `data-tnet`); `applySectorOp` and basin submit surface
     missing-token / non-200 / bad-JSON / empty-fragment failures in the top
     error banner instead of silently doing nothing.
+23. v0.10.1: **Load list shows land name + last-save date** — each row shows
+    the plan name, `SAVED_AT` + `fmt_dt(run.updated_at)` (`YYYY-MM-DD HH:MM`,
+    new Jinja global in `app.py`; new i18n key `SAVED_AT` EN+AR), token kept
+    small; `FileStore.list_runs` now sorts newest-first like Mongo.

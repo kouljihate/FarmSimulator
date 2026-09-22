@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.10.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.10.1 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -104,11 +104,13 @@ Each config card has a set of **sector checkboxes labelled with the actual
    `POST /sectors/<token>/<cfgid>/action`); the result is persisted so a
    reload keeps it.
 4. Pick a config → you get the overview with zones, valves and pipes, plus a
-   page per sector.
+    page per sector.
 5. Every run is persisted — plan + all generated maps (basin, config
    previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
    pickles as fallback). **Recover a past run** from the **Load** tab (first
-   tab): it lists the saved name + token, and one click restores the complete
+   tab): it lists each land name with its last-save date (`Last saved:
+   YYYY-MM-DD HH:MM` via the `fmt_dt` Jinja global; token kept small below),
+   newest first, and one click restores the complete
    page with the saved maps (`GET /load/<token>`).
 6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
    (longitude/latitude) — both stay in sync live. Press **Apply** to save:

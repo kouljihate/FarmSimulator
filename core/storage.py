@@ -155,7 +155,7 @@ class FileStore:
 
     def list_runs(self, limit=50):
         runs = []
-        for fn in sorted(os.listdir(UPLOAD_DIR), reverse=True):
+        for fn in os.listdir(UPLOAD_DIR):
             if not fn.endswith(".db"):
                 continue
             try:
@@ -168,9 +168,8 @@ class FileStore:
                 "name": row.get("name", "Untitled plot"),
                 "updated_at": row.get("updated_at", 0.0),
             })
-            if len(runs) >= limit:
-                break
-        return runs
+        runs.sort(key=lambda r: r["updated_at"], reverse=True)
+        return runs[:limit]
 
 
 def get_store():

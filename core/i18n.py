@@ -65,6 +65,7 @@ EN = {
     # index
     "LOAD_TITLE": "Load a saved run",
     "LOAD": "Load",
+    "SAVED_AT": "Last saved",
     "LOAD_EMPTY": "No saved runs yet - upload a file first, the maps and results are saved automatically.",
     "SECTOR_SELECT": "Select sector",
     "SECTOR_SELECT_MULTI": "Select one or more sectors",
@@ -202,6 +203,7 @@ AR = {
 
     "LOAD_TITLE": "تحميل نتيجة محفوظة",
     "LOAD": "تحميل",
+    "SAVED_AT": "آخر حفظ",
     "LOAD_EMPTY": "لا توجد نتائج محفوظة بعد - ارفع ملفاً أولاً، وتُحفظ الخرائط والنتائج تلقائياً.",
     "SECTOR_SELECT": "تحديد القطاع",
     "SECTOR_SELECT_MULTI": "حدِّد قطاعاً أو أكثر",
