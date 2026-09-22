@@ -233,7 +233,8 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 ## Data model (exact keys — do not rename without updating templates + mappers)
 
 `plan`:
-`name, all_boundaries[{name,poly,is_land}], land (Polygon ll), land_area_m2,
+`name, all_boundaries[{name,poly,is_land}], boundaries[{name,is_land,area_m2}],
+water_points[{lon,lat}], n_water_points, land (Polygon ll), land_area_m2,
 water{lon,lat}, basin{lon,lat,z,has_elev,max_elev,dist_water_m}, basin_m,
 max_elev_m, configs[], existing_sectors(bool), _proj (Projector), _basin_m,
 _land_m`
@@ -407,6 +408,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     button to Basin); returned as `upload_html` in the full payload, injected
     into `#upload-file-card`; upload stays on the Upload tab, load still jumps
     to Basin; `plan_summary` gains `n_boundaries`.
+30. v0.13.1: **file-contents enumeration** — `analyse` adds `boundaries`
+    (+ per-polygon m² areas), `water_points` and `n_water_points` to the plan
+    (also mirrored in `plan_summary`); the upload card lists each element type
+    (land boundary, extra polygons, water points) with counts; new i18n keys
+    `FILE_CONTENTS, EXTRA_POLYGONS, WATER_POINTS` (EN+AR); old saved plans
+    without the keys still render (`or []` guards).
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
     datetime | Load button (`sm:grid-cols-3`, stacked on mobile), in both the
     server rows and the JS `refreshRuns` builder.

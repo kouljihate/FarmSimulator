@@ -23,5 +23,34 @@
       {% endfor %}
     </div>
     <button type="button" class="glow-btn block w-full rounded-2xl px-6 py-3 text-base font-bold tracking-wide" data-go-tab="tab-basin">&rarr; {{ bi('TAB_BASIN') }}</button>
+    <div>
+      <div class="mb-2 text-sm font-semibold text-white/70">{{ t('FILE_CONTENTS') }}</div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {% set _bounds = plan.boundaries or [] %}
+        {% set _land = _bounds|selectattr('is_land')|list|first %}
+        {% set _extra = _bounds|rejectattr('is_land')|list %}
+        {% set _water = plan.water_points or [] %}
+        <div class="rounded-xl bg-white/5 p-3">
+          <div class="text-sm text-white/60">{{ t('LG_BOUNDARY') }} × {{ 1 if _land else 0 }}</div>
+          {% if _land %}
+          <div class="mt-1 text-sm font-semibold text-white">{{ _land.name }}</div>
+          <div class="text-sm text-white/60">{{ "{:,.0f}".format(_land.area_m2) }} m<sup>2</sup></div>
+          {% endif %}
+        </div>
+        <div class="rounded-xl bg-white/5 p-3">
+          <div class="text-sm text-white/60">{{ t('EXTRA_POLYGONS') }} × {{ _extra|length }}</div>
+          {% for b in _extra %}
+          <div class="mt-1 text-sm font-semibold text-white">{{ b.name }}</div>
+          <div class="text-sm text-white/60">{{ "{:,.0f}".format(b.area_m2) }} m<sup>2</sup></div>
+          {% endfor %}
+        </div>
+        <div class="rounded-xl bg-white/5 p-3">
+          <div class="text-sm text-white/60">{{ t('WATER_POINTS') }} × {{ _water|length }}</div>
+          {% for w in _water %}
+          <div class="mt-1 text-sm font-semibold text-white">{{ "%.6f"|format(w.lon) }}, {{ "%.6f"|format(w.lat) }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>

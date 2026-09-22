@@ -80,6 +80,13 @@ def plan_summary(plan):
         "water": dict(plan.get("water") or {}),
         "basin": _basin_summary(plan),
         "existing_sectors": bool(plan.get("existing_sectors")),
+        "boundaries": [
+            {"name": b.get("name"), "is_land": bool(b.get("is_land")),
+             "area_m2": b.get("area_m2")}
+            for b in (plan.get("boundaries") or [])
+        ],
+        "water_points": [dict(w) for w in (plan.get("water_points") or [])],
+        "n_water_points": plan.get("n_water_points", len(plan.get("water_points") or [])),
         "configs": [{
             "id": c.get("id"),
             "name": c.get("name"),

@@ -439,6 +439,19 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
 
     area_m2 = land_m.area
 
+    bounds = []
+    for p in polygons:
+        is_land = p is land_pkg
+        try:
+            a = area_m2 if is_land else proj.to_m(p["polygon"]).area
+        except Exception:  # noqa: BLE001 - display-only area
+            a = 0.0
+        bounds.append({"name": p["name"], "is_land": is_land, "area_m2": a})
+    water_pts = [
+        {"lon": float(w[0]), "lat": float(w[1])}
+        for w in (parsed.get("water_points") or [])
+    ]
+
     # small optimisation: compute zones/pipes eagerly for one config? we keep lazy
     return {
         "name": parsed.get("name") or "Untitled plot",
@@ -447,6 +460,9 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
             "poly": p["polygon"],
             "is_land": p is land_pkg,
         } for p in polygons],
+        "boundaries": bounds,
+        "water_points": water_pts,
+        "n_water_points": len(water_pts),
         "land": land_pkg["polygon"],
         "land_area_m2": area_m2,
         "water": {"lon": pick[0], "lat": pick[1]},
