@@ -543,3 +543,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     line.
 42. v0.22.2: **Zones Open button wording** — label is now `Open "name" افتح`
     (EN, quoted sector name, AR) via `tl('OPEN')` spans, still one row.
+43. v0.22.3: **Zones Open button in 3 columns** — label split into a
+    no-wrap flex row: EN left, quoted name centre (truncates), AR right.
