@@ -324,6 +324,7 @@ def map_config_preview(plan, cfg):
 
 
 def map_config_overview(plan, cfg):
+    """Full map for the Final Result tab: sectors, valves and all piping."""
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
 
@@ -346,6 +347,42 @@ def map_config_overview(plan, cfg):
     return to_html(build(lay, center, 16))
 
 
+def map_config_valves(plan, cfg):
+    """Valve step map: sectors + valves only (no piping)."""
+    lay = Layers()
+    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
+    colors = _sector_color_map(cfg)
+    for s in cfg["sectors"]:
+        lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
+                    colors[s["idx"]], 0.10, weight=2)
+    for v in cfg["valves"]:
+        lay.marker(v["lon"], v["lat"], _ti("valve", zone=v["zone"]), "red", radius=6)
+    _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
+    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
+    return to_html(build(lay, center, 16))
+
+
+def map_config_pipes(plan, cfg):
+    """Pipes step map: sectors + piping only (no valves)."""
+    lay = Layers()
+    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
+    colors = _sector_color_map(cfg)
+    for s in cfg["sectors"]:
+        lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
+                    colors[s["idx"]], 0.10, weight=2)
+    pr = cfg["pipes"]["principal"]
+    lay.line(pr["line"], _ti("principal"), "#0b8a6f", 5)
+    for maj in cfg["pipes"]["majors"]:
+        lay.line(maj["line"], _ti("major", zone=maj["zone"]), "#377eb8", 3)
+    for mn in cfg["pipes"]["minors"]:
+        lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
+    _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
+    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
+    return to_html(build(lay, center, 16))
+
+
 def _sector_color_map(cfg):
     # generous palette so sectors stay identifiable
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
@@ -353,24 +390,28 @@ def _sector_color_map(cfg):
     return {s["idx"]: palette[(s["idx"] - 1) % len(palette)] for s in cfg["sectors"]}
 
 
-def map_sector(plan, cfg, sector):
+def map_sector(plan, cfg, sector, valves=True, pipes=True):
+    """Sector detail map. Zones step uses valves=False, pipes=False so valves
+    and piping only appear from their own steps onward."""
     lay = Layers()
     zones = sorted(sector.get("zones", []), key=lambda z: z["idx"])
     for i, z in enumerate(zones):
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
                     _ZONE_COLORS[i % len(_ZONE_COLORS)], 0.18, weight=2)
 
-    pr = cfg["pipes"]["principal"]
-    lay.line(pr["line"], _ti("principal"), "#0b8a6f", 4)
-    for maj in cfg["pipes"]["majors"]:
-        if maj["zone"].startswith(sector["name"] + "-"):
-            lay.line(maj["line"], _ti("major", zone=maj["zone"]), "#377eb8", 3)
-    for mn in cfg["pipes"]["minors"]:
-        if mn["zone"].startswith(sector["name"] + "-"):
-            lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
-    for v in cfg["valves"]:
-        if v["zone"].startswith(sector["name"] + "-"):
-            lay.marker(v["lon"], v["lat"], _ti("valve", zone=v["zone"]), "red", radius=7)
+    if pipes:
+        pr = cfg["pipes"]["principal"]
+        lay.line(pr["line"], _ti("principal"), "#0b8a6f", 4)
+        for maj in cfg["pipes"]["majors"]:
+            if maj["zone"].startswith(sector["name"] + "-"):
+                lay.line(maj["line"], _ti("major", zone=maj["zone"]), "#377eb8", 3)
+        for mn in cfg["pipes"]["minors"]:
+            if mn["zone"].startswith(sector["name"] + "-"):
+                lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
+    if valves:
+        for v in cfg["valves"]:
+            if v["zone"].startswith(sector["name"] + "-"):
+                lay.marker(v["lon"], v["lat"], _ti("valve", zone=v["zone"]), "red", radius=7)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)

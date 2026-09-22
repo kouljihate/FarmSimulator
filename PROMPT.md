@@ -430,6 +430,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     two checked sectors and rebuilds zones/valves/pipes; new i18n keys
     `SECTOR_SWAP, SWAP_NEED` (EN+AR) + bilingual swap error; toolbar order is
     Add/Edit/Rename/Merge/**Swap**/Remove.
+34. v0.16.0: **step maps** — Use this config draws no valves/pipes: Zones cards
+    use `map_sector(..., valves=False, pipes=False)`; new `map_config_valves`
+    (sectors+valves) and `map_config_pipes` (sectors+piping) maps render in the
+    Valve/Pipes tabs; full map stays in Final; `maps_v=2` invalidates old cached
+    sector artwork; `load` no longer re-saves (preserves cached maps).
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
     datetime | Load button (`sm:grid-cols-3`, stacked on mobile), in both the
     server rows and the JS `refreshRuns` builder.

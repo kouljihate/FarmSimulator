@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.15.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.16.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -115,9 +115,10 @@ Each config card has a set of **sector checkboxes labelled with the actual
     its map in place (`POST /` `{op:sector_coords}` / `{op:sector_action}`);
     the result is persisted so a reload keeps it.
 4. Pick a config with **Use this config** → its detail loads **in the same
-    page** (no navigation): the **Zones** tab shows per-sector maps + zone
-    tables, the **Valve** tab lists every 50 mm valve, the **Pipes** tab lists
-    majors/minors, and **Final Result** shows the full overview map + legend.
+    page** (no navigation): the **Zones** tab shows per-sector maps with zones
+    only (no valves, no pipes yet), the **Valve** tab shows the valves map +
+    valve list, the **Pipes** tab shows the piping map + majors/minors, and
+    **Final Result** shows the full overview map + legend.
     Every Zones card has an **Open** button that launches a modal with a large
     map of that sector and its zones plus its zone table — with **Add, Edit,
     Rename, Remove** actions (rename/remove run directly; edit/add jump to the

@@ -19,6 +19,9 @@ UPLOAD_DIR = os.path.join(BASE, "uploads")
 
 STORE = storage.get_store()
 
+# Bump when cached map artwork changes shape: older stored maps are regenerated.
+MAPS_V = 2
+
 
 def app_version():
     try:
@@ -96,12 +99,13 @@ def plan_summary(plan):
     }
 
 
-def _full_payload(token, plan):
+def _full_payload(token, plan, save=True):
     cfg_maps = {}
     for cfg in plan["configs"]:
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
     basin_map = mapper.map_basin(plan)
-    STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+    if save:
+        STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
     return {
         "ok": True,
         "token": token,
@@ -189,7 +193,7 @@ def index():
         plan = _get_plan(data.get("token"))
         if plan is None:
             return _err("Run not found.")
-        return jsonify(_full_payload(data.get("token"), plan))
+        return jsonify(_full_payload(data.get("token"), plan, save=False))
 
     if op == "basin":
         plan = _get_plan(data.get("token"))
@@ -285,6 +289,11 @@ def index():
         doc = STORE.load(data.get("token"))
         ov_maps = dict((doc or {}).get("overview_maps") or {})
         sector_maps = dict((doc or {}).get("sector_maps") or {})
+        if (doc or {}).get("maps_v") != MAPS_V:
+            ov_maps.pop(data.get("cfgid"), None)
+            ov_maps.pop(str(data.get("cfgid")), None)
+            sector_maps.pop(data.get("cfgid"), None)
+            sector_maps.pop(str(data.get("cfgid")), None)
         ov = ov_maps.get(data.get("cfgid"))
         if ov is None:
             ov = mapper.map_config_overview(plan, cfg)
@@ -292,11 +301,16 @@ def index():
         per_sector = dict(sector_maps.get(data.get("cfgid")) or {})
         for s in cfg["sectors"]:
             if s["name"] not in per_sector:
-                per_sector[s["name"]] = mapper.map_sector(plan, cfg, s)
+                per_sector[s["name"]] = mapper.map_sector(plan, cfg, s,
+                                                          valves=False, pipes=False)
         sector_maps[data.get("cfgid")] = per_sector
-        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps})
+        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps,
+                                            "sector_maps": sector_maps,
+                                            "maps_v": MAPS_V})
         ctx = {"token": data.get("token"), "plan": plan, "cfg": cfg,
-               "overview_map": ov, "per_sector": per_sector}
+               "overview_map": ov, "per_sector": per_sector,
+               "valves_map": mapper.map_config_valves(plan, cfg),
+               "pipes_map": mapper.map_config_pipes(plan, cfg)}
         return jsonify(
             ok=True,
             cfgid=data.get("cfgid"),
