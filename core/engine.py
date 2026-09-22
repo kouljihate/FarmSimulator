@@ -4,13 +4,13 @@ Pipeline (this first part):
   1. basin   -> best spot near the water point, at a favourable elevation
   2. sectorisation -> up to 5 config maps of the land split into sectors <= 10000 m2
   3. zonage  -> every sector split into 3 equal-area zones (Z1, Z2, Z3)
-  4. valves  -> one 50 mm valve at the first point of each zone
-  5. piping  -> 90 mm principal, 50 mm majors, 32 mm minors
+  4. valves  -> principal 90 mm valve per sector + secondary 32 mm valve per zone
+  5. piping  -> 90 mm principal, 63 mm majors, 32 mm minors
 """
 import re as _re
 
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
-from shapely.ops import nearest_points, unary_union
+from shapely.ops import nearest_points, split as _shapely_split, unary_union
 from shapely.validation import make_valid
 
 from .geo import Projector, main_axis_angle, sweep_split
@@ -19,6 +19,17 @@ from .sector import partition
 MAX_SECTOR_AREA = 10000.0
 N_ZONES = 3
 MIN_EXISTING_COVERAGE = 0.5  # sectors already in the file must cover >= 50% of the land
+
+OTHER_KINDS = (
+    "pressure_reducer",
+    "connector_90_63",
+    "connector_63_32",
+    "tee_63",
+    "elbow_63",
+    "elbow_32",
+    "filter_90",
+    "pump_booster",
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -242,7 +253,13 @@ def _zone_order(sector, pieces, basin_m, scan_angle):
 
 
 def extend_config(plan, project, cfg, basin_m, max_elev_m):
-    """Add zones, valves and pipes to a chosen sectorisation config."""
+    """Add zones, valves and pipes to a chosen sectorisation config.
+
+    Valves: one principal 90 mm valve per sector (at the sector entry) plus
+    one secondary 32 mm valve per zone. Pipes: 90 mm principal
+    (basin -> sector entries), 63 mm majors (sector valve -> zone valves),
+    32 mm minors (zone valve -> zone supply point).
+    """
     if cfg.get("ready"):
         return cfg
 
@@ -267,6 +284,20 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         pieces = sweep_split(sector_m, scan_angle, N_ZONES)
         order = _zone_order(sector, pieces, basin_m, scan_angle)
 
+        sector["zones"] = []
+        entry_m = sector["entry_m"]
+        entry_ll = project.to_lonlat(entry_m)
+        valves.append({
+            "kind": "principal",
+            "sector": sector["name"],
+            "zone": sector["name"],
+            "diameter_mm": 90,
+            "lon": entry_ll.x,
+            "lat": entry_ll.y,
+            "point": entry_ll,
+            "name": "Valve principal {0}".format(sector["name"]),
+        })
+
         zidx = 0
         for pi in order:
             zone_m = pieces[pi]
@@ -276,17 +307,15 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
                 continue
             zidx += 1
             zone_ll = project.to_lonlat(zone_m)
-            # valve on the zone boundary closest to the upstream entry
-            valve_m = nearest_points(zone_m.boundary, Point(sector["entry_m"]))[0]
+            # secondary valve on the zone boundary closest to the sector entry
+            valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
             valve_ll = project.to_lonlat(valve_m)
 
-            # major pipe: nearest point on principal -> valve
-            proj_t = principal_m.project(Point(valve_m))
-            on_princ = principal_m.interpolate(proj_t)
-            major_m = LineString([on_princ, valve_m])
+            # major pipe 63 mm: sector entry valve -> zone secondary valve
+            major_m = LineString([Point(entry_m), Point(valve_m)])
             major_ll = project.to_lonlat(major_m)
 
-            # minor pipe: valve -> zone water supply (centroid for part 1)
+            # minor pipe 32 mm: zone valve -> zone water supply (centroid)
             target_m = zone_m.centroid
             minor_m = LineString([valve_m, target_m])
             minor_ll = project.to_lonlat(minor_m)
@@ -302,28 +331,32 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             zones_all.append(zone)
 
             valve = {
+                "kind": "secondary",
+                "sector": sector["name"],
                 "zone": zone["name"],
-                "diameter_mm": 50,
+                "diameter_mm": 32,
                 "lon": valve_ll.x,
                 "lat": valve_ll.y,
                 "point": valve_ll,
-                "name": "Valve {0}".format(zone["name"]),
+                "name": "Valve secondary {0}".format(zone["name"]),
             }
             valves.append(valve)
 
             majors.append({
                 "zone": zone["name"],
-                "diameter_mm": 50,
+                "sector": sector["name"],
+                "diameter_mm": 63,
                 "line": major_ll,
                 "len_m": major_m.length,
             })
             minors.append({
                 "zone": zone["name"],
+                "sector": sector["name"],
                 "diameter_mm": 32,
                 "line": minor_ll,
                 "len_m": minor_m.length,
             })
-            sector.setdefault("zones", []).append(zone)
+            sector["zones"].append(zone)
 
     cfg["ready"] = True
     cfg["zones"] = zones_all
@@ -481,6 +514,8 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     ]
 
     # small optimisation: compute zones/pipes eagerly for one config? we keep lazy
+    for c in configs:
+        c.setdefault("zones_confirmed", False)
     return {
         "name": parsed.get("name") or "Untitled plot",
         "all_boundaries": [{
@@ -500,6 +535,8 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "max_elev_m": max_elev_m,
         "configs": configs,
         "existing_sectors": existing_sectors,
+        "other_elements": [],
+        "simulation": {},
         "_proj": proj,
         "_basin_m": basin_m,
         "_land_m": land_m,
@@ -537,6 +574,8 @@ def set_basin(plan, lon, lat):
         plan["configs"] = [cfg] if cfg else []
     else:
         plan["configs"] = sectorise(land_m, proj, pt)
+    for c in plan["configs"]:
+        c.setdefault("zones_confirmed", False)
     return True, None
 
 
@@ -621,6 +660,7 @@ def recompute_sectors(plan, cfg, polys):
     cfg["sectors"] = sectors
     cfg["n_sectors"] = len(sectors)
     cfg["ready"] = False
+    cfg["zones_confirmed"] = False
     for k in ("zones", "valves", "pipes"):
         cfg.pop(k, None)
     extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
@@ -739,3 +779,290 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         return True, None
 
     return False, "Unknown operation."
+
+
+def _find_zone(cfg, sector_idx, zone_idx=None, zone_name=None):
+    for s in cfg.get("sectors", []):
+        if sector_idx is not None and s.get("idx") != sector_idx:
+            continue
+        for z in s.get("zones", []):
+            if zone_idx is not None and z.get("idx") == zone_idx:
+                return s, z
+            if zone_name is not None and z.get("name") == zone_name:
+                return s, z
+    return None, None
+
+
+def _rebuild_valves_pipes(plan, cfg):
+    proj = plan["_proj"]
+    basin_m = plan["_basin_m"]
+    max_elev_m = plan.get("max_elev_m")
+    principal_pts = []
+    if max_elev_m is not None:
+        principal_pts.append(max_elev_m)
+    principal_pts.append(basin_m)
+    for s in cfg["sectors"]:
+        principal_pts.append(s["entry_m"])
+    principal_m = LineString(principal_pts)
+    principal_ll = proj.to_lonlat(principal_m)
+    valves, majors, minors, zones_all = [], [], [], []
+    for sector in cfg["sectors"]:
+        entry_m = sector["entry_m"]
+        entry_ll = proj.to_lonlat(entry_m)
+        valves.append({
+            "kind": "principal", "sector": sector["name"], "zone": sector["name"],
+            "diameter_mm": 90, "lon": entry_ll.x, "lat": entry_ll.y,
+            "point": entry_ll, "name": "Valve principal {0}".format(sector["name"]),
+        })
+        for z in sector.get("zones", []):
+            zone_m = z["poly_m"]
+            valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
+            valve_ll = proj.to_lonlat(valve_m)
+            major_m = LineString([Point(entry_m), Point(valve_m)])
+            target_m = zone_m.centroid
+            minor_m = LineString([valve_m, target_m])
+            z["centroid"] = proj.to_lonlat(target_m)
+            valves.append({
+                "kind": "secondary", "sector": sector["name"], "zone": z["name"],
+                "diameter_mm": 32, "lon": valve_ll.x, "lat": valve_ll.y,
+                "point": valve_ll, "name": "Valve secondary {0}".format(z["name"]),
+            })
+            majors.append({"zone": z["name"], "sector": sector["name"], "diameter_mm": 63,
+                           "line": proj.to_lonlat(major_m), "len_m": major_m.length})
+            minors.append({"zone": z["name"], "sector": sector["name"], "diameter_mm": 32,
+                           "line": proj.to_lonlat(minor_m), "len_m": minor_m.length})
+            zones_all.append(z)
+    cfg["zones"] = zones_all
+    cfg["valves"] = valves
+    cfg["pipes"] = {"principal": {"diameter_mm": 90, "line": principal_ll,
+                                  "len_m": principal_m.length},
+                    "majors": majors, "minors": minors}
+    cfg["ready"] = True
+    return cfg
+
+
+def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
+                  name=None, x1=None, y1=None, x2=None, y2=None):
+    proj = plan["_proj"]
+    sector = next((s for s in cfg.get("sectors", []) if s.get("idx") == sector_idx), None)
+    if sector is None:
+        return False, "Sector not found."
+    zones = sector.get("zones", [])
+    if op == "rename":
+        nm = (name or "").strip()
+        if not nm:
+            return False, "Empty zone name."
+        taken = {z.get("name", "").lower() for z in cfg.get("zones", [])
+                 if z.get("name") != (zone_name or "")}
+        if nm.lower() in taken:
+            return False, "That zone name is already used. Pick a unique name."
+        target = next((z for z in zones if z.get("name") == zone_name), None)
+        if target is None and zone_idx is not None:
+            target = next((z for z in zones if z.get("idx") == zone_idx), None)
+        if target is None:
+            return False, "Zone not found."
+        old = target["name"]
+        target["name"] = nm
+        for v in cfg.get("valves", []):
+            if v.get("zone") == old:
+                v["zone"] = nm
+                if v.get("kind") == "secondary":
+                    v["name"] = "Valve secondary {0}".format(nm)
+        for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
+            if m.get("zone") == old:
+                m["zone"] = nm
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        return True, None
+    if op == "remove":
+        if len(zones) <= 1:
+            return False, "Cannot remove the last zone."
+        target = next((z for z in zones if z.get("name") == zone_name), None)
+        if target is None and zone_idx is not None:
+            target = next((z for z in zones if z.get("idx") == zone_idx), None)
+        if target is None:
+            return False, "Zone not found."
+        rest = [z for z in zones if z is not target]
+        merged = target["poly_m"].union(rest[0]["poly_m"])
+        if not merged.is_valid:
+            merged = make_valid(merged)
+        rest[0]["poly_m"] = merged
+        rest[0]["poly"] = proj.to_lonlat(merged)
+        rest[0]["area_m2"] = merged.area
+        sector["zones"] = rest
+        for i, z in enumerate(sorted(rest, key=lambda z: z.get("idx", 0)), start=1):
+            z["idx"] = i
+            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        return True, None
+    if op == "split":
+        try:
+            a = proj.to_m(Point(float(x1), float(y1)))
+            b = proj.to_m(Point(float(x2), float(y2)))
+        except (TypeError, ValueError):
+            return False, "Invalid coordinates."
+        if a.distance(b) < 1.0:
+            return False, "Invalid coordinates."
+        target = next((z for z in zones if z.get("name") == zone_name), None)
+        if target is None and zone_idx is not None:
+            target = next((z for z in zones if z.get("idx") == zone_idx), None)
+        if target is None:
+            target = max(zones, key=lambda z: z.get("area_m2", 0)) if zones else None
+        if target is None:
+            return False, "Zone not found."
+        zm = target["poly_m"]
+        dx, dy = b.x - a.x, b.y - a.y
+        L = (dx * dx + dy * dy) ** 0.5
+        ux, uy = dx / L, dy / L
+        ext = max(zm.bounds[2] - zm.bounds[0], zm.bounds[3] - zm.bounds[1]) + 100.0
+        line = LineString([(a.x - ux * ext, a.y - uy * ext), (b.x + ux * ext, b.y + uy * ext)])
+        try:
+            res = _shapely_split(zm, line)
+        except Exception:  # noqa: BLE001 - degenerate split
+            return False, "Invalid polygon."
+        parts = [g for g in res.geoms if g.geom_type.startswith("Polygon") and g.area > 60.0]
+        if len(parts) < 2:
+            return False, "The line must cross the zone."
+        parts.sort(key=lambda g: g.area, reverse=True)
+        keep = parts[:2]
+        rest = [z for z in zones if z is not target]
+        new_zones = []
+        for g in keep:
+            if not g.is_valid:
+                g = make_valid(g)
+            new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g), "area_m2": g.area,
+                              "centroid": proj.to_lonlat(g.centroid)})
+        sector["zones"] = rest + new_zones
+        for i, z in enumerate(sector["zones"], start=1):
+            z["idx"] = i
+            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        return True, None
+    if op == "confirm":
+        cfg["zones_confirmed"] = True
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+    return False, "Unknown operation."
+
+
+def analyse_other_element(plan, cfg, kind, lon, lat):
+    proj = plan["_proj"]
+    try:
+        pt_m = proj.to_m(Point(float(lon), float(lat)))
+    except (TypeError, ValueError):
+        return {"necessary": False, "verdict": "Invalid coordinates.", "suggestion": ""}
+    inside = plan["_land_m"].contains(pt_m) or plan["_land_m"].distance(pt_m) < 1.0
+    if not inside:
+        return {"necessary": False, "verdict": "Outside the land boundary - move it inside.",
+                "suggestion": "Pick a point inside the land, close to a pipe, to avoid extra trenching."}
+    best = 1e18
+    for s in cfg.get("sectors", []):
+        try:
+            best = min(best, s["poly_m"].distance(pt_m))
+        except Exception:  # noqa: BLE001 - display-only
+            continue
+    for m in (cfg.get("pipes", {}).get("majors", []) or []) + (cfg.get("pipes", {}).get("minors", []) or []):
+        try:
+            best = min(best, proj.to_m(m["line"]).distance(pt_m))
+        except Exception:  # noqa: BLE001 - display-only
+            continue
+    basin_d = pt_m.distance(plan["_basin_m"])
+    if kind == "pressure_reducer":
+        necessary = basin_d < 120.0 or (plan.get("basin") or {}).get("has_elev")
+        verdict = "Useful near the basin / high point to protect 32 mm lines." if necessary else \
+            "Probably unnecessary this far from the basin - pressure is already low."
+        suggestion = "Keep one reducer just after the basin; add a second only if a zone sits >15 m below the basin. This keeps the network smooth and cheap."
+    elif kind in ("connector_90_63", "connector_63_32"):
+        necessary = best < 60.0
+        verdict = "Necessary transition where pipe size changes." if necessary else \
+            "Too far from any pipe - move it onto the line to avoid extra fittings."
+        suggestion = "Prefer a single 90x63 reducer at each sector entry and 63x32 at each zone valve; fewer fittings = less head loss and lower cost."
+    elif kind in ("tee_63", "elbow_63", "elbow_32"):
+        necessary = best < 40.0
+        verdict = "Handy to smooth a sharp angle." if necessary else \
+            "Not needed here - no pipe bend nearby."
+        suggestion = "Replace two 90-degree elbows with one 45-degree sweep where possible; it cuts friction and is cheaper long-term."
+    elif kind == "filter_90":
+        necessary = basin_d < 60.0
+        verdict = "Recommended just after the basin." if necessary else \
+            "A filter belongs at the head, not deep in the field."
+        suggestion = "One 120-mesh filter at the head + small screen at each sector valve is the cheapest reliable combo."
+    elif kind == "pump_booster":
+        necessary = basin_d > 250.0 or best > 80.0
+        verdict = "Consider only for far / uphill zones." if necessary else \
+            "Probably overkill - gravity + head from the basin should suffice."
+        suggestion = "Before buying a booster, try shortening the principal line or raising the basin; a booster adds energy cost every year."
+    else:
+        necessary = best < 60.0
+        verdict = "Placed near the network." if necessary else "Far from the network."
+        suggestion = "Group fittings along the principal line to shorten trenches and share labour."
+    return {"necessary": bool(necessary), "verdict": verdict, "suggestion": suggestion}
+
+
+def compute_simulation(plan, cfg, years=10, capex=0.0, annual_cost=0.0,
+                       annual_revenue=0.0, crop="vegetables"):
+    try:
+        years = max(1, min(30, int(years)))
+    except (TypeError, ValueError):
+        years = 10
+    try:
+        capex, annual_cost, annual_revenue = float(capex), float(annual_cost), float(annual_revenue)
+    except (TypeError, ValueError):
+        capex, annual_cost, annual_revenue = 0.0, 0.0, 0.0
+    area_ha = (plan.get("land_area_m2") or 0.0) / 10000.0
+    rows = []
+    cum = -capex
+    breakeven = None
+    for y in range(1, years + 1):
+        net = annual_revenue - annual_cost
+        cum += net
+        roi = (cum / capex * 100.0) if capex > 0 else 0.0
+        rows.append({"year": y, "net": round(net, 2), "cumulative": round(cum, 2),
+                     "roi_pct": round(roi, 1)})
+        if breakeven is None and cum >= 0:
+            breakeven = y
+    crop_hint = {
+        "vegetables": "Short-cycle vegetables: fast cash, needs steady water and labour.",
+        "fruits": "Orchard / drip fruits: higher capex, best ROI after year 3-4, low headache once set.",
+        "cereals": "Cereals: low margin, only pays on large areas with mechanisation.",
+        "fodder": "Fodder + small livestock: stable income, modest water use.",
+    }.get(crop, "")
+    ai = ai_proposal(plan, cfg, crop)
+    return {"years": years, "area_ha": round(area_ha, 2), "capex": capex,
+            "annual_cost": annual_cost, "annual_revenue": annual_revenue,
+            "crop": crop, "crop_hint": crop_hint, "rows": rows,
+            "breakeven_year": breakeven,
+            "total_net": round(cum + capex, 2) if rows else 0.0,
+            "ai": ai}
+
+
+def ai_proposal(plan, cfg, crop="vegetables"):
+    area_ha = (plan.get("land_area_m2") or 0.0) / 10000.0
+    n_sec = len(cfg.get("sectors", [])) if cfg else 0
+    pipe_m = 0.0
+    if cfg and cfg.get("pipes"):
+        pipe_m = (cfg["pipes"]["principal"]["len_m"]
+                  + sum(m["len_m"] for m in cfg["pipes"].get("majors", []))
+                  + sum(m["len_m"] for m in cfg["pipes"].get("minors", [])))
+    if area_ha < 1.0:
+        plan_txt = ("Keep {0} sectors on drip with mulch; grow two vegetable cycles + one "
+                    "legume to cut fertiliser cost. Add a small farm-gate stand - direct "
+                    "sale doubles margin with almost no extra work.".format(max(n_sec, 1)))
+    elif area_ha < 5.0:
+        plan_txt = ("Drip everywhere, one filter station, mulch; split the farm: 60% high-value "
+                    "vegetables, 30% orchard (olive/pomegranate, low water, low headache), 10% "
+                    "fodder for a few sheep. Solar pump kills the energy bill.")
+    else:
+        plan_txt = ("Mechanised drip + soil probes; 50% orchard under drip (best ROI/ha with "
+                    "little labour), 30% seasonal vegetables near the basin (short pipes = cheap), "
+                    "20% cereals/fodder for rotation. One worker + seasonal help is enough.")
+    saving = ("Shorten majors by grouping zone valves along the sector entry line; every 100 m "
+              "of 63 mm saved is ~fittings + trench labour avoided. Prefer 45-degree sweeps over "
+              "90-degree elbows to cut pumping head.")
+    return {"plan": plan_txt,
+            "pipe_m": round(pipe_m, 1),
+            "income_idea": "Grade + pack on site and sell weekly boxes; a tiny cold corner lets you hold prices.",
+            "headache": "Drip + timer + filter = 30 min/day. Avoid sprinklers and thirsty summer crops unless water is free.",
+            "saving": saving}

@@ -32,8 +32,8 @@ MONGO_URI = os.environ.get("MONGO_URI", "mongodb://127.0.0.1:27017")
 MONGO_DB = os.environ.get("MONGO_DB", "farm_simulator")
 MONGO_COLL = "plans"
 
-FULL_KEYS = ("basin_map", "cfg_maps", "overview_maps", "sector_maps")
-_ID_MAP_KEYS = ("cfg_maps", "overview_maps", "sector_maps")
+FULL_KEYS = ("basin_map", "cfg_maps", "overview_maps", "sector_maps", "other_maps")
+_ID_MAP_KEYS = ("cfg_maps", "overview_maps", "sector_maps", "other_maps")
 
 
 def _encode(maps):
@@ -108,6 +108,9 @@ class MongoStore:
             "updated_at": r.get("updated_at", 0.0),
         } for r in rows]
 
+    def delete(self, token):
+        self.col.delete_one({"_id": token})
+
 
 class FileStore:
     """Offline fallback: one pickle per token in uploads/ (plan + maps)."""
@@ -141,6 +144,8 @@ class FileStore:
     def save(self, token, plan, maps=None):
         row = {"name": plan.get("name", "Untitled plot"), "plan": plan, "updated_at": time.time()}
         row.update(_encode({k: maps.get(k) if maps else None for k in FULL_KEYS}))
+        if maps and maps.get("maps_v") is not None:
+            row["maps_v"] = maps.get("maps_v")
         with open(self._fp(token), "wb") as fh:
             pickle.dump(row, fh, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -170,6 +175,15 @@ class FileStore:
             })
         runs.sort(key=lambda r: r["updated_at"], reverse=True)
         return runs[:limit]
+
+    def delete(self, token):
+        for ext in (".db", ".pkl"):
+            fp = os.path.join(UPLOAD_DIR, token + ext)
+            try:
+                if os.path.exists(fp):
+                    os.remove(fp)
+            except OSError:
+                pass
 
 
 def get_store():

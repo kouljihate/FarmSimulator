@@ -21,17 +21,23 @@ Verify without the browser (use this every time you touch engine/parser/mapper/a
 ```
 
 Expected: **exactly 3 configs**, every sector `≤ 10000 m²`, each config total
-`≈ 46019 m²`, and `engine.extend` yields 3 balanced zones per sector.
+`≈ 46019 m²`, and `engine.extend` yields 3 balanced zones per sector with
+**principal 90 mm + secondary 32 mm valves** and **90/63/32 mm pipes**.
 
 Route smoke test (single URL — all `POST /`, all must be 200 with `ok:true`):
 upload (multipart `file`) → `{op:list_runs}` → `{op:load}` → `{op:basin}` →
-`{op:sector_action}` (rename) → `{op:sector_coords}` → `{op:overview}`;
-unknown token/op must return `ok:false`.
+`{op:sector_action}` (rename) → `{op:sector_coords}` → `{op:overview}`
+(returns `zones/valves/pipes/other/sim/final_html`) → `{op:zone_action}`
+(confirm/rename/split) → `{op:other_add}` → `{op:sim_save}` →
+`{op:other_remove}`; unknown token/op and `{op:delete_run}` on a missing
+token must return `ok:false`.
 
 ## Current state (all verified working)
 
 - Part 1 pipeline complete: basin → sectorisation → 3 zones/sector → 50 mm
   valves → 90/50/32 mm piping.
+  (v0.17.0 changed this: **principal 90 mm valve per sector + secondary
+  32 mm valve per zone**, piping **90/63/32 mm** — see history §35.)
 - Sectorisation is **deterministic and smart**: `core/sector.py` "land-and-water
   kd-tree" recursively splits the largest cell along its longest local axis at
   controlled area fractions; slivers `< 0.4 %` of parent area are folded into
@@ -54,34 +60,51 @@ unknown token/op must return `ok:false`.
   `farm_simulator`, collection `plans`) is reachable, else a **`FileStore`**
   (per-token pickles in `uploads/<token>.db`; legacy `uploads/<token>.pkl`
   files are migrated to the store on read). API: `get_plan`, `load`,
-  `save(token, plan, maps)`, `save_maps(token, maps)`, `list_runs(limit)`
-  (newest-first in both stores). A stored record holds `name`, `updated_at`,
-  `plan` (pickled Binary) and the
-  maps `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` — per-config
-  dict keys are **stringified for BSON and cast back to int on read**
-  (`_encode`/`_decode`). Ops persist at upload/load, on basin **Apply**
-  (`op:basin`), on sector actions, and when overview/sector maps are generated
-  (they are **reused from the store instead of recomputed** once saved).
-  The **Load** tab (first tab, `tab-load`) lists saved runs with land name +
-  last-save date (`SAVED_AT` + `updated_str`, pre-formatted server-side;
-  `fmt_dt` Jinja global for the initial rows), and loading restores
+  `save(token, plan, maps)`, `save_maps(token, maps)`, `delete(token)`,
+  `list_runs(limit)` (newest-first in both stores). A stored record holds
+  `name`, `updated_at`, `plan` (pickled Binary) and the
+  maps `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps`, `other_maps`
+  (+ `maps_v`; per-config dict keys are **stringified for BSON and cast back
+  to int on read** (`_encode`/`_decode`)). Ops persist at upload/load, on basin
+  **Apply** (`op:basin`), on sector actions, on zone actions, and when
+  overview/sector/other maps are generated (they are **reused from the store
+  instead of recomputed** once saved).
+  Storage is **keyed by land name (unique, v0.17.0)**: `app._token_for_land`
+  reuses the existing token when the same land is re-uploaded (overwrite, no
+  duplicate), `app._dedup_runs` collapses `list_runs` to **one row per land**
+  (newest wins), `{op:delete_run}` removes the whole land, and every step
+  (upload, basin, sector/zone ops, confirm, other elements, simulation)
+  re-saves via `app._persist`. DB layout per land:
+  `{Land: [Basin], [Sectors, [Zones, [Valves], [Pipes]]]}` (+ `other_elements`,
+  `simulation`). The **Load** tab (first tab, `tab-load`) lists one row per
+  saved land with land name + last-save date (`SAVED_AT` + `updated_str`,
+  pre-formatted server-side; `fmt_dt` Jinja global for the initial rows, same
+  row as the buttons), and loading restores
   Basin+Sectors tabs from the saved plan + saved maps
-  (recomputes only if missing). i18n keys: `LOAD_TITLE`, `LOAD`, `LOAD_EMPTY`,
+  (recomputes only if missing). Each row has **Load** + **Delete** buttons
+  (`data-load-token` / `data-del-token`; `refreshRuns` rebuilds both).
+  i18n keys: `LOAD_TITLE`, `LOAD`, `DELETE`, `LOAD_EMPTY`,
   `SAVED_AT` (EN+AR).
-- **Single-URL SPA (v0.11.0): the browser only uses `/`.** `GET /` renders the
-  `index.html` shell (tab bar, upload form, empty panels, runs list).
-  Everything else is `POST /`: multipart `file` = upload; otherwise JSON
-  `{op, …}` with `op` in `load | list_runs | basin | sector_coords |
-  sector_action | overview`. Responses carry server-rendered fragments
-  (`basin_html`, `sectors_html`, `zones/valves/pipes/final_html`) plus
-  JSON-safe summaries (`plan_summary()`, `runs[]` with `updated_str`).
-  Client state `S = {token, plan, cfgid}` in `index.html`; tab bodies are
-  injected in place, never navigated. `config.html` / `sector.html` are gone
-  (replaced by `_zones/_valves/_pipes/_final_result.html` partials).
+- **Single-URL SPA (v0.11.0, extended v0.17.0): the browser only uses `/`.**
+  `GET /` renders the `index.html` shell (tab bar, upload form, empty panels,
+  runs list). Everything else is `POST /`: multipart `file` = upload;
+  otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
+  basin | sector_coords | sector_action | zone_action | overview |
+  other_add | other_remove | sim_save`. Responses carry server-rendered
+  fragments (`basin_html`, `sectors_html`, `zones/valves/pipes/other/sim/
+  final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
+  with `updated_str`). Client state `S = {token, plan, cfgid}` in
+  `index.html`; tab bodies are injected in place, never navigated.
+  `fillOverview(data, silent)` fills all six result tabs at once
+  (`resetOverview` clears them).   `config.html` / `sector.html` are gone
+  (replaced by `_zones/_valves/_pipes/_other/_simulation/_final_result.html`
+  partials).
   **"Use this config" stays in the same page**: it fetches `{op:overview}`
-  and fills the Zones (per-sector maps + zone tables), Valve (valve table),
-  Pipes (majors/minors tables) and Final Result (full map + legend) tabs, then
-  switches to Zones. Basin/sector edits silently re-fetch the open overview so
+  and fills the Zones (per-sector maps + zone tables + **Confirm Zones**
+  button), Valve (principal 90 mm + secondary 32 mm tables), Pipes
+  (90/63/32), Other Elements (big map + add form + AI verdicts), Simulation
+  (ROI form + AI proposal) and Final Result (full map + legend + report +
+  Export PDF) tabs, then switches to Zones. Basin/sector edits silently re-fetch the open overview so
   all tabs stay in sync. Basin Apply updates the map via the iframe `srcdoc`
   attribute (not `innerHTML` — that never re-rendered).
   **"Upload Result" card** (`UPLOAD_RESULT_TITLE`, id `upload-result-card`,
@@ -190,7 +213,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
   `rounded-2xl border border-white/10 bg-white/5` with
   `border-b border-white/10 px-5 py-3` headers — applied uniformly in all tabs.
 - Home page has a **centred pill tab bar**: **Load, Upload, Basin, Sectors,
-  Zones, Valve, Pipes, Final Result** (pipeline stages; placeholders that show
+  Zones, Valve, Pipes, Other Elements, Simulation, Final Result** (pipeline stages; placeholders that show
   `t('UPLOAD_FIRST')` = "Upload First a File (csv/kml)" when nothing was
   uploaded yet). Tab buttons use `bi(key)` for bilingual text (EN + AR inline).
   Tab switching is a small vanilla-JS snippet in `index.html`; styles live in
@@ -232,18 +255,20 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 
 ## Data model (exact keys — do not rename without updating templates + mappers)
 
-`plan`:
-`name, all_boundaries[{name,description,poly,is_land}], boundaries[{name,description,is_land,area_m2}],
-water_points[{lon,lat}], n_water_points, land (Polygon ll), land_area_m2,
-water{lon,lat}, basin{lon,lat,z,has_elev,max_elev,dist_water_m}, basin_m,
-max_elev_m, configs[], existing_sectors(bool), _proj (Projector), _basin_m,
-_land_m`
+  `plan`:
+  `name, all_boundaries[{name,description,poly,is_land}], boundaries[{name,description,is_land,area_m2}],
+  water_points[{lon,lat}], n_water_points, land (Polygon ll), land_area_m2,
+  water{lon,lat}, basin{lon,lat,z,has_elev,max_elev,dist_water_m}, basin_m,
+  max_elev_m, configs[], existing_sectors(bool),
+  other_elements[{id,kind,lon,lat,size,note,necessary,verdict,suggestion}],
+  simulation{years,capex,annual_cost,annual_revenue,crop},
+  _proj (Projector), _basin_m, _land_m`
 
-`config`: `id, name, angle, n_sectors, sectors[], ready` and after
-`engine.extend(plan, cid)`: `zones[], valves[], pipes`
-(`pipes = {principal:{diameter_mm:90, line, len_m},
-            majors:[{zone,diameter_mm:50,line,len_m}],
-            minors:[{zone,diameter_mm:32,line,len_m}]}`)
+  `config`: `id, name, angle, n_sectors, sectors[], ready, zones_confirmed`
+  and after `engine.extend(plan, cid)`: `zones[], valves[], pipes`
+  (`pipes = {principal:{diameter_mm:90, line, len_m},
+              majors:[{zone,sector,diameter_mm:63,line,len_m}],
+              minors:[{zone,sector,diameter_mm:32,line,len_m}]}`)
 
 Basin editing: `engine.set_basin(plan, lon, lat)` validates the point is
 inside the land (`_land_m.distance(pt) <= 1.0`), updates `basin`,
@@ -266,7 +291,9 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
 `zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid`
 
-`valve`: `zone, diameter_mm:50, lon, lat, point, name`
+  `valve`: principal `{kind:principal, sector, diameter_mm:90, lon, lat,
+  point, name}` + secondary `{kind:secondary, sector, zone, diameter_mm:32,
+  lon, lat, point, name}`
 
 ## Conventions and constraints
 
@@ -444,3 +471,25 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `CLOSE` EN+AR); Add/Edit/Rename/Remove act on that sector (rename/remove via
     the existing confirm modal; edit/add close the modal, jump to Sectors and arm
     the tool programmatically); Escape/backdrop/Close dismiss.
+35. v0.17.0: **land-keyed storage, zone management, new tabs** —
+    land name is the unique key (`_token_for_land` reuses the token on
+    re-upload; `_dedup_runs` shows one row per land; `{op:delete_run}` +
+    Delete button per Load row; every step re-saves via `_persist`;
+    `maps_v=3`, new `other_maps` store); valves are now **principal 90 mm
+    per sector + secondary 32 mm per zone**, pipes **90/63/32 mm**
+    (`_rebuild_valves_pipes` keeps valves/pipes in sync after zone edits);
+    **zone management** (`{op:zone_action}` → `apply_zone_op`: rename /
+    remove / split-by-line via X/Y start+stop / confirm; `zones_confirmed`
+    flag; **Confirm Zones** button ends the Zones tab and jumps to Valve);
+    sector modal gained a **zone-mgmt box** (zone select, X1/Y1/X2/Y2,
+    Trace-on-map via `setZonePick` + `zone-pick` messages, Split/Rename/
+    Remove); new **Other Elements** tab (`map_other_elements` big map,
+    click-to-fill `other-map-click`, `{op:other_add/other_remove}`,
+    heuristic `analyse_other_element` verdict + cheaper/smoother
+    suggestion); new **Simulation** tab before Final (`compute_simulation`
+    ROI table + break-even, `{op:sim_save}`, AI proposal `ai_proposal`);
+    **Final Result** now draws zones + both valve kinds + other elements
+    and adds a detailed land **report + Export PDF** (`window.print` +
+    print CSS); new partials `_other_result` / `_simulation_result`;
+    tab bar is Load/Upload/Basin/Sectors/Zones/Valve/Pipes/Other
+    Elements/Simulation/Final Result.

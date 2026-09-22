@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.16.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.17.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -16,10 +16,25 @@ place. The browser never leaves `/`.
    layout (extra polygons covering ≥ 50 % of the land), those are used directly
    and **no new suggestions are generated**.
 3. **Zonage** — every sector is divided into 3 equal-area zones (Z1, Z2, Z3).
-4. **Valves** — one 50 mm valve at the entry of each zone.
-5. **Piping** — 90 mm principal pipe (basin → sector entries), 50 mm major
-   pipes (principal → each valve), 32 mm minor pipes (valve → zone supply
-   point).
+   Zones are managed per sector from the **Open** modal (rename, remove, split
+   by tracing a line on the map or entering X/Y start + X/Y stop) and locked
+   with the **Confirm Zones** button at the end of the Zones tab — confirming
+   reveals the valves.
+4. **Valves** — one principal **90 mm** valve at each sector entry plus one
+   secondary **32 mm** valve per zone.
+5. **Piping** — 90 mm principal pipe (basin → sector entries), **63 mm** major
+   pipes (sector valve → each zone valve), 32 mm minor pipes (valve → zone
+   supply point).
+6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
+   elbows, filters, booster pumps placed on a big land map (click the map to
+   fill coordinates). Every added element gets a heuristic **AI analysis**
+   (necessary or not) plus a proposal for a smoother, cheaper network.
+7. **Simulation** — ROI after X years (investment, annual cost/revenue, crop)
+   with a yearly table, break-even year and an **AI proposal** for a
+   high-income, low-headache plan.
+8. **Final Result** — one map with everything (sectors, zones, valves, all
+   pipes, other elements) plus a detailed land report with an **Export PDF**
+   button (print).
 
 All interactive maps use Folium + OpenStreetMap tiles. The UI is fully
 bilingual: English (Comfortaa) on the left, Arabic (VIP RAWY Regular) on the
@@ -31,9 +46,9 @@ also bilingual. Config headings show Arabic translations of their base names
 Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
-(right-aligned). The home page has a
+ (right-aligned). The home page has a
 centred tab bar: **Load, Upload, Basin, Sectors, Zones, Valve, Pipes,
-Final Result**
+Other Elements, Simulation, Final Result**
 (the pipeline stages; last five are placeholders for future parts). The
 "Accepted formats" and "What Part 1 produces"
 cards split their content into two columns: English on the left, Arabic on the
@@ -115,22 +130,32 @@ Each config card has a set of **sector checkboxes labelled with the actual
     its map in place (`POST /` `{op:sector_coords}` / `{op:sector_action}`);
     the result is persisted so a reload keeps it.
 4. Pick a config with **Use this config** → its detail loads **in the same
-    page** (no navigation): the **Zones** tab shows per-sector maps with zones
-    only (no valves, no pipes yet), the **Valve** tab shows the valves map +
-    valve list, the **Pipes** tab shows the piping map + majors/minors, and
-    **Final Result** shows the full overview map + legend.
-    Every Zones card has an **Open** button that launches a modal with a large
-    map of that sector and its zones plus its zone table — with **Add, Edit,
-    Rename, Remove** actions (rename/remove run directly; edit/add jump to the
-    Sectors tab with the tool armed for that sector).
+     page** (no navigation): the **Zones** tab shows per-sector maps with zones
+     only (no valves, no pipes yet), the **Valve** tab shows the valves map
+     (principal 90 mm + secondary 32 mm lists), the **Pipes** tab shows the
+     piping map (90 / 63 / 32 mm), **Other Elements** shows the big editable
+     network map, **Simulation** shows the ROI planner, and **Final Result**
+     shows the full map + legend + report with PDF export.
+     Every Zones card has an **Open** button that launches a modal with a large
+     map of that sector and its zones plus its zone table — with **zone
+     management built in**: rename / remove a zone, or split a zone by
+     tracing a line on the map (**Trace on map**, two clicks fill X/Y
+     start/stop) or by typing the coordinates, then **Split**. Sector
+     Add/Edit/Rename/Remove actions are still available from the same modal.
+     Press **Confirm Zones** at the bottom of the Zones tab to lock the
+     layout and reveal the valves.
 5. Every run is persisted — plan + all generated maps (basin, config
-   previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
-   pickles as fallback). **Recover a past run** from the **Load** tab (first
-   tab): it lists each land name with its last-save date (`Last saved:
-   YYYY-MM-DD HH:MM` via the `fmt_dt` Jinja global; token kept small below),
-   newest first, and one click restores the complete
-   page with the saved maps (`POST /` `{op:load}`). Rows are 3 columns on
-   desktop: land name + token | centred last-save datetime | Load button.
+   previews, overviews, per-sector, other-elements) — into MongoDB (or `uploads/<token>.db`
+   pickles as fallback), **saved again on every step** (upload, basin Apply,
+   sector/zone edits, confirm, other elements, simulation). Storage is keyed
+   by **land name (unique)**: re-uploading the same land reuses its record
+   instead of creating a duplicate, and the **Load** tab shows **one row per
+   land** (name + last-save date `Last saved: YYYY-MM-DD HH:MM` on the same
+   row, newest first) with **Load** and **Delete** (removes the whole land)
+   buttons; one click restores the complete page with the saved maps
+   (`POST /` `{op:load}`). DB layout per land:
+   `{Land: [Basin], [Sectors, [Zones, [Valves], [Pipes]]]}` plus other
+   elements and the simulation.
 6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
     (longitude/latitude) — both stay in sync live. Press **Apply** to save:
     `POST /` `{op:basin}` re-runs sector ordering, zones, valves and piping and
@@ -169,19 +194,23 @@ terrain) and its generator `make_test_kml.py`.
 
 ```
 app.py                     single-URL SPA backend: GET / shell, POST / JSON ops
-                           (upload/load/list_runs/basin/sector_coords/sector_action/overview)
+                           (upload/load/list_runs/delete_run/basin/sector_coords/sector_action/
+                            zone_action/overview/other_add/other_remove/sim_save)
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing
   engine.py                pipeline: basin, sectorise, zones, valves, pipes + sector ops
                  (apply_sector_op / recompute_sectors: rename, remove, merge, add, edit)
+                 + zone ops (apply_zone_op: rename, remove, split, confirm),
+                 other-element AI analysis, ROI simulation + AI proposal
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
   storage.py               MongoStore / FileStore (get_store()); saves plan + all maps
   i18n.py                  EN/AR dictionaries + t/bt/btcfg/css helpers
 templates/                 base, index (SPA shell) + partials: _basin_result,
                            _sectors_result, _zones_result, _valves_result,
-                           _pipes_result, _final_result (Tailwind CSS CDN)
+                           _pipes_result, _other_result, _simulation_result,
+                           _final_result (Tailwind CSS CDN)
 static/fonts/              VIP RAWY REGULAR REGULAR.TTF (Arabic)
 samples/                   test KML + generator
 uploads/                   runtime: uploaded raw files (+ <token>.db pickle fallback)
@@ -193,11 +222,15 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
   otherwise a `FileStore` (per-token pickles in `uploads/<token>.db`; old
   `<token>.pkl` files are migrated on read).
 - Every stored record holds `name`, `updated_at`, `plan` (pickled) plus
-  `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps` (per-config keys are
-  stringified for BSON). Ops persist at upload/load, on basin **Apply**, on
-  sector actions, and when overview/sector maps are generated (they are also
-  reused instead of recomputed once saved). The web UI lists/loads runs via
-  the **Load** tab (`POST /` `{op:list_runs}` / `{op:load}`).
+  `basin_map`, `cfg_maps`, `overview_maps`, `sector_maps`, `other_maps`
+  (per-config keys are stringified for BSON). Ops persist at upload, on basin
+  **Apply**, on sector/zone actions, on confirm, and when overview/other/
+  simulation data is generated (maps are also reused instead of recomputed
+  once saved). Records are keyed by land name: re-uploading the same land
+  overwrites its record, `list_runs` is deduplicated to one row per land, and
+  `delete_run` removes the whole land. The web UI lists/loads/deletes runs via
+  the **Load** tab (`POST /` `{op:list_runs}` / `{op:load}` /
+  `{op:delete_run}`).
 
 ## Single-URL SPA
 
@@ -207,7 +240,7 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
   plain-data summaries that the tab JS injects in place.
 - `plan_summary()` strips shapely objects down to JSON-safe dicts for the
   client state; map HTML travels as strings (`basin_map`, per-config previews,
-  overview + per-sector maps).
+  overview + per-sector + other-elements maps).
 
 ## Architecture notes
 
@@ -226,7 +259,8 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
 
 | Object | Keys |
 | --- | --- |
-| `plan` | `name, all_boundaries, boundaries[{name,description,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, _proj, _basin_m, _land_m` |
-| `config` | `id, name, angle, n_sectors, sectors, ready` + post-extend `zones, valves, pipes` |
+| `plan` | `name, all_boundaries, boundaries[{name,description,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, other_elements[{id,kind,lon,lat,size,note,necessary,verdict,suggestion}], simulation{years,capex,annual_cost,annual_revenue,crop}, _proj, _basin_m, _land_m` |
+| `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
-| `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, diameter_mm:50, len_m}), minors[]({zone, diameter_mm:32, len_m})` |
+| `valve` | principal: `{kind:principal, sector, diameter_mm:90, lon, lat, point, name}`; secondary: `{kind:secondary, sector, zone, diameter_mm:32, lon, lat, point, name}` |
+| `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, sector, diameter_mm:63, len_m}), minors[]({zone, sector, diameter_mm:32, len_m})` |

@@ -20,7 +20,7 @@ UPLOAD_DIR = os.path.join(BASE, "uploads")
 STORE = storage.get_store()
 
 # Bump when cached map artwork changes shape: older stored maps are regenerated.
-MAPS_V = 2
+MAPS_V = 3
 
 
 def app_version():
@@ -75,6 +75,19 @@ def _sector_summary(s):
     }
 
 
+def _cfg_totals(cfg):
+    pipes = cfg.get("pipes") or {}
+    princ = (pipes.get("principal") or {}).get("len_m", 0.0)
+    majors = sum(m.get("len_m", 0.0) for m in pipes.get("majors", []) or [])
+    minors = sum(m.get("len_m", 0.0) for m in pipes.get("minors", []) or [])
+    n_p = sum(1 for v in cfg.get("valves", []) or [] if v.get("kind") == "principal")
+    n_s = sum(1 for v in cfg.get("valves", []) or [] if v.get("kind") != "principal")
+    return {"principal_m": princ, "majors_m": majors, "minors_m": minors,
+            "total_m": princ + majors + minors,
+            "n_principal": n_p, "n_secondary": n_s,
+            "n_zones": len(cfg.get("zones", []) or [])}
+
+
 def plan_summary(plan):
     return {
         "name": plan.get("name", "Untitled plot"),
@@ -83,6 +96,8 @@ def plan_summary(plan):
         "water": dict(plan.get("water") or {}),
         "basin": _basin_summary(plan),
         "existing_sectors": bool(plan.get("existing_sectors")),
+        "other_elements": [dict(e) for e in (plan.get("other_elements") or [])],
+        "simulation": dict(plan.get("simulation") or {}),
         "boundaries": [
             {"name": b.get("name"), "description": b.get("description") or "",
              "is_land": bool(b.get("is_land")), "area_m2": b.get("area_m2")}
@@ -94,8 +109,93 @@ def plan_summary(plan):
             "id": c.get("id"),
             "name": c.get("name"),
             "n_sectors": c.get("n_sectors"),
+            "zones_confirmed": bool(c.get("zones_confirmed")),
+            "totals": _cfg_totals(c),
             "sectors": [_sector_summary(s) for s in c.get("sectors") or []],
         } for c in plan.get("configs") or []],
+    }
+
+
+def _norm_name(name):
+    return (name or "untitled plot").strip().lower()
+
+
+def _dedup_runs(runs):
+    best = {}
+    for r in runs or []:
+        k = _norm_name(r.get("name"))
+        if k not in best or (r.get("updated_at") or 0) > (best[k].get("updated_at") or 0):
+            best[k] = r
+    out = sorted(best.values(), key=lambda r: r.get("updated_at") or 0, reverse=True)
+    for r in out:
+        r["updated_str"] = fmt_dt(r.get("updated_at"))
+    return out
+
+
+def _token_for_land(name, exclude=None):
+    for r in STORE.list_runs(limit=200):
+        if _norm_name(r.get("name")) == _norm_name(name) and r.get("token") != exclude:
+            return r.get("token")
+    return None
+
+
+def _persist(token, plan, maps=None):
+    if maps is None:
+        doc = STORE.load(token) or {}
+        keep = {k: doc.get(k) for k in ("basin_map", "cfg_maps", "overview_maps",
+                                        "sector_maps", "other_maps", "maps_v")
+                if doc.get(k) is not None}
+        STORE.save(token, plan, keep)
+    else:
+        STORE.save(token, plan, maps)
+
+
+def _overview_ctx(token, plan, cfg):
+    engine.extend(plan, cfg["id"])
+    doc = STORE.load(token)
+    ov_maps = dict((doc or {}).get("overview_maps") or {})
+    sector_maps = dict((doc or {}).get("sector_maps") or {})
+    other_maps = dict((doc or {}).get("other_maps") or {})
+    if (doc or {}).get("maps_v") != MAPS_V:
+        for store in (ov_maps, sector_maps, other_maps):
+            store.pop(cfg["id"], None)
+            store.pop(str(cfg["id"]), None)
+    ov = ov_maps.get(cfg["id"])
+    if ov is None:
+        ov = mapper.map_config_overview(plan, cfg)
+        ov_maps[cfg["id"]] = ov
+    per_sector = dict(sector_maps.get(cfg["id"]) or {})
+    for s in cfg["sectors"]:
+        if s["name"] not in per_sector:
+            per_sector[s["name"]] = mapper.map_sector(plan, cfg, s,
+                                                      valves=False, pipes=False)
+    sector_maps[cfg["id"]] = per_sector
+    other = other_maps.get(cfg["id"])
+    if other is None:
+        other = mapper.map_other_elements(plan, cfg)
+        other_maps[cfg["id"]] = other
+    STORE.save_maps(token, {"overview_maps": ov_maps,
+                            "sector_maps": sector_maps,
+                            "other_maps": other_maps,
+                            "maps_v": MAPS_V})
+    _persist(token, plan)
+    sim = engine.compute_simulation(plan, cfg, **(plan.get("simulation") or {}))
+    return {"token": token, "plan": plan, "cfg": cfg,
+            "overview_map": ov, "per_sector": per_sector,
+            "other_map": other,
+            "valves_map": mapper.map_config_valves(plan, cfg),
+            "pipes_map": mapper.map_config_pipes(plan, cfg),
+            "sim": sim}
+
+
+def _overview_fragments(ctx):
+    return {
+        "zones_html": render_template("_zones_result.html", **ctx),
+        "valves_html": render_template("_valves_result.html", **ctx),
+        "pipes_html": render_template("_pipes_result.html", **ctx),
+        "other_html": render_template("_other_result.html", **ctx),
+        "sim_html": render_template("_simulation_result.html", **ctx),
+        "final_html": render_template("_final_result.html", **ctx),
     }
 
 
@@ -105,7 +205,7 @@ def _full_payload(token, plan, save=True):
         cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
     basin_map = mapper.map_basin(plan)
     if save:
-        STORE.save(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+        _persist(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
     return {
         "ok": True,
         "token": token,
@@ -149,10 +249,7 @@ app.jinja_env.filters["natsort"] = natsort
 
 @app.context_processor
 def inject_runs():
-    runs = STORE.list_runs()
-    for r in runs:
-        r["updated_str"] = fmt_dt(r.get("updated_at"))
-    return {"runs": runs}
+    return {"runs": _dedup_runs(STORE.list_runs())}
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -162,8 +259,8 @@ def index():
 
     f = request.files.get("file")
     if f is not None and f.filename:
-        token = uuid.uuid4().hex[:12]
-        dest = os.path.join(UPLOAD_DIR, token + "_" + os.path.basename(f.filename))
+        tmp = uuid.uuid4().hex[:12]
+        dest = os.path.join(UPLOAD_DIR, tmp + "_" + os.path.basename(f.filename))
         f.save(dest)
         try:
             parsed = parser.load_file(dest)
@@ -178,16 +275,27 @@ def index():
             if os.path.exists(dest):
                 os.remove(dest)
             return _err(str(exc))
+        if os.path.exists(dest):
+            os.remove(dest)
+        token = _token_for_land(plan.get("name")) or uuid.uuid4().hex[:12]
         return jsonify(_full_payload(token, plan))
 
     data = request.get_json(silent=True) or {}
     op = data.get("op")
 
     if op == "list_runs":
-        runs = STORE.list_runs()
-        for r in runs:
-            r["updated_str"] = fmt_dt(r.get("updated_at"))
-        return jsonify(ok=True, runs=runs)
+        return jsonify(ok=True, runs=_dedup_runs(STORE.list_runs()))
+
+    if op == "delete_run":
+        token = data.get("token")
+        plan = _get_plan(token)
+        if plan is None:
+            return _err("Run not found.")
+        try:
+            STORE.delete(token)
+        except AttributeError:
+            pass
+        return jsonify(ok=True, runs=_dedup_runs(STORE.list_runs()))
 
     if op == "load":
         plan = _get_plan(data.get("token"))
@@ -211,7 +319,7 @@ def index():
             cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
         basin_map = mapper.map_basin(plan)
         if ok:
-            STORE.save(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+            _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
         if not ok:
             return jsonify(ok=False, error_html=str(i18n.err(msg)))
         return jsonify(
@@ -264,13 +372,16 @@ def index():
             cfg_maps[c["id"]] = mapper.map_config_preview(plan, c)
         doc = STORE.load(data.get("token"))
         basin_map = (doc or {}).get("basin_map")
-        STORE.save(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+        _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
         ov_maps = dict((doc or {}).get("overview_maps") or {})
         sector_maps = dict((doc or {}).get("sector_maps") or {})
+        other_maps = dict((doc or {}).get("other_maps") or {})
         for key, store in ((data.get("cfgid"), ov_maps), (str(data.get("cfgid")), ov_maps),
-                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps)):
+                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps),
+                           (data.get("cfgid"), other_maps), (str(data.get("cfgid")), other_maps)):
             store.pop(key, None)
-        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps})
+        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
+                                            "other_maps": other_maps})
         return jsonify(
             ok=True,
             sectors_html=render_template(
@@ -279,46 +390,124 @@ def index():
             plan=plan_summary(plan),
         )
 
-    if op == "overview":
+    if op == "zone_action":
         plan = _get_plan(data.get("token"))
         cfg = next((c for c in (plan or {}).get("configs", [])
                     if c["id"] == data.get("cfgid")), None)
         if plan is None or cfg is None:
             return _err("Run not found.")
         engine.extend(plan, data.get("cfgid"))
+        ok, msg = engine.apply_zone_op(
+            plan, cfg, data.get("action", ""),
+            sector_idx=data.get("sector_idx"), zone_idx=data.get("zone_idx"),
+            zone_name=data.get("zone_name"), name=data.get("name"),
+            x1=data.get("x1"), y1=data.get("y1"),
+            x2=data.get("x2"), y2=data.get("y2"),
+        )
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(msg)))
         doc = STORE.load(data.get("token"))
         ov_maps = dict((doc or {}).get("overview_maps") or {})
         sector_maps = dict((doc or {}).get("sector_maps") or {})
-        if (doc or {}).get("maps_v") != MAPS_V:
-            ov_maps.pop(data.get("cfgid"), None)
-            ov_maps.pop(str(data.get("cfgid")), None)
-            sector_maps.pop(data.get("cfgid"), None)
-            sector_maps.pop(str(data.get("cfgid")), None)
-        ov = ov_maps.get(data.get("cfgid"))
-        if ov is None:
-            ov = mapper.map_config_overview(plan, cfg)
-            ov_maps[data.get("cfgid")] = ov
-        per_sector = dict(sector_maps.get(data.get("cfgid")) or {})
-        for s in cfg["sectors"]:
-            if s["name"] not in per_sector:
-                per_sector[s["name"]] = mapper.map_sector(plan, cfg, s,
-                                                          valves=False, pipes=False)
-        sector_maps[data.get("cfgid")] = per_sector
-        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps,
-                                            "sector_maps": sector_maps,
-                                            "maps_v": MAPS_V})
-        ctx = {"token": data.get("token"), "plan": plan, "cfg": cfg,
-               "overview_map": ov, "per_sector": per_sector,
-               "valves_map": mapper.map_config_valves(plan, cfg),
-               "pipes_map": mapper.map_config_pipes(plan, cfg)}
-        return jsonify(
-            ok=True,
-            cfgid=data.get("cfgid"),
-            zones_html=render_template("_zones_result.html", **ctx),
-            valves_html=render_template("_valves_result.html", **ctx),
-            pipes_html=render_template("_pipes_result.html", **ctx),
-            final_html=render_template("_final_result.html", **ctx),
-        )
+        other_maps = dict((doc or {}).get("other_maps") or {})
+        for key, store in ((data.get("cfgid"), ov_maps), (str(data.get("cfgid")), ov_maps),
+                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps),
+                           (data.get("cfgid"), other_maps), (str(data.get("cfgid")), other_maps)):
+            store.pop(key, None)
+        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
+                                            "other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "other_add":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        kind = (data.get("kind") or "pressure_reducer").strip()
+        if kind not in engine.OTHER_KINDS:
+            kind = "pressure_reducer"
+        try:
+            lon = float(data.get("lon"))
+            lat = float(data.get("lat"))
+        except (TypeError, ValueError):
+            return jsonify(ok=False, error=str(i18n.err("Invalid coordinates.")))
+        verdict = engine.analyse_other_element(plan, cfg, kind, lon, lat)
+        el = {"id": uuid.uuid4().hex[:8], "kind": kind, "lon": lon, "lat": lat,
+              "size": (data.get("size") or "").strip()[:24],
+              "note": (data.get("note") or "").strip()[:200],
+              "necessary": verdict["necessary"], "verdict": verdict["verdict"],
+              "suggestion": verdict["suggestion"]}
+        plan.setdefault("other_elements", []).append(el)
+        doc = STORE.load(data.get("token"))
+        other_maps = dict((doc or {}).get("other_maps") or {})
+        other_maps.pop(data.get("cfgid"), None)
+        other_maps.pop(str(data.get("cfgid")), None)
+        STORE.save_maps(data.get("token"), {"other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
+                     element=el)
+        return jsonify(frags)
+
+    if op == "other_remove":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        plan["other_elements"] = [e for e in (plan.get("other_elements") or [])
+                                  if e.get("id") != data.get("id")]
+        doc = STORE.load(data.get("token"))
+        other_maps = dict((doc or {}).get("other_maps") or {})
+        other_maps.pop(data.get("cfgid"), None)
+        other_maps.pop(str(data.get("cfgid")), None)
+        STORE.save_maps(data.get("token"), {"other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "sim_save":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        if data.get("use_ai"):
+            area_ha = (plan.get("land_area_m2") or 0.0) / 10000.0
+            plan["simulation"] = {"years": int(data.get("years") or 10),
+                                  "capex": round(2500 * area_ha + 1200, 2),
+                                  "annual_cost": round(600 * area_ha + 300, 2),
+                                  "annual_revenue": round(2600 * area_ha + 400, 2),
+                                  "crop": data.get("crop") or "vegetables"}
+        else:
+            plan["simulation"] = {"years": data.get("years"),
+                                  "capex": data.get("capex"),
+                                  "annual_cost": data.get("annual_cost"),
+                                  "annual_revenue": data.get("annual_revenue"),
+                                  "crop": data.get("crop") or "vegetables"}
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
+                     sim=ctx["sim"])
+        return jsonify(frags)
+
+    if op == "overview":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
 
     return _err("Unknown operation.")
 

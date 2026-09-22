@@ -1,6 +1,11 @@
 <div class="mb-4 flex flex-wrap items-center gap-3">
   <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
   <span class="inl text-sm text-white/60">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
+  {% if cfg.zones_confirmed %}
+  <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-200">{{ t('ZONES_CONFIRMED') }}</span>
+  {% else %}
+  <span class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-200">{{ t('ZONES_PENDING') }}</span>
+  {% endif %}
 </div>
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
   {% for s in cfg.sectors %}
@@ -27,7 +32,7 @@
             <tr>
               <td class="px-4 py-2 font-semibold text-white">{{ z.name }}</td>
               <td class="px-4 py-2">{{ "{:,.0f}".format(z.area_m2) }} m<sup>2</sup></td>
-              <td class="px-4 py-2">{{ t('D_50') }}</td>
+              <td class="px-4 py-2">{{ t('D_32') }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -36,4 +41,8 @@
     </div>
   </div>
   {% endfor %}
+</div>
+<div class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+  <p class="mb-3 text-sm text-white/60">{{ t('ZONES_PENDING') }} — {{ t('VALVE_PRINCIPAL') }} + {{ t('VALVE_SECONDARY') }}</p>
+  <button type="button" class="glow-btn rounded-2xl px-8 py-3 text-base font-bold confirm-zones-btn" data-cfg="{{ cfg.id }}">{{ t('CONFIRM_ZONES') }}</button>
 </div>

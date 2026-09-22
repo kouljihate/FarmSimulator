@@ -12,6 +12,8 @@
     <button type="button" class="tab-btn" data-tab-target="tab-zones">{{ bi('TAB_ZONES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-valve">{{ bi('TAB_VALVE') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-pipes">{{ bi('TAB_PIPES') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-other">{{ bi('TAB_OTHER') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-sim">{{ bi('TAB_SIM') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-final">{{ bi('TAB_FINAL') }}</button>
   </div>
 </div>
@@ -23,7 +25,7 @@
       <div id="runs-card" class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" {% if not runs %}style="display:none"{% endif %}>
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('LOAD_TITLE') }}</h2></div>
         <div class="p-5 md:p-6">
-          <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-saved-at='{{ t('SAVED_AT') }}'>
+          <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-del-label='{{ t('DELETE') }}' data-saved-at='{{ t('SAVED_AT') }}'>
             {% for run in runs %}
             <li class="grid grid-cols-1 items-center gap-3 rounded-xl bg-white/5 p-3 sm:grid-cols-3">
               <div>
@@ -31,8 +33,9 @@
                 <div class="text-xs text-white/30">{{ run.token }}</div>
               </div>
               <div class="text-center text-sm text-white/50">{{ t('SAVED_AT') }}: {{ run.updated_str }}</div>
-              <div class="flex sm:justify-end">
+              <div class="flex gap-2 sm:justify-end">
                 <button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="{{ run.token }}">{{ t('LOAD') }}</button>
+                <button type="button" class="tool-btn tool-btn-danger" data-del-token="{{ run.token }}">{{ t('DELETE') }}</button>
               </div>
             </li>
             {% endfor %}
@@ -154,6 +157,22 @@
       </div>
     </div>
 
+    <div class="tab-panel" id="tab-other">
+      <div id="other-result"></div>
+      <div id="other-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_OTHER') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-sim">
+      <div id="sim-result"></div>
+      <div id="sim-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_SIM') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-final">
       <div id="final-result"></div>
       <div id="final-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
@@ -185,6 +204,29 @@
     <h3 id="sector-detail-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
     <iframe id="sector-detail-map" class="map big mb-4" width="100%" height="440"></iframe>
     <div id="sector-detail-zones" class="mb-4 overflow-x-auto rounded-xl border border-white/10"></div>
+    <div id="zone-mgmt" class="mb-4 rounded-2xl border border-cyan-400/20 bg-white/5 p-4">
+      <h4 class="mb-1 text-sm font-bold text-white">{{ t('ZONE_MGMT') }}</h4>
+      <p class="mb-3 text-xs text-white/55">{{ t('ZONE_TRACE_HINT') }}</p>
+      <div class="mb-2 flex flex-wrap gap-2">
+        <button type="button" id="zone-trace-btn" class="tool-btn">{{ bv('TRACE_BTN') }}</button>
+        <span id="zone-pick-hint" class="hidden text-xs text-amber-200">{{ t('MAP_CLICK_HINT') }}</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <input id="zone-x1" type="number" step="0.000001" placeholder="X1" class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+        <input id="zone-y1" type="number" step="0.000001" placeholder="Y1" class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+        <input id="zone-x2" type="number" step="0.000001" placeholder="X2" class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+        <input id="zone-y2" type="number" step="0.000001" placeholder="Y2" class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <select id="zone-target" class="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80"></select>
+        <input id="zone-new-name" type="text" placeholder="Zone name" class="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button type="button" id="zone-split-btn" class="glow-btn rounded-xl px-4 py-2 text-sm font-bold">{{ bv('ZONE_SPLIT_BTN') }}</button>
+        <button type="button" id="zone-rename-btn" class="tool-btn">{{ bv('ZONE_RENAME') }}</button>
+        <button type="button" id="zone-remove-btn" class="tool-btn tool-btn-danger">{{ bv('ZONE_REMOVE') }}</button>
+      </div>
+    </div>
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
         <button type="button" id="sector-detail-add" class="tool-btn">{{ bv('SECTOR_ADD') }}</button>
@@ -374,7 +416,8 @@
   function resetOverview() {
     S.cfgid = null;
     var pairs = [['zones-result', 'zones-empty'], ['valves-result', 'valves-empty'],
-                 ['pipes-result', 'pipes-empty'], ['final-result', 'final-empty']];
+                 ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
+                 ['sim-result', 'sim-empty'], ['final-result', 'final-empty']];
     pairs.forEach(function (p) {
       var r = document.getElementById(p[0]);
       var e = document.getElementById(p[1]);
@@ -383,22 +426,44 @@
     });
   }
 
+  function fillOverview(data, silent) {
+    S.cfgid = data.cfgid;
+    var map = [['zones-result', 'zones-empty', data.zones_html],
+               ['valves-result', 'valves-empty', data.valves_html],
+               ['pipes-result', 'pipes-empty', data.pipes_html],
+               ['other-result', 'other-empty', data.other_html],
+               ['sim-result', 'sim-empty', data.sim_html],
+               ['final-result', 'final-empty', data.final_html]];
+    map.forEach(function (m) {
+      var r = document.getElementById(m[0]);
+      var e = document.getElementById(m[1]);
+      if (r) r.innerHTML = m[2] || '';
+      if (e) e.style.display = m[2] ? 'none' : '';
+    });
+    if (data.plan) S.plan = data.plan;
+    if (!silent) { hideError(); goTab('tab-zones'); }
+  }
+
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
     api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10) }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
-      S.cfgid = data.cfgid;
-      var map = [['zones-result', 'zones-empty', data.zones_html],
-                 ['valves-result', 'valves-empty', data.valves_html],
-                 ['pipes-result', 'pipes-empty', data.pipes_html],
-                 ['final-result', 'final-empty', data.final_html]];
-      map.forEach(function (m) {
-        var r = document.getElementById(m[0]);
-        var e = document.getElementById(m[1]);
-        if (r) r.innerHTML = m[2] || '';
-        if (e) e.style.display = 'none';
-      });
-      if (!silent) { hideError(); goTab('tab-zones'); }
+      fillOverview(data, silent);
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
+  function zoneAction(cfgid, action, extra) {
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    var body = extra || {};
+    body.op = 'zone_action';
+    body.token = S.token;
+    body.cfgid = parseInt(cfgid, 10);
+    body.action = action;
+    api(body).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
+      hideError();
+      fillOverview(data, true);
+      if (dCfg != null) openDetailModal(String(dCfg), dIdx, dName, true);
     }).catch(function () { showError(terrHtml('tnet')); });
   }
 
@@ -410,6 +475,7 @@
       var empty = document.getElementById('runs-empty');
       if (!list || !card || !empty) return;
       var loadLabel = list.dataset.loadLabel || 'Load';
+      var delLabel = list.dataset.delLabel || 'Delete';
       var savedAt = list.dataset.savedAt || '';
       var html = '';
       data.runs.forEach(function (r) {
@@ -417,9 +483,11 @@
           + '<div><div class="font-semibold text-white">' + esc(r.name) + '</div>'
           + '<div class="text-xs text-white/30">' + esc(r.token) + '</div></div>'
           + '<div class="text-center text-sm text-white/50">' + savedAt + ': ' + esc(r.updated_str || '') + '</div>'
-          + '<div class="flex sm:justify-end">'
+          + '<div class="flex gap-2 sm:justify-end">'
           + '<button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="'
-          + esc(r.token) + '">' + loadLabel + '</button></div></li>';
+          + esc(r.token) + '">' + loadLabel + '</button>'
+          + '<button type="button" class="tool-btn tool-btn-danger" data-del-token="'
+          + esc(r.token) + '">' + delLabel + '</button></div></li>';
       });
       list.innerHTML = html;
       var has = data.runs.length > 0;
@@ -445,6 +513,22 @@
   }
 
   document.addEventListener('click', function (e) {
+    var del = e.target && e.target.closest ? e.target.closest('[data-del-token]') : null;
+    if (del) {
+      hideError();
+      var row = del.closest('li');
+      var nm = row ? row.querySelector('.font-semibold').textContent : del.getAttribute('data-del-token');
+      if (!confirm('Delete ' + nm + '?')) return;
+      api({ op: 'delete_run', token: del.getAttribute('data-del-token') }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        if (S.token === del.getAttribute('data-del-token')) {
+          S.token = null; S.plan = null; S.cfgid = null;
+          resetOverview();
+        }
+        refreshRuns();
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
     var lb = e.target && e.target.closest ? e.target.closest('[data-load-token]') : null;
     if (lb) {
       hideError();
@@ -459,6 +543,33 @@
     var ub = e.target && e.target.closest ? e.target.closest('.use-config-btn') : null;
     if (ub) {
       loadOverview(ub.getAttribute('data-cfg'), false);
+      return;
+    }
+    var cz = e.target && e.target.closest ? e.target.closest('.confirm-zones-btn') : null;
+    if (cz) {
+      zoneAction(cz.getAttribute('data-cfg'), 'confirm', {});
+      goTab('tab-valve');
+      return;
+    }
+    var od = e.target && e.target.closest ? e.target.closest('.other-del-btn') : null;
+    if (od) {
+      if (!S.token) return;
+      api({ op: 'other_remove', token: S.token, cfgid: parseInt(od.getAttribute('data-cfg'), 10), id: od.getAttribute('data-id') }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
+    var sa = e.target && e.target.closest ? e.target.closest('#sim-ai-btn') : null;
+    if (sa) {
+      if (!S.token) return;
+      var sf = document.getElementById('sim-form');
+      api({ op: 'sim_save', token: S.token, cfgid: parseInt(sa.getAttribute('data-cfg'), 10), use_ai: true,
+            years: sf ? document.getElementById('sim-years').value : 10,
+            crop: sf ? document.getElementById('sim-crop').value : 'vegetables' }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
     var ob = e.target && e.target.closest ? e.target.closest('.sector-open-btn') : null;
@@ -644,11 +755,34 @@
   var dMap = document.getElementById('sector-detail-map');
   var dZones = document.getElementById('sector-detail-zones');
   var dCfg = null, dIdx = null, dName = '';
+  var zonePickCount = 0, zoneTraceArmed = false;
 
-  function hideDetailModal() { if (dModal) dModal.style.display = 'none'; }
+  function hideDetailModal() {
+    if (dModal) dModal.style.display = 'none';
+    setZonePick(false);
+  }
   function detailName() { return chipName(dCfg, dIdx) || dName; }
-  function openDetailModal(cfg, idx, name) {
+  function setZonePick(v, attempt) {
+    zoneTraceArmed = !!v;
+    var hint = document.getElementById('zone-pick-hint');
+    if (hint) hint.classList.toggle('hidden', !v);
+    attempt = attempt || 0;
+    var done = false;
+    try {
+      var w = dMap && dMap.contentWindow;
+      var doc = dMap && dMap.contentDocument;
+      if (doc) {
+        var inner = doc.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.setZonePick === 'function') { w.setZonePick(v); done = true; }
+    } catch (x) {}
+    if (!done && attempt < 30) setTimeout(function () { setZonePick(v, attempt + 1); }, 150);
+  }
+  function openDetailModal(cfg, idx, name, keep) {
     dCfg = cfg; dIdx = idx; dName = name || '';
+    zonePickCount = 0;
+    setZonePick(false);
     var card = null;
     var zr = document.getElementById('zones-result');
     if (zr) {
@@ -667,6 +801,26 @@
         ? '<table class="w-full text-sm text-white/75">' + tbl.innerHTML + '</table>'
         : '';
     }
+    var zt = document.getElementById('zone-target');
+    if (zt && S.plan) {
+      var cfgObj = null;
+      (S.plan.configs || []).forEach(function (c) { if (String(c.id) === String(cfg)) cfgObj = c; });
+      var opts = '';
+      if (cfgObj) {
+        (cfgObj.sectors || []).forEach(function (s) {
+          if (s.idx === idx || String(s.idx) === String(idx)) {
+            (s.zones || []).forEach(function (z) {
+              opts += '<option value="' + esc(z.name) + '">' + esc(z.name) + '</option>';
+            });
+          }
+        });
+      }
+      zt.innerHTML = opts;
+    }
+    ['zone-x1', 'zone-y1', 'zone-x2', 'zone-y2', 'zone-new-name'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && !keep) el.value = '';
+    });
     if (dModal) dModal.style.display = 'flex';
   }
   function armSectorTool(cfg, idx, op) {
@@ -689,6 +843,14 @@
   var dRename = document.getElementById('sector-detail-rename');
   var dRemove = document.getElementById('sector-detail-remove');
   var dClose = document.getElementById('sector-detail-close');
+  var zTrace = document.getElementById('zone-trace-btn');
+  var zSplit = document.getElementById('zone-split-btn');
+  var zRename = document.getElementById('zone-rename-btn');
+  var zRemove = document.getElementById('zone-remove-btn');
+  function zoneTarget() {
+    var zt = document.getElementById('zone-target');
+    return zt ? zt.value : '';
+  }
   if (dAdd) dAdd.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'add'); });
   if (dEdit) dEdit.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'edit'); });
   if (dRename) dRename.addEventListener('click', function () {
@@ -703,8 +865,40 @@
   });
   if (dClose) dClose.addEventListener('click', hideDetailModal);
   if (dModal) dModal.addEventListener('click', function (e) { if (e.target === dModal) hideDetailModal(); });
+  if (zTrace) zTrace.addEventListener('click', function () { zonePickCount = 0; setZonePick(!zoneTraceArmed); });
+  if (zSplit) zSplit.addEventListener('click', function () {
+    zoneAction(dCfg, 'split', { sector_idx: dIdx, zone_name: zoneTarget(),
+      x1: document.getElementById('zone-x1').value, y1: document.getElementById('zone-y1').value,
+      x2: document.getElementById('zone-x2').value, y2: document.getElementById('zone-y2').value });
+  });
+  if (zRename) zRename.addEventListener('click', function () {
+    var nm = document.getElementById('zone-new-name').value.trim();
+    if (!nm) return;
+    zoneAction(dCfg, 'rename', { sector_idx: dIdx, zone_name: zoneTarget(), name: nm });
+  });
+  if (zRemove) zRemove.addEventListener('click', function () {
+    zoneAction(dCfg, 'remove', { sector_idx: dIdx, zone_name: zoneTarget() });
+  });
 
   window.addEventListener('message', function (e) {    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'zone-pick') {
+      var ids = ['zone-x1', 'zone-y1', 'zone-x2', 'zone-y2'];
+      var slot = zonePickCount % 4;
+      if (slot % 2 === 0) {
+        document.getElementById(ids[slot]).value = Number(e.data.lon).toFixed(6);
+        document.getElementById(ids[slot + 1]).value = Number(e.data.lat).toFixed(6);
+        zonePickCount += 2;
+      }
+      if (zonePickCount >= 4) setZonePick(false);
+      return;
+    }
+    if (e.data.type === 'other-map-click') {
+      var lo = document.getElementById('other-lon');
+      var la = document.getElementById('other-lat');
+      if (lo) lo.value = Number(e.data.lon).toFixed(6);
+      if (la) la.value = Number(e.data.lat).toFixed(6);
+      return;
+    }
     var cfg = e.data.cfg;
     if (e.data.type === 'sector-select') {
       if (cfg != null && e.data.idx != null) {
@@ -792,6 +986,37 @@
   }
 
   document.addEventListener('submit', function (e) {
+    var of = e.target && e.target.id === 'other-form' ? e.target : null;
+    if (of) {
+      e.preventDefault();
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      api({ op: 'other_add', token: S.token, cfgid: parseInt(of.getAttribute('data-cfg'), 10),
+            kind: document.getElementById('other-kind').value,
+            size: document.getElementById('other-size').value,
+            lon: parseFloat(document.getElementById('other-lon').value),
+            lat: parseFloat(document.getElementById('other-lat').value) }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
+    var sf2 = e.target && e.target.id === 'sim-form' ? e.target : null;
+    if (sf2) {
+      e.preventDefault();
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      api({ op: 'sim_save', token: S.token, cfgid: parseInt(sf2.getAttribute('data-cfg'), 10),
+            years: document.getElementById('sim-years').value,
+            crop: document.getElementById('sim-crop').value,
+            capex: document.getElementById('sim-capex').value,
+            annual_cost: document.getElementById('sim-cost').value,
+            annual_revenue: document.getElementById('sim-rev').value }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
     var form = e.target && e.target.id === 'basin-form' ? e.target : null;
     if (!form) return;
     e.preventDefault();

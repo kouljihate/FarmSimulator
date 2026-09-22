@@ -159,7 +159,9 @@
   .tool-btn-danger:hover { border-color: #f87171; background: rgba(248,113,113,.3); box-shadow: 0 0 12px rgba(248,113,113,.4); }
 
   #sector-modal { background: rgba(3,7,18,.72); backdrop-filter: blur(6px); }
-  #sector-modal .sector-modal-card {
+  #sector-detail-modal { background: rgba(3,7,18,.72); backdrop-filter: blur(6px); }
+  #sector-modal .sector-modal-card,
+  #sector-detail-modal .sector-modal-card {
     background:
       radial-gradient(120% 120% at 0% 0%, rgba(34,211,238,.14), transparent 50%),
       radial-gradient(120% 120% at 100% 100%, rgba(139,92,246,.18), transparent 50%),
@@ -169,6 +171,10 @@
     box-shadow: 0 0 30px rgba(34,211,238,.18), 0 0 60px rgba(139,92,246,.14), 0 20px 40px rgba(0,0,0,.5);
   }
   #sector-modal .sector-modal-title {
+    color: #fff;
+    text-shadow: 0 0 12px rgba(34,211,238,.6);
+  }
+  #sector-detail-modal .sector-modal-title {
     color: #fff;
     text-shadow: 0 0 12px rgba(34,211,238,.6);
   }
@@ -183,6 +189,13 @@
     transition: all .18s ease;
   }
   #sector-modal input::placeholder { color: rgba(226,232,240,.45); }
+  #sector-detail-modal input, #sector-detail-modal select {
+    border-radius: .75rem;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: #fff;
+  }
+  #sector-detail-modal select option { color: #0b1220; }
   #sector-modal input:focus { border-color: #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,.45); background: rgba(34,211,238,.06); }
   #sector-modal .sector-modal-msg { color: rgba(255,255,255,.72); }
   #sector-modal .sector-modal-btn {
@@ -211,6 +224,16 @@
   #sector-modal .sector-modal-msg .bv { display: flex; flex-direction: column; gap: 4px; }
   #sector-modal .sector-modal-msg .bv .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .85rem; }
   #sector-modal .sector-modal-msg .bv .en { font-size: .8rem; color: rgba(255,255,255,.65); }
+
+  #other-kind option, #sim-crop option, #zone-target option { color: #0b1220; }
+
+  @media print {
+    nav, footer, .tab-btn, #top-error, #sector-modal, #sector-detail-modal,
+    #other-form, #sim-form, .confirm-zones-btn, .use-config-btn { display: none !important; }
+    body { background: #fff; color: #000; }
+    .tab-panel { display: block !important; }
+    #final-report { color: #000; }
+  }
 </style>
 </head>
 <body class="min-h-screen font-sans antialiased" dir="ltr">

@@ -1,3 +1,4 @@
+<div id="final-report">
 <h1 class="text-2xl font-bold text-white">{{ t('CFG_TITLE') }} - {{ btcfg(cfg.name) }}</h1>
 <p class="inl text-white/60">
   {{ cfg.n_sectors }} {{ t('SECTORS') }} · {{ t('CFG_SUB') }}
@@ -27,8 +28,50 @@
     <span><span class="sw" style="background:#0b8a6f"></span>{{ t('LG_P90') }}</span>
     <span><span class="sw" style="background:#377eb8"></span>{{ t('LG_P50') }}</span>
     <span><span class="sw" style="background:#4daf4a"></span>{{ t('LG_P32') }}</span>
-    <span><span class="sw" style="background:red"></span>{{ t('LG_VALVE') }}</span>
+    <span><span class="sw" style="background:red"></span>{{ t('LG_VALVE90') }}</span>
+    <span><span class="sw" style="background:orange"></span>{{ t('LG_VALVE32') }}</span>
+    <span><span class="sw" style="background:purple"></span>{{ t('LG_OTHER') }}</span>
     <span><span class="sw" style="background:brown"></span>{{ t('LG_BASIN') }}</span>
     <span><span class="sw" style="background:blue"></span>{{ t('LG_WATER') }}</span>
   </div>
+</div>
+
+<div class="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('REPORT_TITLE') }}</h3></div>
+  <div class="grid grid-cols-2 gap-3 p-5 text-sm text-white/75 lg:grid-cols-4">
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('LAND_SURFACE') }}</div><div class="font-bold text-white">{{ "{:,.0f}".format(plan.land_area_m2) }} m2 ({{ "%.2f"|format(plan.land_area_m2/10000) }} ha)</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('BASIN_TITLE') }}</div><div class="font-bold text-white">{{ "%.6f"|format(plan.basin.lon) }}, {{ "%.6f"|format(plan.basin.lat) }}</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('DIST_WATER') }}</div><div class="font-bold text-white">{{ "{:,.0f}".format(plan.basin.dist_water_m) }} m</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('SECTORS') }}</div><div class="font-bold text-white">{{ cfg.n_sectors }} · {{ cfg.zones|length }} {{ t('ZONES') }}</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('VALVE_PRINCIPAL') }}</div><div class="font-bold text-white">{{ cfg.valves|selectattr('kind','equalto','principal')|list|length }} × 90 mm</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('VALVE_SECONDARY') }}</div><div class="font-bold text-white">{{ cfg.valves|rejectattr('kind','equalto','principal')|list|length }} × 32 mm</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('T_PRINCIPAL') }} 90</div><div class="font-bold text-white">{{ "{:,.0f}".format(cfg.pipes.principal.len_m) }} m</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('T_MAJOR') }} 63 + {{ t('T_MINOR') }} 32</div><div class="font-bold text-white">{{ "{:,.0f}".format(cfg.pipes.majors|sum(attribute='len_m')) }} + {{ "{:,.0f}".format(cfg.pipes.minors|sum(attribute='len_m')) }} m</div></div>
+  </div>
+  <div class="space-y-3 p-5 text-sm text-white/75">
+    {% for s in cfg.sectors %}
+    <div class="rounded-xl border border-white/10 p-3">
+      <div class="font-bold text-white">{{ s.name }} — {{ "{:,.0f}".format(s.area_m2) }} m2</div>
+      <div class="mt-1">{% for z in s.zones %}<span class="mr-2 rounded-full bg-white/10 px-2 py-0.5">{{ z.name }} ({{ "{:,.0f}".format(z.area_m2) }} m2)</span>{% endfor %}</div>
+    </div>
+    {% endfor %}
+    {% if plan.other_elements %}
+    <div class="rounded-xl border border-white/10 p-3">
+      <div class="font-bold text-white">{{ t('OTHER_TITLE') }} ({{ plan.other_elements|length }})</div>
+      {% for el in plan.other_elements %}<div>{{ el.kind }} — {{ "%.5f"|format(el.lon) }}, {{ "%.5f"|format(el.lat) }} — {{ el.verdict }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if sim %}
+    <div class="rounded-xl border border-white/10 p-3">
+      <div class="font-bold text-white">{{ t('SIM_TITLE') }}</div>
+      <div>{{ t('SIM_BREAKEVEN') }}: {{ sim.breakeven_year if sim.breakeven_year else '—' }} · {{ t('SIM_TOTAL') }}: {{ "{:,.0f}".format(sim.total_net) }}</div>
+      <div class="mt-1 text-white/60">{{ sim.ai.plan }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+</div>
+
+<div class="mt-4 text-center">
+  <button type="button" class="glow-btn rounded-2xl px-8 py-3 font-bold" onclick="window.print()">{{ t('EXPORT_PDF') }}</button>
 </div>
