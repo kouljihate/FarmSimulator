@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.9.7 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.9.9 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -72,15 +72,21 @@ Each config card has a set of **sector checkboxes labelled with the actual
     tabs; long names truncated with `max-w-20 truncate`).
     Checking one (or several)
     highlights the matching sector(s) in that card's map (yellow outline +
-    fill), and clicking any sector inside the map toggles its checkbox —
-    multiple sectors can stay selected at once.
-3. **Manage sectors** — each config card now has a taller map and a toolbar
-   of **rounded two-row buttons** (Arabic on top, English below):
-   **Add** (draw the new sector boundary on the map, then *Done*),
-   **Edit** (drag the vertices of a selected sector, then *Done*),
-   **Rename**, **Merge** (check two sectors), **Remove**. The toolbar header
-   shows **"Manage" on the left** and **"إدارة" on the right**, with the tool
-   buttons between them. **Rename** and
+    fill), expands a **sector accordion** below with a 3-column EN / data / AR
+    breakdown (name, area, centroid, entry point, zone angle, zone count), and
+    clicking any sector inside the map toggles its checkbox —
+    multiple sectors can stay selected at once (map-driven toggles also
+    expand/collapse the matching accordion).
+3. **Manage sectors** — each config card now has a taller map and a centred
+    toolbar of **rounded two-row buttons** (Arabic on top, English below):
+    **Add** (draw the new sector boundary on the map, then *Done*),
+    **Edit** (drag the vertices of a selected sector, then *Done*),
+    **Rename**, **Merge** (check two sectors), **Remove**. The toolbar row is
+    `justify-between`: **"Manage" on the left**, the tool buttons in the
+    middle, **"إدارة" on the right** — there is no separate status line;
+    selection/merge guidance is shown in the top error banner (sourced from a
+    hidden `#sector-i18n` store holding the `ts()` bilingual strings, so the
+    Add/Edit **Done** label keeps working). **Rename** and
    **Remove** ask for confirmation in a small modal dialog — the modal header
    shows bilingual text (English left, Arabic right), the body and buttons
    show Arabic on top and English below. The modal matches the app theme

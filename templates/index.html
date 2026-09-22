@@ -190,6 +190,12 @@
   </div>
 </div>
 
+<div id="sector-i18n" style="display:none"
+     data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
+     data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
+     data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
+     data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"></div>
+
 <script>
 (function () {
   var btns = document.querySelectorAll('.tab-btn');
@@ -213,6 +219,7 @@
   }
 
   function withSectorMap(frame, fn, attempt) {
+    if (!frame) return;
     attempt = attempt || 0;
     try {
       var w = frame.contentWindow;
@@ -241,8 +248,13 @@
     return s && s.querySelector('iframe.map[data-cfg="' + cfg + '"]');
   }
   function statusNode(cfg) {
-    var s = document.getElementById('sectors-result');
-    return s && s.querySelector('.sector-status[data-cfg="' + cfg + '"]');
+    return document.getElementById('sector-i18n');
+  }
+  function terrHtml(key) {
+    var st = document.getElementById('sector-i18n');
+    var raw = (st && st.dataset[key]) || '';
+    var p = raw.split(' | ');
+    return p[0] + ' <span style="font-family:VIP RAWY Regular,sans-serif;direction:rtl">' + (p[1] || p[0]) + '</span>';
   }
   function chipName(cfg, idx) {
     var s = document.getElementById('sectors-result');
@@ -250,12 +262,11 @@
     return c ? c.value : '';
   }
   function setStatus(cfg, key) {
-    var st = statusNode(cfg);
-    if (st && st.dataset[key]) st.textContent = st.dataset[key];
+    if (key === 'tneed' || key === 'tmerge') showError(terrHtml(key));
   }
   function needsSel(cfg) {
     if (sel[cfg] != null) return true;
-    setStatus(cfg, 'tneed');
+    showError(terrHtml('tneed'));
     return false;
   }
   function pickBtn(cfg, op) {
@@ -315,8 +326,7 @@
     }
     var acc = document.querySelector('.sector-accordion[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
     if (acc) acc.classList.toggle('hidden', !box.checked);
-    var st = statusNode(cfg);
-    if (st) st.textContent = box.value;
+    hideError();
     var frame = iframeFor(cfg);
     if (frame) {
       withSectorMap(frame, function (w) {
@@ -337,7 +347,7 @@
         if (!b.dataset.label) b.dataset.label = b.innerHTML;
         withSectorMap(iframeFor(cfg), function (w) { w.startDraw(); });
         drawMode[cfg] = true;
-        b.textContent = st.dataset.tfin;
+        if (st) b.textContent = st.dataset.tfin;
         b.classList.add('armed');
         setStatus(cfg, 'tdraw');
       } else {
@@ -359,7 +369,7 @@
             withSectorMap(fr, function (w) { w.startEdit(idx, d.ring); });
             editMode[cfg] = true;
             editIdxOf[cfg] = idx;
-            b.textContent = st.dataset.tfin;
+            if (st) b.textContent = st.dataset.tfin;
             b.classList.add('armed');
             setStatus(cfg, 'tedit');
           })
@@ -470,8 +480,9 @@
           box.checked = !!e.data.checked;
           if (box.checked) sel[cfg] = e.data.idx;
           else if (sel[cfg] == e.data.idx) sel[cfg] = null;
-          var st = statusNode(cfg);
-          if (st) st.textContent = box.value;
+          var acc2 = document.querySelector('.sector-accordion[data-cfg="' + cfg + '"][data-idx="' + e.data.idx + '"]');
+          if (acc2) acc2.classList.toggle('hidden', !box.checked);
+          hideError();
         }
       }
       return;

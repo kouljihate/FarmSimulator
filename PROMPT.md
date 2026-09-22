@@ -77,14 +77,26 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    (`grid-cols-1`, maps bleed edge-to-edge via `-mx-6`), stacked vertically.
    Each config card shows **sector checkboxes** (`sector-check` label +
    hidden `sector-chk` input, `data-cfg`/`data-idx`, name in `value`)
-   grouped across one row (`flex-wrap justify-center`), neon themed, labelled
-   **just `S1`, `S2`, …** (the native checkbox square is `display:none`;
-   a checked pill glows via `.sector-check:has(.sector-chk:checked)`).
-   **Multiple boxes can be checked at once**; all checked sectors are
-   highlighted in the map, and clicking a sector *in* the map toggles its
-   checkbox. The toolbar (`tool-btn`, rounded, two stacked lines via
-   `bv(key)` = Arabic on top + English below; `ts(key)` feeds plain bilingual
-   `data-t*` status texts) holds Add/Edit/Rename/Merge/Remove. The preview
+    grouped across one row (`flex-wrap justify-center`), neon themed, labelled
+    with the **actual sector name** (custom renames included,
+    `max-w-20 truncate`; native checkbox square is `display:none`;
+    a checked pill glows via `.sector-check:has(.sector-chk:checked)`).
+    **Multiple boxes can be checked at once**; all checked sectors are
+    highlighted in the map, each checked sector expands a **sector accordion**
+    (`.sector-accordion`, 3-column EN / data / AR grid: name, area, centroid,
+    entry point, zone angle, zone count; new i18n keys `SECTOR_NAME`,
+    `CENTROID`, `ENTRY_POINT`, `ZONE_ANGLE`, `ZONES_COUNT` EN+AR), and clicking
+    a sector *in* the map toggles its checkbox **and** its accordion.
+    The toolbar (`tool-btn`, rounded, two stacked lines via
+    `bv(key)` = Arabic on top + English below) holds Add/Edit/Rename/Merge/Remove
+    in a centred `justify-between` row: `MANAGE` EN left, buttons middle, AR
+    right — **no `.sector-status` line**. Bilingual JS strings live in a hidden
+    global `#sector-i18n` div (`data-tsel/tneed/tmerge/tdraw/tedit/tfin/tcancel/tsaving`
+    via `ts()`); `statusNode()` returns that store, `setStatus` only surfaces
+    `tneed`/`tmerge` through the top error banner (`terrHtml`), hints are
+    signalled by the armed **Done** button state, and checkbox/map-select
+    changes clear the banner via `hideError()`. `withSectorMap` guards null
+    frames.
    maps are interactive, built by `mapper._sector_select_js(cfg)`: sector
    polygons are drawn directly with Leaflet (a `sector` option tags each;
    folium drops unknown options) and carry a `sticky` tooltip;
@@ -98,9 +110,12 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    iframe) to call `selectSectors`, polling until the map is ready.
    `load_run` regenerates config preview maps that lack `selectSector`
    (old saved runs). i18n: `SECTOR_SELECT`, `SECTOR_SELECT_MULTI` (EN+AR).
-- **Sector management** (v0.8.0): each config card has a **taller map**
-   (`iframe.map.tall`, 560 px) and a toolbar of `tool-btn` buttons with
-   `data-op` = `add | edit | rename | merge | remove` plus a status line.
+- **Sector management** (v0.8.0, toolbar centred v0.9.8, status line removed
+   v0.9.8): each config card has a **taller map**
+   (`iframe.map.tall`, 560 px) and a centred toolbar of `tool-btn` buttons with
+   `data-op` = `add | edit | rename | merge | remove` and **no status line**
+   (guidance via top error banner + armed Done state; strings from global
+   `#sector-i18n`).
    `core/engine.py` exposes `apply_sector_op(plan, cfg, op, idx, idx2, name,
    ring)` → rebuilds the sector chain/entries via `recompute_sectors` (re-sorts
    by distance to basin, keeps custom non-`S\d+` names) and the full
@@ -322,3 +337,17 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     for long names. Manage toolbar header split into EN label on the left
     (`tl('MANAGE')[0]`) and AR label on the right (`tl('MANAGE')[1]`) with
     the tool buttons between them; AR + status grouped in a right-aligned div.
+19. v0.9.8: **centred toolbar, status line removed** — Manage row is now
+    `justify-between` (EN label left, buttons centred, AR label right); the
+    `.sector-status` span and its `data-t*` strings are gone.
+20. v0.9.8: **sector accordion** — each checked sector expands a 3-column
+    EN / data / AR card (name, area, centroid, entry, zone angle, zone count);
+    new i18n keys `SECTOR_NAME, CENTROID, ENTRY_POINT, ZONE_ANGLE,
+    ZONES_COUNT` (EN+AR) + `.sector-accordion` neon style in `base.html`;
+    checkbox `change` toggles the accordion.
+21. v0.9.9: **toolbar JS repair after status-span removal** — bilingual
+    strings moved to a hidden global `#sector-i18n` div; `statusNode()` reads
+    the store, `setStatus` only surfaces `tneed`/`tmerge` via the top error
+    banner (`terrHtml`), select changes clear the banner, map-driven
+    `sector-select` also toggles the accordion, `withSectorMap` guards null
+    frames; `VERSION` → 0.9.9 with README/PROMPT resynced.
