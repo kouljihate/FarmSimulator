@@ -176,6 +176,23 @@
   </div>
 </div>
 
+<div id="sector-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none">
+  <div class="sector-modal-card max-h-[90vh] w-full max-w-4xl overflow-y-auto p-6">
+    <h3 id="sector-detail-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
+    <iframe id="sector-detail-map" class="map big mb-4" width="100%" height="440"></iframe>
+    <div id="sector-detail-zones" class="mb-4 overflow-x-auto rounded-xl border border-white/10"></div>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="sector-detail-add" class="tool-btn">{{ bv('SECTOR_ADD') }}</button>
+        <button type="button" id="sector-detail-edit" class="tool-btn">{{ bv('SECTOR_EDIT') }}</button>
+        <button type="button" id="sector-detail-rename" class="tool-btn">{{ bv('SECTOR_RENAME') }}</button>
+        <button type="button" id="sector-detail-remove" class="tool-btn tool-btn-danger">{{ bv('SECTOR_REMOVE') }}</button>
+      </div>
+      <button type="button" id="sector-detail-close" class="sector-modal-btn">{{ bv('CLOSE') }}</button>
+    </div>
+  </div>
+</div>
+
 <div id="sector-i18n" style="display:none"
      data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
      data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
@@ -435,6 +452,11 @@
       loadOverview(ub.getAttribute('data-cfg'), false);
       return;
     }
+    var ob = e.target && e.target.closest ? e.target.closest('.sector-open-btn') : null;
+    if (ob) {
+      openDetailModal(ob.getAttribute('data-cfg'), parseInt(ob.getAttribute('data-idx'), 10), ob.getAttribute('data-name'));
+      return;
+    }
   });
 
   document.addEventListener('change', function (e) {
@@ -587,12 +609,79 @@
       if (e.key === 'Enter') { e.preventDefault(); confirmSectorModal(); }
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && modal.style.display === 'flex') { modalMode = null; hideModal(); }
+      if (e.key === 'Escape') {
+        if (modal.style.display === 'flex') { modalMode = null; hideModal(); }
+        else hideDetailModal();
+      }
     });
   }
 
-  window.addEventListener('message', function (e) {
-    if (!e.data || !e.data.type) return;
+  var dModal = document.getElementById('sector-detail-modal');
+  var dTitle = document.getElementById('sector-detail-title');
+  var dMap = document.getElementById('sector-detail-map');
+  var dZones = document.getElementById('sector-detail-zones');
+  var dCfg = null, dIdx = null, dName = '';
+
+  function hideDetailModal() { if (dModal) dModal.style.display = 'none'; }
+  function detailName() { return chipName(dCfg, dIdx) || dName; }
+  function openDetailModal(cfg, idx, name) {
+    dCfg = cfg; dIdx = idx; dName = name || '';
+    var card = null;
+    var zr = document.getElementById('zones-result');
+    if (zr) {
+      var btn = zr.querySelector('.sector-open-btn[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+      if (btn && btn.parentElement) card = btn.parentElement;
+    }
+    if (dTitle) dTitle.textContent = detailName() || dName;
+    if (dMap) {
+      var src = card ? card.querySelector('iframe.map') : null;
+      if (src) dMap.setAttribute('srcdoc', src.getAttribute('srcdoc') || '');
+      else dMap.removeAttribute('srcdoc');
+    }
+    if (dZones) {
+      var tbl = card ? card.querySelector('table') : null;
+      dZones.innerHTML = tbl
+        ? '<table class="w-full text-sm text-white/75">' + tbl.innerHTML + '</table>'
+        : '';
+    }
+    if (dModal) dModal.style.display = 'flex';
+  }
+  function armSectorTool(cfg, idx, op) {
+    hideDetailModal();
+    goTab('tab-sectors');
+    if (op !== 'add') {
+      var s = document.getElementById('sectors-result');
+      var box = s && s.querySelector('.sector-chk[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+      if (!box) { showError(terrHtml('tneed')); return; }
+      if (!box.checked) {
+        box.checked = true;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    var b = pickBtn(cfg, op);
+    if (b) b.click();
+  }
+  var dAdd = document.getElementById('sector-detail-add');
+  var dEdit = document.getElementById('sector-detail-edit');
+  var dRename = document.getElementById('sector-detail-rename');
+  var dRemove = document.getElementById('sector-detail-remove');
+  var dClose = document.getElementById('sector-detail-close');
+  if (dAdd) dAdd.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'add'); });
+  if (dEdit) dEdit.addEventListener('click', function () { armSectorTool(dCfg, dIdx, 'edit'); });
+  if (dRename) dRename.addEventListener('click', function () {
+    var nm = detailName();
+    hideDetailModal();
+    openRenameModal(dCfg, dIdx, nm);
+  });
+  if (dRemove) dRemove.addEventListener('click', function () {
+    var nm = detailName();
+    hideDetailModal();
+    openRemoveModal(dCfg, dIdx, nm);
+  });
+  if (dClose) dClose.addEventListener('click', hideDetailModal);
+  if (dModal) dModal.addEventListener('click', function (e) { if (e.target === dModal) hideDetailModal(); });
+
+  window.addEventListener('message', function (e) {    if (!e.data || !e.data.type) return;
     var cfg = e.data.cfg;
     if (e.data.type === 'sector-select') {
       if (cfg != null && e.data.idx != null) {

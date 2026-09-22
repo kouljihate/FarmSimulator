@@ -402,3 +402,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `cfg.sectors|natsort` (new Jinja filter in `app.py`: case-insensitive
     natural sort) for pills and accordions, so renames re-order the list
     (maps + Zones tab keep basin-distance/idx order).
+27. v0.12.0: **sector detail modal** — every Zones card has an Open button
+    (`.sector-open-btn` with `data-cfg/idx/name`) launching `#sector-detail-modal`
+    (large map copied from the card `srcdoc`, zone table cloned, new i18n key
+    `CLOSE` EN+AR); Add/Edit/Rename/Remove act on that sector (rename/remove via
+    the existing confirm modal; edit/add close the modal, jump to Sectors and arm
+    the tool programmatically); Escape/backdrop/Close dismiss.

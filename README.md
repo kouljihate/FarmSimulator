@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.11.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.12.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -112,6 +112,10 @@ Each config card has a set of **sector checkboxes labelled with the actual
     page** (no navigation): the **Zones** tab shows per-sector maps + zone
     tables, the **Valve** tab lists every 50 mm valve, the **Pipes** tab lists
     majors/minors, and **Final Result** shows the full overview map + legend.
+    Every Zones card has an **Open** button that launches a modal with a large
+    map of that sector and its zones plus its zone table — with **Add, Edit,
+    Rename, Remove** actions (rename/remove run directly; edit/add jump to the
+    Sectors tab with the tool armed for that sector).
 5. Every run is persisted — plan + all generated maps (basin, config
    previews, overviews, per-sector) — into MongoDB (or `uploads/<token>.db`
    pickles as fallback). **Recover a past run** from the **Load** tab (first
