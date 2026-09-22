@@ -510,3 +510,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     Elements/Simulation/Final Result.
 36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
     the Valve tab (see data-model note above for the override-layer design).
+37. v0.19.0: **zone labels** — `mapper.map_sector` (Zones-tab maps) draws a
+    permanent `DivIcon` badge with the zone name on each zone centroid
+    (`_zone_label`, HTML-escaped), so names are visible without hovering.

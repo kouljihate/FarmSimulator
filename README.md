@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.18.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.19.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -15,7 +15,8 @@ place. The browser never leaves `/`.
    `≤ 10,000 m²` (S1, S2, …). If the uploaded file *already contains* a sector
    layout (extra polygons covering ≥ 50 % of the land), those are used directly
    and **no new suggestions are generated**.
-3. **Zonage** — every sector is divided into 3 equal-area zones (Z1, Z2, Z3).
+3. **Zonage** — every sector is divided into 3 equal-area zones (Z1, Z2, Z3),
+    each with its **name label shown directly on the zone map**.
    Zones are managed per sector from the **Open** modal (rename, remove, split
    by tracing a line on the map or entering X/Y start + X/Y stop) and locked
    with the **Confirm Zones** button at the end of the Zones tab — confirming

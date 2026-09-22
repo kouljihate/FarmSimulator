@@ -1,5 +1,6 @@
 """Turn planning results into standalone folium/leaflet maps (HTML strings)."""
 import folium
+import html as _html
 
 from . import i18n
 
@@ -462,6 +463,16 @@ def _zone_pick_js():
     ) + "</script>"
 
 
+def _zone_label(name):
+    """Permanent badge glued on a zone centroid (name always visible)."""
+    return (
+        "<div style=\"font-family:Comfortaa,'Segoe UI',sans-serif;font-size:11px;"
+        "font-weight:700;color:#fff;background:rgba(7,11,20,.68);"
+        "border:1px solid rgba(255,255,255,.5);border-radius:8px;"
+        "padding:1px 7px;white-space:nowrap;\">{n}</div>"
+    ).format(n=_html.escape(str(name)))
+
+
 def _sector_color_map(cfg):
     # generous palette so sectors stay identifiable
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
@@ -502,5 +513,11 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
                "#111111", radius=3)
     center = [sector["centroid"].y, sector["centroid"].x]
     m = build(lay, center, 18)
+    for z in zones:
+        c = z["centroid"]
+        folium.map.Marker(
+            [c.y, c.x],
+            icon=folium.DivIcon(html=_zone_label(z["name"])),
+        ).add_to(m)
     m.get_root().html.add_child(folium.Element(_zone_pick_js()))
     return to_html(m)
