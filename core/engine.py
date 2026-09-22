@@ -634,7 +634,8 @@ def _current_polys(cfg):
 def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
     """Apply one sector edit to a config in place. Returns (ok, message).
 
-    Supported ops: rename, remove, merge (idx+idx2), add (ring), edit (idx+ring).
+    Supported ops: rename, remove, merge (idx+idx2), swap (idx+idx2),
+    add (ring), edit (idx+ring).
     After every operation the config's entries/zones/valves/pipes are rebuilt.
     """
     if op == "rename":
@@ -681,6 +682,15 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         ]
         polys.append((merged, a.get("name")))
         recompute_sectors(plan, cfg, polys)
+        return True, None
+
+    if op == "swap":
+        a = _find_sector(cfg, idx)
+        b = _find_sector(cfg, idx2)
+        if a is None or b is None or idx == idx2:
+            return False, "Select two sectors to swap."
+        a["name"], b["name"] = b.get("name"), a.get("name")
+        recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None
 
     if op in ("add", "edit"):

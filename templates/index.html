@@ -202,7 +202,7 @@
      data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
      data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
      data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"
-     data-tnet="{{ ts('NETWORK_ERROR') }}"></div>
+     data-tnet="{{ ts('NETWORK_ERROR') }}" data-tswap="{{ ts('SWAP_NEED') }}"></div>
 
 <script>
 (function () {
@@ -553,6 +553,15 @@
         applySectorOp(cfg, 'merge', { idx: chk[0], idx2: chk[1] });
       } else {
         setStatus(cfg, chk.length < 2 ? 'tneed' : 'tmerge');
+      }
+      return;
+    }
+    if (op === 'swap') {
+      var chk2 = checkedIdx(cfg);
+      if (chk2.length === 2) {
+        applySectorOp(cfg, 'swap', { idx: chk2[0], idx2: chk2[1] });
+      } else {
+        showError(terrHtml('tswap'));
       }
       return;
     }

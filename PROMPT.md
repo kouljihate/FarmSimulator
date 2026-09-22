@@ -132,7 +132,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 - **Sector management** (v0.8.0, toolbar centred v0.9.8, status line removed
    v0.9.8): each config card has a **taller map**
    (`iframe.map.tall`, 560 px) and a centred toolbar of `tool-btn` buttons with
-   `data-op` = `add | edit | rename | merge | remove` and **no status line**
+    `data-op` = `add | edit | rename | merge | swap | remove` and **no status line**
    (guidance via top error banner + armed Done state; strings from global
    `#sector-i18n`).
    `core/engine.py` exposes `apply_sector_op(plan, cfg, op, idx, idx2, name,
@@ -424,8 +424,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `description` per polygon through `all_boundaries`/`boundaries`;
     `_existing_config` groups kept polygons by description (A-Z, undescribed
     last; basin-distance within groups) with per-group names `<desc> <k>`
-    (capped 32 chars, deduped; undescribed keep `S{rank}`); upload card groups
+    (capped 32 chars, deduped; undescribed keep `S{rank}`);     upload card groups
     extras via `groupby('description')`.
+33. v0.15.0: **Swap button (after Merge)** — `swap` op exchanges the names of
+    two checked sectors and rebuilds zones/valves/pipes; new i18n keys
+    `SECTOR_SWAP, SWAP_NEED` (EN+AR) + bilingual swap error; toolbar order is
+    Add/Edit/Rename/Merge/**Swap**/Remove.
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
     datetime | Load button (`sm:grid-cols-3`, stacked on mobile), in both the
     server rows and the JS `refreshRuns` builder.
