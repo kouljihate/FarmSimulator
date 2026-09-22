@@ -105,6 +105,25 @@
   iframe.map.tall { height: 560px; }
   iframe.map.valve-xl { height: 620px; }
   @media (max-width: 640px) { iframe.map.valve-xl { height: 460px; } }
+
+  .valve-circle-btn {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid rgba(34,211,238,.45);
+    background: rgba(34,211,238,.1);
+    color: #fff;
+    transition: all .18s ease;
+    vertical-align: middle;
+  }
+  .valve-circle-btn svg { width: 1rem; height: 1rem; }
+  .valve-circle-btn:hover { border-color: #22d3ee; background: rgba(34,211,238,.28); box-shadow: 0 0 12px rgba(34,211,238,.35); }
+  .valve-circle-danger { border-color: rgba(248,113,113,.5); background: rgba(248,113,113,.12); }
+  .valve-circle-danger:hover { border-color: #f87171; background: rgba(248,113,113,.3); box-shadow: 0 0 12px rgba(248,113,113,.4); }
+  .valve-row-sel { background: rgba(34,211,238,.12); }
   main { padding-bottom: 3rem; }
   .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; box-shadow: 0 0 6px rgba(255,255,255,.35); }
 

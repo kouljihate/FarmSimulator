@@ -487,13 +487,24 @@
 
   var pendingValveId = null;
 
-  function valveOpt(vid) {
-    var vt = document.getElementById('valve-target');
-    if (!vt) return null;
-    for (var i = 0; i < vt.options.length; i++) {
-      if (vt.options[i].value === vid) return vt.options[i];
-    }
-    return null;
+  function valveEditBtn(vid) {
+    var vr = document.getElementById('valves-result');
+    return vr ? vr.querySelector('.valve-edit-btn[data-vid="' + vid + '"]') : null;
+  }
+
+  function withValveMap(fn, attempt) {
+    var frame = document.getElementById('valve-map-frame');
+    if (!frame) return;
+    attempt = attempt || 0;
+    try {
+      var w = frame.contentWindow;
+      if (frame.contentDocument) {
+        var inner = frame.contentDocument.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.focusValve === 'function') { fn(w); return; }
+    } catch (x) {}
+    if (attempt < 40) setTimeout(function () { withValveMap(fn, attempt + 1); }, 100);
   }
 
   function valveInfoHtml(v) {
@@ -508,21 +519,25 @@
     if (box && v) box.innerHTML = valveInfoHtml(v);
   }
 
-  function syncValveForm(v) {
-    var vt = document.getElementById('valve-target');
-    var vlo = document.getElementById('valve-lon');
-    var vla = document.getElementById('valve-lat');
-    if (vt && v.id) vt.value = v.id;
-    if (vlo && isFinite(v.lon)) vlo.value = Number(v.lon).toFixed(6);
-    if (vla && isFinite(v.lat)) vla.value = Number(v.lat).toFixed(6);
+  function highlightValveRow(vid) {
+    var vr = document.getElementById('valves-result');
+    if (!vr) return;
+    var rows = vr.querySelectorAll('.valve-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle('valve-row-sel', rows[i].getAttribute('data-vid') === vid);
+    }
+  }
+
+  function syncValvePanel(v) {
     showValveInfo(v);
+    if (v && v.id) highlightValveRow(v.id);
   }
 
   function selectValveById(vid) {
-    var o = valveOpt(vid);
+    var o = valveEditBtn(vid);
     if (!o) return false;
-    syncValveForm({
-      id: o.value, name: o.getAttribute('data-name') || o.text,
+    syncValvePanel({
+      id: o.getAttribute('data-vid'), name: o.getAttribute('data-name'),
       kind: o.getAttribute('data-kind'), sector: o.getAttribute('data-sector'),
       zone: o.getAttribute('data-zone'), diameter_mm: o.getAttribute('data-diam'),
       lon: parseFloat(o.getAttribute('data-lon')), lat: parseFloat(o.getAttribute('data-lat'))
@@ -631,47 +646,16 @@
     }
     var ve = e.target && e.target.closest ? e.target.closest('.valve-edit-btn') : null;
     if (ve) {
-      var vt = document.getElementById('valve-target');
-      var vlo = document.getElementById('valve-lon');
-      var vla = document.getElementById('valve-lat');
-      if (vt) vt.value = ve.getAttribute('data-vid');
-      if (vlo) vlo.value = ve.getAttribute('data-lon');
-      if (vla) vla.value = ve.getAttribute('data-lat');
       hideError();
-      selectValveById(ve.getAttribute('data-vid'));
-      if (vt) vt.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    var va = e.target && e.target.closest ? e.target.closest('#valve-add-btn') : null;
-    if (va) {
-      if (!S.token) { showError(terrHtml('tnet')); return; }
-      var vk = document.getElementById('valve-kind');
-      var vs = document.getElementById('valve-sector');
-      var vz = document.getElementById('valve-zone');
-      var vlo2 = document.getElementById('valve-lon');
-      var vla2 = document.getElementById('valve-lat');
-      valveAction(va.getAttribute('data-cfg'), 'add', {
-        kind: vk ? vk.value : 'secondary',
-        sector: vs ? vs.value : '',
-        zone: vz ? vz.value : '',
-        lon: vlo2 ? parseFloat(vlo2.value) : NaN,
-        lat: vla2 ? parseFloat(vla2.value) : NaN
+      syncValvePanel({
+        id: ve.getAttribute('data-vid'), name: ve.getAttribute('data-name'),
+        kind: ve.getAttribute('data-kind'), sector: ve.getAttribute('data-sector'),
+        zone: ve.getAttribute('data-zone'), diameter_mm: ve.getAttribute('data-diam'),
+        lon: parseFloat(ve.getAttribute('data-lon')), lat: parseFloat(ve.getAttribute('data-lat'))
       });
-      return;
-    }
-    var vm = e.target && e.target.closest ? e.target.closest('#valve-move-btn') : null;
-    if (vm) {
-      if (!S.token) { showError(terrHtml('tnet')); return; }
-      var vt2 = document.getElementById('valve-target');
-      var vid = vt2 ? vt2.value : '';
-      if (!vid || vid === '__new__') { showError(terrHtml('tvalvepick')); return; }
-      var vlo3 = document.getElementById('valve-lon');
-      var vla3 = document.getElementById('valve-lat');
-      valveAction(vm.getAttribute('data-cfg'), 'move', {
-        valve_id: vid,
-        lon: vlo3 ? parseFloat(vlo3.value) : NaN,
-        lat: vla3 ? parseFloat(vla3.value) : NaN
-      });
+      withValveMap(function (w) { w.focusValve(ve.getAttribute('data-vid')); });
+      var fr = document.getElementById('valve-map-frame');
+      if (fr) fr.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     var sa = e.target && e.target.closest ? e.target.closest('#sim-ai-btn') : null;
@@ -699,10 +683,6 @@
   });
 
   document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'valve-target') {
-      if (e.target.value && e.target.value !== '__new__') selectValveById(e.target.value);
-      return;
-    }
     var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
     if (!box) return;
     var cfg = box.getAttribute('data-cfg');
@@ -1013,7 +993,7 @@
     if (e.data.type === 'valve-select') {
       if (e.data.valve) {
         hideError();
-        syncValveForm({
+        syncValvePanel({
           id: e.data.valve.id, name: e.data.valve.name, kind: e.data.valve.kind,
           sector: e.data.valve.sector, zone: e.data.valve.zone,
           diameter_mm: e.data.valve.diameter_mm,
@@ -1026,25 +1006,21 @@
       var cfgid = (e.data.cfg != null) ? e.data.cfg : S.cfgid;
       var vid = e.data.valve_id;
       var vlon = Number(e.data.lon), vlat = Number(e.data.lat);
-      var o = valveOpt(vid);
+      var o = valveEditBtn(vid);
       var base = o ? {
-        id: vid, name: o.getAttribute('data-name') || o.text,
+        id: vid, name: o.getAttribute('data-name'),
         kind: o.getAttribute('data-kind'), sector: o.getAttribute('data-sector'),
         zone: o.getAttribute('data-zone'), diameter_mm: o.getAttribute('data-diam'),
         lon: vlon, lat: vlat
       } : { id: vid, name: vid, kind: '', sector: '', zone: '', diameter_mm: '', lon: vlon, lat: vlat };
       hideError();
-      syncValveForm(base);
+      syncValvePanel(base);
       if (cfgid == null || !S.token) return;
       pendingValveId = vid;
       valveAction(cfgid, 'move', { valve_id: vid, lon: vlon, lat: vlat });
       return;
     }
     if (e.data.type === 'valve-map-click') {
-      var lo = document.getElementById('valve-lon');
-      var la = document.getElementById('valve-lat');
-      if (lo) lo.value = Number(e.data.lon).toFixed(6);
-      if (la) la.value = Number(e.data.lat).toFixed(6);
       return;
     }
     if (e.data.type === 'other-map-click') {

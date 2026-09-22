@@ -302,13 +302,14 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
    zone structural edits reset that sector's tweaks). Op `{op:valve_action}`
    (`{cfgid, action: add|move|remove, valve_id, kind, lon, lat, sector, zone}`)
    → `apply_valve_op`, same map-invalidation + overview-fragment pattern as
-   `zone_action`. Valve tab (`_valves_result.html`) shows X/Y per row with
-   Edit/Remove buttons + a management card (valve select, kind/sector/zone for
-   new, X/Y filled by map click via `mapper._valve_pick_js` → `valve-map-click`
-   → `#valve-lon/#valve-lat`); moved rows get `●`, added rows `*`. New i18n keys
-   `VALVE_MGMT, VALVE_MGMT_SUB, VALVE_TARGET, VALVE_NEW, VALVE_ADD, VALVE_MOVE,
-   VALVE_PICK` + errors `"Valve not found."`, `"The valve must lie inside the
-   land boundary."` (EN+AR).
+    `zone_action`. Valve tab (`_valves_result.html`) shows one table of all
+    valves (kind/diameter/sector/zone/X/Y per row) with circle Edit/Remove icon
+    buttons in an Actions column (Edit → info panel + row highlight + map
+    `focusValve(id)`; map markers draggable via `mapper._valve_manage_js` →
+    `valve-select`/`valve-drag`); moved rows get `●`, added rows `*`. New i18n keys
+    `VALVE_MGMT, VALVE_MGMT_SUB, VALVE_TARGET, VALVE_NEW, VALVE_ADD, VALVE_MOVE,
+    VALVE_PICK` + errors `"Valve not found."`, `"The valve must lie inside the
+    land boundary."` (EN+AR).
 
 ## Conventions and constraints
 
@@ -521,9 +522,18 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     (`iframe.map.valve-xl` + `#valve-map-frame`); valves are drawn by
     `mapper._valve_manage_js` as draggable Leaflet markers (red = principal,
     orange = secondary) with full-info popups; map posts `valve-select`
-    (click → fills form + Selected-valve panel) and `valve-drag`
+    (click → fills form + Selected-valve panel) and     `valve-drag`
     (release → live form/panel update + auto `valve_action/move` persist with
     selection restore); empty-map clicks still post `valve-map-click`;
     `_valves_result.html` gained the Selected-valve panel (`#valve-info`) and
     data-rich `#valve-target` options; new i18n keys `VALVE_DRAG_HINT,
     VALVE_SELECTED, VALVE_INFO_EMPTY` (EN+AR); `MAPS_V=5`.
+40. v0.22.0: **single Valve table, no management form** — the Valve Management
+    card (add/move form) is removed; one table lists **all** valves with an
+    Actions column of circle Edit/Remove SVG icon buttons
+    (`.valve-circle-btn`, `.valve-row-sel` highlight in `base.html`); table
+    Edit shows the Selected-valve info, highlights the row and pans/opens the
+    marker via `mapper._valve_manage_js:window.focusValve(id)`; `index.html`
+    valve JS now reads row `data-*` (`valveEditBtn`) instead of the old
+    `#valve-target/#valve-lon/#valve-lat` form; empty-map clicks are ignored;
+    new i18n keys `ACTIONS, PRINCIPAL, SECONDARY` (EN+AR).
