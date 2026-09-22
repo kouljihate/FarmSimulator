@@ -4,7 +4,7 @@ into lists of land boundary polygons and water points.
 Result shape:
     {
       "name": str,
-      "polygons": [{"name": str, "polygon": Polygon(lon,lat), "vertices_z": [(lon,lat,z), ...]}],
+      "polygons": [{"name": str, "description": str, "polygon": Polygon(lon,lat), "vertices_z": [(lon,lat,z), ...]}],
       "water_points": [(lon, lat), ...],
       "source": "kml" | "csv",
     }
@@ -96,7 +96,8 @@ def parse_kml(path):
                             pt = poly.representative_point()
                             water.append((pt.x, pt.y))
                         else:
-                            polygons.append({"name": name, "polygon": poly, "vertices_z": ring})
+                            polygons.append({"name": name, "description": desc.strip(),
+                                             "polygon": poly, "vertices_z": ring})
             elif tag == "Point":
                 if _is_land_type(desc):
                     continue
@@ -217,7 +218,8 @@ def parse_csv(path):
     for ring in rings:
         poly = _polygon_from_ring(ring["coords"])
         if poly is not None:
-            polygons.append({"name": ring["name"], "polygon": poly, "vertices_z": ring["coords"]})
+            polygons.append({"name": ring["name"], "description": "",
+                             "polygon": poly, "vertices_z": ring["coords"]})
 
     return {
         "name": name,
@@ -246,7 +248,8 @@ def _parse_wkt_csv(name, cols, data):
             if poly is not None:
                 dx = cols["name"]
                 nm = r[dx].strip() if dx is not None and dx < len(r) else "Boundary"
-                polygons.append({"name": nm, "polygon": poly, "vertices_z": []})
+                polygons.append({"name": nm, "description": "",
+                                 "polygon": poly, "vertices_z": []})
     return {"name": name, "polygons": polygons, "water_points": water, "source": "csv"}
 
 

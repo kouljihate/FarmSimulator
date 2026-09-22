@@ -339,6 +339,11 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
 # --------------------------------------------------------------------------- #
 # Whole-plot analysis
 # --------------------------------------------------------------------------- #
+def _nat_key(text):
+    return [int(t) if t.isdigit() else t.lower()
+            for t in _re.split(r"(\d+)", text or "")]
+
+
 def _existing_config(extra, land_m, proj, basin_m):
     """Build a single config from sector polygons already present in the file.
 
@@ -358,32 +363,54 @@ def _existing_config(extra, land_m, proj, basin_m):
         inter = gm.intersection(land_m)
         if inter.area < 0.5 * gm.area:
             continue
-        kept.append(gm)
+        kept.append((gm, (p.get("description") or "").strip()))
     if not kept:
         return None
-    total = unary_union(kept)
+    total = unary_union([gm for gm, _ in kept])
     if total.is_empty or total.intersection(land_m).area < MIN_EXISTING_COVERAGE * land_m.area:
         return None
 
-    order = sorted(range(len(kept)), key=lambda i: kept[i].centroid.distance(basin_m))
+    groups = {}
+    for i, (gm, desc) in enumerate(kept):
+        groups.setdefault(desc.lower(), {"display": desc, "members": []})["members"].append(i)
+    ordered = sorted(groups.values(),
+                     key=lambda g: (not g["display"], _nat_key(g["display"])))
+    for g in ordered:
+        g["members"].sort(key=lambda i: kept[i][0].centroid.distance(basin_m))
     sectors = []
+    used = set()
     cur = basin_m
-    for rank, i in enumerate(order, start=1):
-        piece_m = kept[i]
-        poly_ll = proj.to_lonlat(piece_m)
-        entry = nearest_points(piece_m.boundary, Point(cur))[0]
-        sectors.append({
-            "idx": rank,
-            "name": "S{0:d}".format(rank),
-            "poly_m": piece_m,
-            "poly": poly_ll,
-            "centroid": proj.to_lonlat(piece_m.centroid),
-            "area_m2": piece_m.area,
-            "entry": proj.to_lonlat(entry),
-            "entry_m": entry,
-            "zone_angle": main_axis_angle(piece_m) + 90.0,
-        })
-        cur = entry
+    rank = 0
+    for g in ordered:
+        for k, i in enumerate(g["members"], start=1):
+            rank += 1
+            piece_m = kept[i][0]
+            if g["display"]:
+                base = (g["display"][:32].rstrip() or g["display"])
+                name, n = "{0} {1:d}".format(base, k), k
+                while name.lower() in used:
+                    n += 1
+                    name = "{0} {1:d}".format(base, n)
+            else:
+                name = "S{0:d}".format(rank)
+                while name.lower() in used:
+                    rank += 1
+                    name = "S{0:d}".format(rank)
+            used.add(name.lower())
+            poly_ll = proj.to_lonlat(piece_m)
+            entry = nearest_points(piece_m.boundary, Point(cur))[0]
+            sectors.append({
+                "idx": rank,
+                "name": name,
+                "poly_m": piece_m,
+                "poly": poly_ll,
+                "centroid": proj.to_lonlat(piece_m.centroid),
+                "area_m2": piece_m.area,
+                "entry": proj.to_lonlat(entry),
+                "entry_m": entry,
+                "zone_angle": main_axis_angle(piece_m) + 90.0,
+            })
+            cur = entry
 
     return {
         "id": 0,
@@ -446,7 +473,8 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
             a = area_m2 if is_land else proj.to_m(p["polygon"]).area
         except Exception:  # noqa: BLE001 - display-only area
             a = 0.0
-        bounds.append({"name": p["name"], "is_land": is_land, "area_m2": a})
+        bounds.append({"name": p["name"], "description": p.get("description") or "",
+                       "is_land": is_land, "area_m2": a})
     water_pts = [
         {"lon": float(w[0]), "lat": float(w[1])}
         for w in (parsed.get("water_points") or [])
@@ -457,6 +485,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "name": parsed.get("name") or "Untitled plot",
         "all_boundaries": [{
             "name": p["name"],
+            "description": p.get("description") or "",
             "poly": p["polygon"],
             "is_land": p is land_pkg,
         } for p in polygons],
@@ -501,6 +530,7 @@ def set_basin(plan, lon, lat):
     if plan.get("existing_sectors"):
         extra = [{
             "name": b["name"],
+            "description": b.get("description") or "",
             "polygon": b["poly"],
         } for b in plan["all_boundaries"] if not b["is_land"]]
         cfg = _existing_config(extra, land_m, proj, pt)

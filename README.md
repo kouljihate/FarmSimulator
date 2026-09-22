@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.13.2 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.14.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -150,7 +150,9 @@ Each config card has a set of **sector checkboxes labelled with the actual
     land-described point is skipped as a mere label. Placemarks without a
     description keep the default rule (polygons = boundaries, points = water);
   - extra polygons covering ≥ 50 % of the land are interpreted as an
-    *existing sector layout* and used as-is.
+    *existing sector layout* and used as-is: each polygon stays its own
+    sector, grouped and ordered by `description` (sectors named
+    `<description> <k>` per group, e.g. `North 1`, `North 2`).
 - **CSV/TXT**, header row with any of:
   - coordinates: `lat` / `lon` (also `lng`, `long`, `longitude`);
   - a `type` column where rows marked `water` (or `point`, `source`, `puit`,
@@ -222,7 +224,7 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
 
 | Object | Keys |
 | --- | --- |
-| `plan` | `name, all_boundaries, boundaries[{name,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, _proj, _basin_m, _land_m` |
+| `plan` | `name, all_boundaries, boundaries[{name,description,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, _proj, _basin_m, _land_m` |
 | `config` | `id, name, angle, n_sectors, sectors, ready` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
 | `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, diameter_mm:50, len_m}), minors[]({zone, diameter_mm:32, len_m})` |

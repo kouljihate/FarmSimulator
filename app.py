@@ -81,8 +81,8 @@ def plan_summary(plan):
         "basin": _basin_summary(plan),
         "existing_sectors": bool(plan.get("existing_sectors")),
         "boundaries": [
-            {"name": b.get("name"), "is_land": bool(b.get("is_land")),
-             "area_m2": b.get("area_m2")}
+            {"name": b.get("name"), "description": b.get("description") or "",
+             "is_land": bool(b.get("is_land")), "area_m2": b.get("area_m2")}
             for b in (plan.get("boundaries") or [])
         ],
         "water_points": [dict(w) for w in (plan.get("water_points") or [])],

@@ -233,7 +233,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 ## Data model (exact keys — do not rename without updating templates + mappers)
 
 `plan`:
-`name, all_boundaries[{name,poly,is_land}], boundaries[{name,is_land,area_m2}],
+`name, all_boundaries[{name,description,poly,is_land}], boundaries[{name,description,is_land,area_m2}],
 water_points[{lon,lat}], n_water_points, land (Polygon ll), land_area_m2,
 water{lon,lat}, basin{lon,lat,z,has_elev,max_elev,dist_water_m}, basin_m,
 max_elev_m, configs[], existing_sectors(bool), _proj (Projector), _basin_m,
@@ -420,6 +420,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     (land boundary, extra polygons, water points) with counts; new i18n keys
     `FILE_CONTENTS, EXTRA_POLYGONS, WATER_POINTS` (EN+AR); old saved plans
     without the keys still render (`or []` guards).
+32. v0.14.0: **extra polygons split by `description`** — parser keeps
+    `description` per polygon through `all_boundaries`/`boundaries`;
+    `_existing_config` groups kept polygons by description (A-Z, undescribed
+    last; basin-distance within groups) with per-group names `<desc> <k>`
+    (capped 32 chars, deduped; undescribed keep `S{rank}`); upload card groups
+    extras via `groupby('description')`.
 28. v0.12.1: **Load rows are 3 columns** — name+token | centred last-save
     datetime | Load button (`sm:grid-cols-3`, stacked on mobile), in both the
     server rows and the JS `refreshRuns` builder.
