@@ -356,22 +356,34 @@ def map_config_overview(plan, cfg):
     return to_html(build(lay, center, 16))
 
 
-def map_config_valves(plan, cfg):
-    """Valve step map: sectors + zones + draggable valves (no piping)."""
+def map_config_valves(plan, cfg, only_zone=None):
+    """Valve step map: sectors + zones + draggable valves (no piping).
+
+    With `only_zone` set, only that zone (emphasized) and its secondary
+    valves are drawn, centred and zoomed on the zone.
+    """
+    zones = [z for z in cfg.get("zones", [])
+             if only_zone is None or z.get("name") == only_zone]
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
-    colors = _sector_color_map(cfg)
-    for s in cfg["sectors"]:
-        lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
-                    colors[s["idx"]], 0.10, weight=2)
-    for z in cfg.get("zones", []):
+    if only_zone is None:
+        colors = _sector_color_map(cfg)
+        for s in cfg["sectors"]:
+            lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
+                        colors[s["idx"]], 0.10, weight=2)
+    for z in zones:
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
-                    "#ff7f0e", 0.08, weight=1)
+                    "#ff7f0e", 0.18 if only_zone else 0.08,
+                    weight=3 if only_zone else 1)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
-    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    m = build(lay, center, 16)
-    for z in cfg.get("zones", []):
+    if only_zone and zones and zones[0].get("centroid") is not None:
+        c0 = zones[0]["centroid"]
+        center, zoom = [c0.y, c0.x], 18
+    else:
+        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 16
+    m = build(lay, center, zoom)
+    for z in zones:
         c = z.get("centroid")
         if c is None:
             continue
@@ -379,7 +391,7 @@ def map_config_valves(plan, cfg):
             [c.y, c.x],
             icon=folium.DivIcon(html=_zone_label(z["name"])),
         ).add_to(m)
-    m.get_root().html.add_child(folium.Element(_valve_manage_js(cfg)))
+    m.get_root().html.add_child(folium.Element(_valve_manage_js(cfg, only_zone)))
     return to_html(m)
 
 
@@ -431,7 +443,7 @@ def map_other_elements(plan, cfg):
     return to_html(m)
 
 
-def _valve_manage_js(cfg):
+def _valve_manage_js(cfg, only_zone=None):
     """Script for the Valve step map.
 
     Draws every valve as a draggable Leaflet marker (principal = big red,
@@ -439,12 +451,16 @@ def _valve_manage_js(cfg):
     ``{type:'valve-select', cfg, valve: {...}}`` to the top window and opens a
     popup with the full valve info; releasing a drag posts
     ``{type:'valve-drag', cfg, valve_id, lon, lat}`` so the parent can update
-    the form live and persist the move. Clicks on empty map still post
-    ``{type:'valve-map-click', lon, lat}`` to fill new-valve coordinates.
+    the info live and persist the move. Clicks on empty map still post
+    ``{type:'valve-map-click', lon, lat}``. With `only_zone`, only that zone's
+    secondary valves get markers.
     """
     import json
     valves = []
     for v in cfg.get("valves") or []:
+        if only_zone is not None and (v.get("kind") == "principal"
+                                      or v.get("zone") != only_zone):
+            continue
         valves.append({
             "id": v.get("id"),
             "name": v.get("name"),

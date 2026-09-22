@@ -150,8 +150,11 @@ def _persist(token, plan, maps=None):
         STORE.save(token, plan, maps)
 
 
-def _overview_ctx(token, plan, cfg):
+def _overview_ctx(token, plan, cfg, only_zone=None):
     engine.extend(plan, cfg["id"])
+    if only_zone is not None and only_zone not in {
+            z.get("name") for z in cfg.get("zones", [])}:
+        only_zone = None
     doc = STORE.load(token)
     ov_maps = dict((doc or {}).get("overview_maps") or {})
     sector_maps = dict((doc or {}).get("sector_maps") or {})
@@ -183,7 +186,8 @@ def _overview_ctx(token, plan, cfg):
     return {"token": token, "plan": plan, "cfg": cfg,
             "overview_map": ov, "per_sector": per_sector,
             "other_map": other,
-            "valves_map": mapper.map_config_valves(plan, cfg),
+            "valves_map": mapper.map_config_valves(plan, cfg, only_zone),
+            "selected_zone": only_zone,
             "pipes_map": mapper.map_config_pipes(plan, cfg),
             "sim": sim}
 
@@ -534,7 +538,8 @@ def index():
                     if c["id"] == data.get("cfgid")), None)
         if plan is None or cfg is None:
             return _err("Run not found.")
-        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        ctx = _overview_ctx(data.get("token"), plan, cfg,
+                              data.get("zone") or None)
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)

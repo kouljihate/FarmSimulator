@@ -545,3 +545,10 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     (EN, quoted sector name, AR) via `tl('OPEN')` spans, still one row.
 43. v0.22.3: **Zones Open button in 3 columns** — label split into a
     no-wrap flex row: EN left, quoted name centre (truncates), AR right.
+44. v0.23.0: **Valve single-zone work mode** — zone filter select (one zone at
+    a time) + Save button; `{op:overview}` accepts `zone`, `map_config_valves`
+    draws only that zone (zoom 18) + its secondary markers, table lists only
+    its valves; drags while filtered are staged client-side (amber dirty rows)
+    and persisted by Save (sequential moves, filter kept); switching zones
+    auto-saves staged moves; unfiltered drags still save instantly; new i18n
+    keys `VALVE_ZONE_FILTER, VALVE_ALL_ZONES, VALVE_SAVE` (EN+AR).

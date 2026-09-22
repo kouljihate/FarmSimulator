@@ -249,7 +249,7 @@
 
 <script>
 (function () {
-  var S = { token: null, plan: null, cfgid: null };
+  var S = { token: null, plan: null, cfgid: null, valveZone: null };
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
@@ -416,6 +416,7 @@
 
   function resetOverview() {
     S.cfgid = null;
+    S.valveZone = null;
     var pairs = [['zones-result', 'zones-empty'], ['valves-result', 'valves-empty'],
                  ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
                  ['sim-result', 'sim-empty'], ['final-result', 'final-empty']];
@@ -442,12 +443,16 @@
       if (e) e.style.display = m[2] ? 'none' : '';
     });
     if (data.plan) S.plan = data.plan;
+    var zf = document.getElementById('valve-zone-filter');
+    S.valveZone = (zf && zf.value) ? zf.value : null;
+    valveStaged = {};
+    updateValveSaveBtn();
     if (!silent) { hideError(); goTab('tab-zones'); }
   }
 
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
-    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10) }).then(function (data) {
+    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), zone: S.valveZone || '' }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       fillOverview(data, silent);
     }).catch(function () { showError(terrHtml('tnet')); });
@@ -543,6 +548,55 @@
       lon: parseFloat(o.getAttribute('data-lon')), lat: parseFloat(o.getAttribute('data-lat'))
     });
     return true;
+  }
+
+  var valveStaged = {};
+
+  function updateValveSaveBtn() {
+    var b = document.getElementById('valve-zone-save-btn');
+    if (!b) return;
+    var n = Object.keys(valveStaged).length;
+    b.disabled = !n;
+    b.classList.toggle('opacity-40', !n);
+  }
+
+  function markValveDirty(vid, lon, lat) {
+    var o = valveEditBtn(vid);
+    if (o) {
+      o.setAttribute('data-lon', lon);
+      o.setAttribute('data-lat', lat);
+      var row = o.closest ? o.closest('.valve-row') : null;
+      if (row) row.classList.add('valve-row-dirty');
+    }
+    updateValveSaveBtn();
+  }
+
+  function saveStagedValves(cfgid, done) {
+    var ids = Object.keys(valveStaged);
+    if (!ids.length || !S.token) { if (done) done(); return; }
+    var i = 0;
+    (function next() {
+      if (i >= ids.length) { valveStaged = {}; if (done) done(); return; }
+      var vid = ids[i++];
+      var p = valveStaged[vid];
+      api({ op: 'valve_action', token: S.token, cfgid: parseInt(cfgid, 10),
+            action: 'move', valve_id: vid, lon: p.lon, lat: p.lat }).then(next).catch(function () {
+        showError(terrHtml('tnet'));
+      });
+    })();
+  }
+
+  function applyValveZoneFilter(cfgid, zone) {
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    if (Object.keys(valveStaged).length) {
+      saveStagedValves(cfgid, function () {
+        S.valveZone = zone || null;
+        loadOverview(cfgid, true);
+      });
+    } else {
+      S.valveZone = zone || null;
+      loadOverview(cfgid, true);
+    }
   }
 
   function refreshRuns() {
@@ -658,6 +712,15 @@
       if (fr) fr.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    var vs = e.target && e.target.closest ? e.target.closest('#valve-zone-save-btn') : null;
+    if (vs) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      hideError();
+      saveStagedValves(vs.getAttribute('data-cfg'), function () {
+        loadOverview(vs.getAttribute('data-cfg'), true);
+      });
+      return;
+    }
     var sa = e.target && e.target.closest ? e.target.closest('#sim-ai-btn') : null;
     if (sa) {
       if (!S.token) return;
@@ -683,6 +746,11 @@
   });
 
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'valve-zone-filter') {
+      hideError();
+      applyValveZoneFilter(e.target.getAttribute('data-cfg'), e.target.value || null);
+      return;
+    }
     var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
     if (!box) return;
     var cfg = box.getAttribute('data-cfg');
@@ -1015,6 +1083,11 @@
       } : { id: vid, name: vid, kind: '', sector: '', zone: '', diameter_mm: '', lon: vlon, lat: vlat };
       hideError();
       syncValvePanel(base);
+      if (S.valveZone) {
+        valveStaged[vid] = { lon: vlon, lat: vlat };
+        markValveDirty(vid, vlon, vlat);
+        return;
+      }
       if (cfgid == null || !S.token) return;
       pendingValveId = vid;
       valveAction(cfgid, 'move', { valve_id: vid, lon: vlon, lat: vlat });

@@ -6,6 +6,25 @@
   {% endif %}
 </div>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('VALVE_ZONE_FILTER') }}</h3></div>
+  <div class="flex flex-wrap items-end gap-3 p-5">
+    <div class="min-w-52 flex-1">
+      <label class="mb-1 block text-xs text-white/60">{{ t('ZONE') }}</label>
+      <select id="valve-zone-filter" data-cfg="{{ cfg.id }}" class="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+        <option value="">{{ tl('VALVE_ALL_ZONES')[0] }} / {{ tl('VALVE_ALL_ZONES')[1] }}</option>
+        {% for s in cfg.sectors %}
+        <optgroup label="{{ s.name }}">
+          {% for z in s.zones %}
+          <option value="{{ z.name }}" {% if selected_zone == z.name %}selected{% endif %}>{{ z.name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" id="valve-zone-save-btn" data-cfg="{{ cfg.id }}" disabled class="glow-btn rounded-xl px-6 py-2 text-sm font-bold opacity-40">{{ bv('VALVE_SAVE') }}</button>
+  </div>
+</div>
+<div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
   <div class="p-5">
     <iframe id="valve-map-frame" data-cfg="{{ cfg.id }}" class="map valve-xl" width="100%" height="620" srcdoc="{{ valves_map|e }}"></iframe>
     <p class="mt-2 text-center text-xs text-white/50">{{ t('VALVE_DRAG_HINT') }}</p>
@@ -34,7 +53,7 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-white/10">
-        {% for v in cfg.valves %}
+        {% for v in cfg.valves %}{% if not selected_zone or v.zone == selected_zone %}
         <tr data-vid="{{ v.id }}" class="valve-row">
           <td class="px-4 py-2 font-semibold text-white">{{ v.name }}{% if v.get('custom') %} *{% endif %}{% if v.get('moved') %} &#9679;{% endif %}</td>
           <td class="px-4 py-2">{% if v.kind == 'principal' %}{{ t('PRINCIPAL') }}{% else %}{{ t('SECONDARY') }}{% endif %}</td>
@@ -48,7 +67,7 @@
             <button type="button" class="valve-circle-btn valve-circle-danger valve-del-btn" data-cfg="{{ cfg.id }}" data-vid="{{ v.id }}" title="{{ tl('OTHER_REMOVE')[0] }} / {{ tl('OTHER_REMOVE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </td>
         </tr>
-        {% endfor %}
+        {% endif %}{% endfor %}
       </tbody>
     </table>
   </div>
