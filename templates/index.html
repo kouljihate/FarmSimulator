@@ -245,7 +245,7 @@
 
 <script>
 (function () {
-  var S = { token: null, plan: null, cfgid: null, valveZone: null };
+  var S = { token: null, plan: null, cfgid: null, valveSector: null };
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
@@ -412,7 +412,7 @@
 
   function resetOverview() {
     S.cfgid = null;
-    S.valveZone = null;
+    S.valveSector = null;
     var pairs = [['zones-result', 'zones-empty'], ['valves-result', 'valves-empty'],
                  ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
                  ['sim-result', 'sim-empty'], ['final-result', 'final-empty']];
@@ -439,8 +439,8 @@
       if (e) e.style.display = m[2] ? 'none' : '';
     });
     if (data.plan) S.plan = data.plan;
-    var zf = document.getElementById('valve-zone-filter');
-    S.valveZone = (zf && zf.value) ? zf.value : null;
+    var zf = document.getElementById('valve-sector-filter');
+    S.valveSector = (zf && zf.value) ? zf.value : null;
     valveStaged = {};
     updateValveSaveBtn();
     if (!silent) { hideError(); goTab('tab-zones'); }
@@ -448,7 +448,7 @@
 
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
-    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), zone: S.valveZone || '' }).then(function (data) {
+    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sector: S.valveSector || '' }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       fillOverview(data, silent);
     }).catch(function () { showError(terrHtml('tnet')); });
@@ -582,15 +582,15 @@
     })();
   }
 
-  function applyValveZoneFilter(cfgid, zone) {
+  function applyValveZoneFilter(cfgid, sector) {
     if (!S.token) { showError(terrHtml('tnet')); return; }
     if (Object.keys(valveStaged).length) {
       saveStagedValves(cfgid, function () {
-        S.valveZone = zone || null;
+        S.valveSector = sector || null;
         loadOverview(cfgid, true);
       });
     } else {
-      S.valveZone = zone || null;
+      S.valveSector = sector || null;
       loadOverview(cfgid, true);
     }
   }
@@ -742,7 +742,7 @@
   });
 
   document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'valve-zone-filter') {
+    if (e.target && e.target.id === 'valve-sector-filter') {
       hideError();
       applyValveZoneFilter(e.target.getAttribute('data-cfg'), e.target.value || null);
       return;
@@ -1074,7 +1074,7 @@
       } : { id: vid, name: vid, kind: '', sector: '', zone: '', diameter_mm: '', lon: vlon, lat: vlat };
       hideError();
       syncValvePanel(base);
-      if (S.valveZone) {
+      if (S.valveSector) {
         valveStaged[vid] = { lon: vlon, lat: vlat };
         markValveDirty(vid, vlon, vlat);
         return;

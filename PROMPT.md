@@ -568,3 +568,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 47. v0.24.2: **glow buttons follow the bv rule** — `.glow-btn .bv` CSS stacks
     Arabic (row 1) over English (row 2) like `.tool-btn`, so Split (and Valve
     Save) match the other buttons.
+48. v0.25.0: **Valve sector filter (was zone filter)** — the Valve dropdown
+    lists sectors; selecting one shows only that sector (zones + principal and
+    secondary valves, zoom 17) in map and table; staged-drag + Save flow
+    unchanged; `{op:overview}` takes `sector`, i18n keys renamed to
+    `VALVE_SECTOR_FILTER, VALVE_ALL_SECTORS` (EN+AR).

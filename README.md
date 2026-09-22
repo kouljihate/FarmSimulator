@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.24.2 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.25.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -26,10 +26,10 @@ place. The browser never leaves `/`.
     with sectors + all zones (with name labels) + draggable valve markers:
     clicking a marker selects it and shows its full info (name, kind, diameter,
     sector, zone, X/Y) in the Selected-valve panel; dragging a marker
-    updates the info live on release and auto-saves the move (all-zones view).
-    A zone filter selects a **single** zone: the map and table then show only
-    that zone, drags are staged (amber row) until **Save** persists them, and
-    switching zones auto-saves first. Below the map a
+    updates the info live on release and auto-saves the move (all-sectors view).
+    A sector filter selects a **single** sector: the map and table then show only
+    that sector, drags are staged (amber row) until **Save** persists them, and
+    switching sectors auto-saves first. Below the map a
     single table lists **all** valves (principal + secondary) with an Actions
     column of circle Edit/Remove icon buttons — Edit shows the valve info,
     highlights its row and focuses its marker on the map.
