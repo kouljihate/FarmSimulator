@@ -485,6 +485,13 @@ def map_config_pipes(plan, cfg, only_sector=None):
     for z in zones:
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
                     "#ff7f0e", 0.08, weight=1)
+    for v in cfg.get("valves", []) or []:
+        if only_sector is not None and v.get("sector") != only_sector:
+            continue
+        if v.get("kind") == "principal":
+            lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
+        else:
+            lay.marker(v["lon"], v["lat"], _ti("valve32", zone=v["zone"]), "orange", radius=6)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     if only_sector and secs:

@@ -587,3 +587,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `focusPipe` locate), one unified pipes table with circle Locate buttons;
     pipes stay derived (no move/remove — they follow valves); new i18n keys
     `PIPE_SELECTED, PIPE_INFO_EMPTY, PIPE_CLICK_HINT, LOCATE, PIPES` (EN+AR).
+51. v0.27.1: **valves on Pipes map** — `map_config_pipes` also draws principal
+    (red) + secondary (orange) valve markers, display-only, sector-filtered
+    like the rest.
