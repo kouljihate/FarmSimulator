@@ -119,10 +119,16 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
    `core/engine.py` exposes `apply_sector_op(plan, cfg, op, idx, idx2, name,
    ring)` → rebuilds the sector chain/entries via `recompute_sectors` (re-sorts
    by distance to basin, keeps custom non-`S\d+` names) and the full
-   zones/valves/pipes pipeline. Rules: rename rejects `S<digits>` only; remove
-   needs ≥ 2 sectors; add/edit need a valid ring inside the land (≥ 90 % of
-   area, ≥ 60 m²) — add **carves** the new polygon out of every existing sector
-   (`difference`); merge unions two sectors keeping the first's name.
+    zones/valves/pipes pipeline. Rules: rename rejects `S<digits>` only; remove
+    needs ≥ 2 sectors; add/edit need a valid ring inside the land (≥ 90 % of
+    area, ≥ 60 m²) — add **carves** the new polygon out of every existing sector
+    (`difference`); merge unions two sectors keeping the first's name.
+    **Rename also rejects duplicate names** (case-insensitive match against the
+    other sectors → `"That sector name is already used. Pick a unique name."`).
+    All sector-op error strings are bilingual via `i18n.err` (`ERRORS` entries).
+    Client `applySectorOp` and the basin submit never fail silently any more:
+    missing token, non-200, bad JSON or empty fragment all show the bilingual
+    `NETWORK_ERROR` (`#sector-i18n` `data-tnet`) in the top error banner.
    `core/mapper._sector_manage_js(cfg)` adds draw/edit tools (`startDraw`,
    `startEdit(idx, ring)` that rewires vertex drags, `finishDraw/finishEdit`,
    Escape = cancel) posting `sector-draw` / `sector-edit` / `sector-cancel`
@@ -351,3 +357,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     banner (`terrHtml`), select changes clear the banner, map-driven
     `sector-select` also toggles the accordion, `withSectorMap` guards null
     frames; `VERSION` → 0.9.9 with README/PROMPT resynced.
+22. v0.10.0: **unique sector names + loud failures** — rename rejects an
+    already-used name (case-insensitive, other sectors only) with a bilingual
+    error; all sector-op messages added to `ERRORS` (EN+AR); new `NETWORK_ERROR`
+    key (`#sector-i18n` `data-tnet`); `applySectorOp` and basin submit surface
+    missing-token / non-200 / bad-JSON / empty-fragment failures in the top
+    error banner instead of silently doing nothing.

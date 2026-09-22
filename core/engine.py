@@ -604,6 +604,10 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
             return False, "Empty sector name."
         if _is_default_sector_name(nm):
             return False, "Pick a custom name (not S<number>)."
+        taken = {s.get("name", "").strip().lower()
+                 for s in cfg["sectors"] if s["idx"] != idx}
+        if nm.lower() in taken:
+            return False, "That sector name is already used. Pick a unique name."
         target["name"] = nm
         recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None

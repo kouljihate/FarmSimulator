@@ -194,7 +194,8 @@
      data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
      data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
      data-tedit="{{ ts('EDIT_HINT') }}" data-tfin="{{ ts('FINISH') }}"
-     data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"></div>
+     data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"
+     data-tnet="{{ ts('NETWORK_ERROR') }}"></div>
 
 <script>
 (function () {
@@ -294,7 +295,7 @@
   }
 
   function applySectorOp(cfg, action, extra) {
-    if (!TOKEN) return;
+    if (!TOKEN) { showError(terrHtml('tnet')); return; }
     setStatus(cfg, 'tsaving');
     var body = extra || {};
     body.action = action;
@@ -302,15 +303,17 @@
     req.open('POST', '/sectors/' + TOKEN + '/' + cfg + '/action');
     req.setRequestHeader('Content-Type', 'application/json');
     req.onload = function () {
-      if (req.status !== 200) return;
+      if (req.status !== 200) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       var data;
-      try { data = JSON.parse(req.responseText); } catch (x) { return; }
-      if (!data.ok) { if (data.error) showError(data.error); resetTool(cfg, null); return; }
+      try { data = JSON.parse(req.responseText); } catch (x) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
+      if (!data.ok) { if (data.error) showError(data.error); else showError(terrHtml('tnet')); resetTool(cfg, null); return; }
+      if (!data.sectors) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       hideError();
       var sp = document.getElementById('sectors-result');
       if (sp && data.sectors) sp.innerHTML = data.sectors;
       sel[cfg] = null; drawMode[cfg] = false; editMode[cfg] = false; mergeFrom[cfg] = null;
     };
+    req.onerror = function () { showError(terrHtml('tnet')); resetTool(cfg, null); };
     req.send(JSON.stringify(body));
   }
 
@@ -567,11 +570,12 @@
       req.open('POST', basinForm.getAttribute('action'));
       req.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       req.onload = function () {
-        if (req.status !== 200) return;
+        if (req.status !== 200) { showError(terrHtml('tnet')); return; }
         var data;
-        try { data = JSON.parse(req.responseText); } catch (x) { return; }
+        try { data = JSON.parse(req.responseText); } catch (x) { showError(terrHtml('tnet')); return; }
         if (!data.ok || data.error_html) {
           if (data.error_html) showError(data.error_html);
+          else showError(terrHtml('tnet'));
           return;
         }
         if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
@@ -582,6 +586,7 @@
         var sp = document.getElementById('sectors-result');
         if (sp) sp.innerHTML = data.sectors;
       };
+      req.onerror = function () { showError(terrHtml('tnet')); };
       req.send(new FormData(basinForm));
     });
   }

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.9.9 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.10.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**:
@@ -86,15 +86,19 @@ Each config card has a set of **sector checkboxes labelled with the actual
     middle, **"إدارة" on the right** — there is no separate status line;
     selection/merge guidance is shown in the top error banner (sourced from a
     hidden `#sector-i18n` store holding the `ts()` bilingual strings, so the
-    Add/Edit **Done** label keeps working). **Rename** and
+    Add/Edit **Done** label keeps working). Every failed request (missing
+    token, HTTP/network error, bad payload) now surfaces a bilingual message
+    in the top error banner instead of failing silently. **Rename** and
    **Remove** ask for confirmation in a small modal dialog — the modal header
    shows bilingual text (English left, Arabic right), the body and buttons
    show Arabic on top and English below. The modal matches the app theme
    (blurred backdrop, glassmorphism card with neon glow, gradient
-   confirm/danger buttons). **Removing (or merging/editing) a sector does not
-   rename the others** — the remaining sectors keep their names (S3 stays S3,
-   custom names stay); adding a new sector picks the next free `S{max+1}`
-   name. Every edit rebuilds
+    confirm/danger buttons). **Removing (or merging/editing) a sector does not
+    rename the others** — the remaining sectors keep their names (S3 stays S3,
+    custom names stay); adding a new sector picks the next free `S{max+1}`
+    name. **Sector names must be unique**: renaming to an already-used name
+    (case-insensitive) is rejected with a bilingual error, as are empty names
+    and default-style `S<number>` names. Every edit rebuilds
    the sector chain, zones, valves and piping for that config and re-renders
    its map in place (`GET /sectors/<token>/<cfgid>/<idx>/coords`,
    `POST /sectors/<token>/<cfgid>/action`); the result is persisted so a
