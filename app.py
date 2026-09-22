@@ -407,6 +407,8 @@ def index():
             zone_name=data.get("zone_name"), name=data.get("name"),
             x1=data.get("x1"), y1=data.get("y1"),
             x2=data.get("x2"), y2=data.get("y2"),
+            zone_name2=data.get("zone_name2"),
+            zone_names=data.get("zone_names"),
         )
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))

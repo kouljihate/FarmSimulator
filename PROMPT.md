@@ -495,11 +495,13 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     per sector + secondary 32 mm per zone**, pipes **90/63/32 mm**
     (`_rebuild_valves_pipes` keeps valves/pipes in sync after zone edits);
     **zone management** (`{op:zone_action}` → `apply_zone_op`: rename /
-    remove / split-by-line via X/Y start+stop / confirm; `zones_confirmed`
+    remove / split-by-line via X/Y start+stop / swap / merge / confirm;
+    `zones_confirmed`
     flag; **Confirm Zones** button ends the Zones tab and jumps to Valve);
-    sector modal gained a **zone-mgmt box** (zone select, X1/Y1/X2/Y2,
-    Trace-on-map via `setZonePick` + `zone-pick` messages, Split/Rename/
-    Remove); new **Other Elements** tab (`map_other_elements` big map,
+    sector modal gained a **zone-mgmt box** (multi-select zone checkboxes,
+    X1/Y1/X2/Y2,
+    Trace-on-map via `setZonePick` + `zone-pick` messages, Split/Rename/Swap/
+    Merge/Remove); new **Other Elements** tab (`map_other_elements` big map,
     click-to-fill `other-map-click`, `{op:other_add/other_remove}`,
     heuristic `analyse_other_element` verdict + cheaper/smoother
     suggestion); new **Simulation** tab before Final (`compute_simulation`
@@ -552,3 +554,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     and persisted by Save (sequential moves, filter kept); switching zones
     auto-saves staged moves; unfiltered drags still save instantly; new i18n
     keys `VALVE_ZONE_FILTER, VALVE_ALL_ZONES, VALVE_SAVE` (EN+AR).
+45. v0.24.0: **zone multi-select manage** — Open modal lists zones with
+    checkboxes (row highlights); Zone Management buttons act on the checked
+    set: Split/Rename/Remove take the selection (rename needs exactly one),
+    new Swap (two checked exchange names) and Merge (2+ union, renumber);
+    `apply_zone_op` gained `swap`/`merge` + multi `remove` (removed areas fold
+    into the first remaining zone) via `zone_name2`/`zone_names`; new i18n keys
+    `ZONE_SWAP, ZONE_MERGE, ZONE_ONE_NEED, ZONE_SWAP_NEED, ZONE_MERGE_NEED`
+    (EN+AR) + swap/merge ERRORS.

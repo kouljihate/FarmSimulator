@@ -1078,8 +1078,21 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
     return False, "Unknown operation."
 
 
+def _move_zone_refs(cfg, old, new):
+    for v in cfg.get("valves", []):
+        if v.get("zone") == old:
+            v["zone"] = new
+            if v.get("kind") == "secondary":
+                v["name"] = "Valve secondary {0}".format(new)
+    for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
+        if m.get("zone") == old:
+            m["zone"] = new
+    _rekey_valves(cfg, old_zone=old, new_zone=new)
+
+
 def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
-                  name=None, x1=None, y1=None, x2=None, y2=None):
+                  name=None, x1=None, y1=None, x2=None, y2=None,
+                  zone_name2=None, zone_names=None):
     proj = plan["_proj"]
     sector = next((s for s in cfg.get("sectors", []) if s.get("idx") == sector_idx), None)
     if sector is None:
@@ -1100,28 +1113,67 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             return False, "Zone not found."
         old = target["name"]
         target["name"] = nm
-        for v in cfg.get("valves", []):
-            if v.get("zone") == old:
-                v["zone"] = nm
-                if v.get("kind") == "secondary":
-                    v["name"] = "Valve secondary {0}".format(nm)
-        for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
-            if m.get("zone") == old:
-                m["zone"] = nm
-        _rekey_valves(cfg, old_zone=old, new_zone=nm)
+        _move_zone_refs(cfg, old, nm)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        return True, None
+    if op == "swap":
+        a = next((z for z in zones if z.get("name") == zone_name), None)
+        b = next((z for z in zones if z.get("name") == zone_name2), None)
+        if a is None or b is None or zone_name == zone_name2:
+            return False, "Select two zones to swap."
+        tmp = "__swap_tmp__"
+        while tmp.lower() in {z.get("name", "").lower() for z in cfg.get("zones", [])}:
+            tmp = "_" + tmp
+        old_a, old_b = a["name"], b["name"]
+        a["name"] = tmp
+        _move_zone_refs(cfg, old_a, tmp)
+        b["name"] = old_a
+        _move_zone_refs(cfg, old_b, old_a)
+        a["name"] = old_b
+        _move_zone_refs(cfg, tmp, old_b)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        return True, None
+    if op == "merge":
+        wanted = {n for n in (zone_names or []) if n}
+        if zone_name:
+            wanted.add(zone_name)
+        targets = [z for z in zones if z.get("name") in wanted]
+        if len(targets) < 2:
+            return False, "Select two zones to merge."
+        survivor = min(targets, key=lambda z: z.get("idx", 0))
+        merged = survivor["poly_m"]
+        for z in targets:
+            if z is not survivor:
+                merged = merged.union(z["poly_m"])
+        if not merged.is_valid:
+            merged = make_valid(merged)
+        sector["zones"] = [z for z in zones if z is survivor or z not in targets]
+        survivor["poly_m"] = merged
+        survivor["poly"] = proj.to_lonlat(merged)
+        survivor["area_m2"] = merged.area
+        for i, z in enumerate(sorted(sector["zones"], key=lambda z: z.get("idx", 0)), start=1):
+            z["idx"] = i
+            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         return True, None
     if op == "remove":
-        if len(zones) <= 1:
-            return False, "Cannot remove the last zone."
-        target = next((z for z in zones if z.get("name") == zone_name), None)
-        if target is None and zone_idx is not None:
-            target = next((z for z in zones if z.get("idx") == zone_idx), None)
-        if target is None:
+        wanted = {n for n in (zone_names or []) if n}
+        if zone_name:
+            wanted.add(zone_name)
+        targets = [z for z in zones if z.get("name") in wanted]
+        if not targets and zone_idx is not None:
+            targets = [z for z in zones if z.get("idx") == zone_idx]
+        if not targets:
             return False, "Zone not found."
-        rest = [z for z in zones if z is not target]
-        merged = target["poly_m"].union(rest[0]["poly_m"])
+        rest = [z for z in zones if z not in targets]
+        if not rest:
+            return False, "Cannot remove the last zone."
+        merged = rest[0]["poly_m"]
+        for z in targets:
+            merged = merged.union(z["poly_m"])
         if not merged.is_valid:
             merged = make_valid(merged)
         rest[0]["poly_m"] = merged

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.23.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.24.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -215,7 +215,7 @@ core/
   parser.py                KML / CSV / WKT parsing
   engine.py                pipeline: basin, sectorise, zones, valves, pipes + sector ops
                  (apply_sector_op / recompute_sectors: rename, remove, merge, add, edit)
-                 + zone ops (apply_zone_op: rename, remove, split, confirm),
+                  + zone ops (apply_zone_op: rename, remove, split, swap, merge, confirm),
                  other-element AI analysis, ROI simulation + AI proposal
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
