@@ -537,3 +537,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     valve JS now reads row `data-*` (`valveEditBtn`) instead of the old
     `#valve-target/#valve-lon/#valve-lat` form; empty-map clicks are ignored;
     new i18n keys `ACTIONS, PRINCIPAL, SECONDARY` (EN+AR).
+41. v0.22.1: **Zones Open button on one row** — per-sector Open button uses
+    inline `bi('OPEN')` + `whitespace-nowrap truncate` instead of the
+    block-level `di` flex from `t()`, so EN/AR/name always stay on a single
+    line.
