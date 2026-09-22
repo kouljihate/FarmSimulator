@@ -541,3 +541,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     inline `bi('OPEN')` + `whitespace-nowrap truncate` instead of the
     block-level `di` flex from `t()`, so EN/AR/name always stay on a single
     line.
+42. v0.22.2: **Zones Open button wording** — label is now `Open "name" افتح`
+    (EN, quoted sector name, AR) via `tl('OPEN')` spans, still one row.
