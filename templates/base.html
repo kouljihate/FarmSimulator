@@ -288,8 +288,41 @@
     to { opacity: 1; transform: none; }
   }
 
+  #page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(3,7,18,.55);
+    backdrop-filter: blur(3px);
+  }
+  #page-loader .loader-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .9rem;
+    padding: 1.8rem 2.4rem;
+    border-radius: 1.2rem;
+    background: rgba(13,21,36,.92);
+    border: 1px solid rgba(34,211,238,.35);
+    box-shadow: 0 0 34px rgba(34,211,238,.22), 0 18px 44px rgba(0,0,0,.55);
+  }
+  #page-loader .loader-spinner {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 5px solid rgba(255,255,255,.14);
+    border-top-color: #22d3ee;
+    border-right-color: #8b5cf6;
+    animation: loader-spin .8s linear infinite;
+  }
+  @keyframes loader-spin { to { transform: rotate(360deg); } }
+  #page-loader .loader-text { color: #fff; font-size: .9rem; }
+
   @media print {
-    nav, footer, .tab-btn, #top-error, #sector-modal, #sector-detail-modal,
+    nav, footer, .tab-btn, #top-error, #toasts, #page-loader, #sector-modal, #sector-detail-modal,
     #other-form, #sim-form, .confirm-zones-btn, .confirm-rows-btn, .confirm-valves-btn, .use-config-btn { display: none !important; }
     body { background: #fff; color: #000; }
     .tab-panel { display: block !important; }

@@ -712,3 +712,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     after it (sector/rows Open, Trace, sector tools, valve/pipe buttons);
     restored + verified end-to-end in headless Chrome; recap default colors
     switched to hex (named colors break `<input type=color>`).
+77. v0.41.0: **loading overlay** — centered animated spinner + bilingual text
+    over a dimmed backdrop during long ops (shows after 250 ms, ref-counted
+    for parallel requests); all JSON ops go through `api()` which drives it,
+    upload/sector ops wrapped directly; new i18n key `LOADING` (EN+AR).

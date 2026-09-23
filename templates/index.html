@@ -3,6 +3,12 @@
 
 <div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur" style="display:none"></div>
 <div id="toasts" aria-live="polite"></div>
+<div id="page-loader" style="display:none">
+  <div class="loader-box">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">{{ t('LOADING') }}</div>
+  </div>
+</div>
 
 <div class="mb-4 flex justify-center pt-1">
   <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
@@ -312,11 +318,38 @@
   }
 
   function api(payload) {
+    loaderOn();
     return fetch('/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).then(function (r) { return r.json(); });
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      loaderOff();
+      return data;
+    }, function (err) {
+      loaderOff();
+      throw err;
+    });
+  }
+
+  var loadingN = 0, loadingT = null;
+
+  function loaderOn() {
+    loadingN++;
+    var l = document.getElementById('page-loader');
+    if (!l || loadingT || l.style.display === 'flex') return;
+    loadingT = setTimeout(function () {
+      loadingT = null;
+      if (loadingN > 0) l.style.display = 'flex';
+    }, 250);
+  }
+
+  function loaderOff() {
+    loadingN = Math.max(0, loadingN - 1);
+    if (loadingN !== 0) return;
+    if (loadingT) { clearTimeout(loadingT); loadingT = null; }
+    var l = document.getElementById('page-loader');
+    if (l) l.style.display = 'none';
   }
 
   function mutate(payload) {
@@ -420,11 +453,13 @@
     body.token = S.token;
     body.cfgid = parseInt(cfg, 10);
     body.action = action;
+    loaderOn();
     fetch('/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }).then(function (req) { return req.json(); }).then(function (data) {
+      loaderOff();
       if (!data.ok) { if (data.error) showError(data.error); else showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       if (!data.sectors_html) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       hideError();
@@ -434,7 +469,7 @@
       if (data.plan) S.plan = data.plan;
       resetSectorState();
       if (S.cfgid != null) loadOverview(S.cfgid, true);
-    }).catch(function () { showError(terrHtml('tnet')); resetTool(cfg, null); });
+    }).catch(function () { loaderOff(); showError(terrHtml('tnet')); resetTool(cfg, null); });
   }
 
   function setPlan(payload) {
@@ -830,13 +865,15 @@
       hideError();
       var btn = uploadForm.querySelector('button[type="submit"]');
       if (btn) btn.disabled = true;
+      loaderOn();
       fetch('/', { method: 'POST', body: new FormData(uploadForm) }).then(function (r) { return r.json(); }).then(function (data) {
+        loaderOff();
         if (btn) btn.disabled = false;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
         setPlan(data);
-      }).catch(function () { if (btn) btn.disabled = false; showError(terrHtml('tnet')); });
+      }).catch(function () { loaderOff(); if (btn) btn.disabled = false; showError(terrHtml('tnet')); });
     });
   }
 
