@@ -194,6 +194,7 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
             "selected_sector": only_sector,
             "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector),
             "selected_pipe_sector": only_pipe_sector,
+            "tree_codes": engine.TREE_TYPES,
             "sim": sim}
 
 
@@ -203,6 +204,7 @@ def _overview_fragments(ctx):
         "valves_html": render_template("_valves_result.html", **ctx),
         "pipes_html": render_template("_pipes_result.html", **ctx),
         "other_html": render_template("_other_result.html", **ctx),
+        "trees_html": render_template("_trees_result.html", **ctx),
         "sim_html": render_template("_simulation_result.html", **ctx),
         "final_html": render_template("_final_result.html", **ctx),
     }
@@ -538,6 +540,21 @@ def index():
         other_maps.pop(data.get("cfgid"), None)
         other_maps.pop(str(data.get("cfgid")), None)
         STORE.save_maps(data.get("token"), {"other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "tree_save":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        ok, msg = engine.apply_tree_op(plan, cfg, data.get("trees"))
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))

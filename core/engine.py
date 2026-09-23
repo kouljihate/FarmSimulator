@@ -32,6 +32,18 @@ OTHER_KINDS = (
     "pump_booster",
 )
 
+TREE_TYPES = (
+    "none",
+    "olive",
+    "citrus",
+    "almond",
+    "pomegranate",
+    "apple",
+    "date_palm",
+    "grape",
+    "fig",
+)
+
 
 # --------------------------------------------------------------------------- #
 # Land / terrain helpers
@@ -329,6 +341,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
                 "poly": zone_ll,
                 "area_m2": zone_m.area,
                 "centroid": project.to_lonlat(target_m),
+                "tree": "none",
             }
             zones_all.append(zone)
 
@@ -1350,6 +1363,26 @@ def apply_pipe_op(plan, cfg, op, pipe_id=None, diameter=None,
     return False, "Unknown operation."
 
 
+def apply_tree_op(plan, cfg, trees):
+    """Set the tree type of zones. Returns (ok, message).
+
+    ``trees`` maps zone names to tree-type keys (see ``TREE_TYPES``); every
+    zone keeps its own type so layouts can be mixed.
+    """
+    if not isinstance(trees, dict):
+        return False, "Invalid tree selection."
+    zones = {z.get("name"): z for s in cfg.get("sectors", [])
+             for z in (s.get("zones", []) or [])}
+    for zone_name, tree in trees.items():
+        if tree not in TREE_TYPES:
+            return False, "Invalid tree selection."
+        target = zones.get(zone_name)
+        if target is None:
+            return False, "Zone not found."
+        target["tree"] = tree
+    return True, None
+
+
 def _move_zone_refs(cfg, old, new):
     for v in cfg.get("valves", []):
         if v.get("zone") == old:
@@ -1493,7 +1526,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             if not g.is_valid:
                 g = make_valid(g)
             new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g), "area_m2": g.area,
-                              "centroid": proj.to_lonlat(g.centroid)})
+                              "centroid": proj.to_lonlat(g.centroid), "tree": "none"})
         sector["zones"] = rest + new_zones
         for i, z in enumerate(sector["zones"], start=1):
             z["idx"] = i

@@ -10,9 +10,11 @@
     <button type="button" class="tab-btn" data-tab-target="tab-basin">{{ bi('TAB_BASIN') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-sectors">{{ bi('TAB_SECTORS') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-zones">{{ bi('TAB_ZONES') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-rows">{{ bi('TAB_ROWS') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-valve">{{ bi('TAB_VALVE') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-pipes">{{ bi('TAB_PIPES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-other">{{ bi('TAB_OTHER') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-trees">{{ bi('TAB_TREES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-sim">{{ bi('TAB_SIM') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-final">{{ bi('TAB_FINAL') }}</button>
   </div>
@@ -141,6 +143,14 @@
       </div>
     </div>
 
+    <div class="tab-panel" id="tab-rows">
+      <div id="rows-result"></div>
+      <div id="rows-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_ROWS') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-valve">
       <div id="valves-result"></div>
       <div id="valves-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
@@ -161,6 +171,14 @@
       <div id="other-result"></div>
       <div id="other-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_OTHER') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-trees">
+      <div id="trees-result"></div>
+      <div id="trees-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_TREES') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
@@ -414,8 +432,10 @@
     S.cfgid = null;
     S.valveSector = null;
     S.pipeSector = null;
-    var pairs = [['zones-result', 'zones-empty'], ['valves-result', 'valves-empty'],
+    var pairs = [['zones-result', 'zones-empty'], ['rows-result', 'rows-empty'],
+                 ['valves-result', 'valves-empty'],
                  ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
+                 ['trees-result', 'trees-empty'],
                  ['sim-result', 'sim-empty'], ['final-result', 'final-empty']];
     pairs.forEach(function (p) {
       var r = document.getElementById(p[0]);
@@ -428,9 +448,11 @@
   function fillOverview(data, silent) {
     S.cfgid = data.cfgid;
     var map = [['zones-result', 'zones-empty', data.zones_html],
+               ['rows-result', 'rows-empty', data.rows_html],
                ['valves-result', 'valves-empty', data.valves_html],
                ['pipes-result', 'pipes-empty', data.pipes_html],
                ['other-result', 'other-empty', data.other_html],
+               ['trees-result', 'trees-empty', data.trees_html],
                ['sim-result', 'sim-empty', data.sim_html],
                ['final-result', 'final-empty', data.final_html]];
     map.forEach(function (m) {
@@ -768,6 +790,20 @@
     if (cz) {
       zoneAction(cz.getAttribute('data-cfg'), 'confirm', {});
       goTab('tab-valve');
+      return;
+    }
+    var ts = e.target && e.target.closest ? e.target.closest('.tree-save-btn') : null;
+    if (ts) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var trees = {};
+      var tr = document.getElementById('trees-result');
+      var sels = tr ? tr.querySelectorAll('.tree-sel') : [];
+      for (var ti = 0; ti < sels.length; ti++) trees[sels[ti].getAttribute('data-zone')] = sels[ti].value;
+      api({ op: 'tree_save', token: S.token, cfgid: parseInt(ts.getAttribute('data-cfg'), 10), trees: trees }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
     var od = e.target && e.target.closest ? e.target.closest('.other-del-btn') : null;

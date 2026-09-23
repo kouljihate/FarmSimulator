@@ -1,0 +1,35 @@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
+  <span class="inl text-sm text-white/60">{{ cfg.zones|length }} {{ t('ZONES') }}</span>
+</div>
+<p class="mb-4 text-sm text-white/55">{{ t('TREE_SUB') }}</p>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for s in cfg.sectors %}
+  <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+    <div class="flex flex-1 flex-col p-5">
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-white">{{ s.name }}</h3>
+        <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-white/80">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
+      </div>
+      <div class="space-y-2">
+        {% for z in s.zones %}
+        <div class="flex items-center gap-2 rounded-xl bg-white/5 p-2.5">
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-semibold text-white">{{ z.name }}</div>
+            <div class="text-xs text-white/50">{{ "{:,.0f}".format(z.area_m2) }} m<sup>2</sup></div>
+          </div>
+          <select class="tree-sel w-36 rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white/80" data-zone="{{ z.name }}">
+            {% for code in tree_codes %}
+            <option value="{{ code }}" {% if (z.get('tree') or 'none') == code %}selected{% endif %}>{{ t('TREE_' + code.upper()) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+  <button type="button" class="glow-btn rounded-2xl px-8 py-3 text-base font-bold tree-save-btn" data-cfg="{{ cfg.id }}">{{ bv('TREE_SAVE') }}</button>
+</div>

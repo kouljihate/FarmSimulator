@@ -291,7 +291,7 @@ plus the `"Point is outside the land boundary."` error.
 `sector`: `idx (1-based), name (S{idx}), poly_m, poly (lonlat), centroid,
 area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
-`zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid`
+`zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid, tree`
 
    `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
    point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
@@ -516,7 +516,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     and adds a detailed land **report + Export PDF** (`window.print` +
     print CSS); new partials `_other_result` / `_simulation_result`;
     tab bar is Load/Upload/Basin/Sectors/Zones/Valve/Pipes/Other
-    Elements/Simulation/Final Result.
+    Elements/Trees/Simulation/Final Result.
 36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
     the Valve tab (see data-model note above for the override-layer design).
 37. v0.19.0: **zone labels** — `mapper.map_sector` (Zones-tab maps) draws a
@@ -605,3 +605,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     drawn in pipes/overview/other maps and counted in totals; new i18n keys
     `PIPE_MGMT, PIPE_MGMT_SUB, PIPE_TARGET, PIPE_NEW, PIPE_ADD, PIPE_SAVE`
     (EN+AR) + pipe ERRORS.
+54. v0.30.0: **Trees tab** (after Other Elements) — per-zone tree-type select
+    (olive/citrus/almond/pomegranate/apple/date_palm/grape/fig/none, mixed
+    allowed); `{op:tree_save}` → `apply_tree_op` (validated, persisted, no
+    map/confirm side effects); zone dicts carry `tree` (default none); new
+    partial `_trees_result`, i18n keys `TAB_TREES, TREE_SUB, TREE_SAVE,
+    TREE_<TYPE>` (EN+AR) + tree ERROR.
