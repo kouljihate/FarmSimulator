@@ -265,7 +265,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
   simulation{years,capex,annual_cost,annual_revenue,crop},
   _proj (Projector), _basin_m, _land_m`
 
-  `config`: `id, name, angle, n_sectors, sectors[], ready, zones_confirmed`
+  `config`: `id, name, angle, n_sectors, sectors[], ready, zones_confirmed, rows_confirmed`
   and after `engine.extend(plan, cid)`: `zones[], valves[], pipes`
   (`pipes = {principal:{pid:P,diameter_mm:90, line, len_m},
               majors:[{pid:M:zone,zone,sector,diameter_mm:63,line,len_m}],
@@ -623,3 +623,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     ROW_SPACING, ROW_TRACE, ROW_TREE, ROW_DIRECTION, ROW_SLOPE, ROW_ROWS`
     (EN+AR) + spacing ERROR; tab bar is Load/Upload/Basin/Sectors/Zones/Rows/
     Valve/Pipes/Other Elements/Trees/Simulation/Final Result.
+56. v0.32.0: **Rows confirm step** — Confirm Zones now jumps to Rows; Rows tab
+    gained a Confirm Rows button (`rows_save` with `confirm:true` →
+    `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
+    edits like `zones_confirmed`; new i18n keys `CONFIRM_ROWS,
+    ROWS_CONFIRMED, ROWS_PENDING` (EN+AR).

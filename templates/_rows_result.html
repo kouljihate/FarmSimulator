@@ -1,6 +1,11 @@
 <div class="mb-4 flex flex-wrap items-center gap-3">
   <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
   <span class="inl text-sm text-white/60">{{ cfg.zones|length }} {{ t('ZONES') }}</span>
+  {% if cfg.rows_confirmed %}
+  <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-200">{{ t('ROWS_CONFIRMED') }}</span>
+  {% else %}
+  <span class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-200">{{ t('ROWS_PENDING') }}</span>
+  {% endif %}
 </div>
 <p class="mb-4 text-sm text-white/55">{{ t('ROWS_SUB') }}</p>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
@@ -50,4 +55,8 @@
     </div>
   </div>
   {% endfor %}
+</div>
+<div class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+  <p class="mb-3 text-sm text-white/60">{{ t('ROWS_PENDING') }} — {{ t('VALVE_PRINCIPAL') }} + {{ t('VALVE_SECONDARY') }}</p>
+  <button type="button" class="glow-btn rounded-2xl px-8 py-3 text-base font-bold confirm-rows-btn" data-cfg="{{ cfg.id }}">{{ t('CONFIRM_ROWS') }}</button>
 </div>

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.31.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.32.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -285,7 +285,7 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
 | Object | Keys |
 | --- | --- |
 | `plan` | `name, all_boundaries, boundaries[{name,description,is_land,area_m2}], water_points[{lon,lat}], n_water_points, land, land_area_m2, water, basin, basin_m, max_elev_m, configs, existing_sectors, other_elements[{id,kind,lon,lat,size,note,necessary,verdict,suggestion}], simulation{years,capex,annual_cost,annual_revenue,crop}, _proj, _basin_m, _land_m` |
-| `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed, valve_overrides{(kind,sector,zone):[lon,lat]}, removed_valves[], custom_valves[]` + post-extend `zones, valves, pipes` |
+| `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed, rows_confirmed, valve_overrides{(kind,sector,zone):[lon,lat]}, removed_valves[], custom_valves[]` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
 | `valve` | principal: `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat, point, name}`; secondary: `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32, lon, lat, point, name}` (+ `moved` when repositioned, `custom:true` for added valves) |
 | `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, sector, diameter_mm:63, len_m}), minors[]({zone, sector, diameter_mm:32, len_m})` |

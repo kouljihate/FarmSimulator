@@ -542,6 +542,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     # small optimisation: compute zones/pipes eagerly for one config? we keep lazy
     for c in configs:
         c.setdefault("zones_confirmed", False)
+        c.setdefault("rows_confirmed", False)
     return {
         "name": parsed.get("name") or "Untitled plot",
         "all_boundaries": [{
@@ -603,6 +604,7 @@ def set_basin(plan, lon, lat):
         plan["configs"] = sectorise(land_m, proj, pt)
     for c in plan["configs"]:
         c.setdefault("zones_confirmed", False)
+        c.setdefault("rows_confirmed", False)
     return True, None
 
 
@@ -692,6 +694,7 @@ def recompute_sectors(plan, cfg, polys):
     cfg["n_sectors"] = len(sectors)
     cfg["ready"] = False
     cfg["zones_confirmed"] = False
+    cfg["rows_confirmed"] = False
     for k in ("zones", "valves", "pipes"):
         cfg.pop(k, None)
     extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
@@ -1501,6 +1504,7 @@ def apply_rows_op(plan, cfg, spacing=None):
     if not (ROW_SPACING_MIN <= sp <= ROW_SPACING_MAX):
         return False, "Invalid spacing."
     compute_rows(plan, cfg, sp)
+    cfg["rows_confirmed"] = False
     return True, None
 
 
@@ -1561,6 +1565,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _move_zone_refs(cfg, old, nm)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
         return True, None
     if op == "swap":
         a = next((z for z in zones if z.get("name") == zone_name), None)
@@ -1579,6 +1584,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _move_zone_refs(cfg, tmp, old_b)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
         return True, None
     if op == "merge":
         wanted = {n for n in (zone_names or []) if n}
@@ -1603,6 +1609,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
         return True, None
     if op == "remove":
         wanted = {n for n in (zone_names or []) if n}
@@ -1630,6 +1637,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
         return True, None
     if op == "split":
         try:
@@ -1674,6 +1682,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
         return True, None
     if op == "confirm":
         cfg["zones_confirmed"] = True

@@ -560,7 +560,11 @@ def index():
         if plan is None or cfg is None:
             return _err("Run not found.")
         engine.extend(plan, data.get("cfgid"))
-        ok, msg = engine.apply_rows_op(plan, cfg, data.get("spacing"))
+        if data.get("confirm"):
+            cfg["rows_confirmed"] = True
+            ok, msg = True, None
+        else:
+            ok, msg = engine.apply_rows_op(plan, cfg, data.get("spacing"))
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
