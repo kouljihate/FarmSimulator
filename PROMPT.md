@@ -649,3 +649,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     the shared change listener, shadowing the global sector-selection object
     so checking a sector never stuck (Remove/Rename/Edit always complained);
     renamed the local to `picked`.
+60. v0.34.2: **accordion Arabic once** — sector info card left labels now use
+    EN-only `tl()[0]` instead of bilingual `t()`, so each row reads EN label,
+    value, AR label (was AR twice).
