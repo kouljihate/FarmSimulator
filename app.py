@@ -20,7 +20,7 @@ UPLOAD_DIR = os.path.join(BASE, "uploads")
 STORE = storage.get_store()
 
 # Bump when cached map artwork changes shape: older stored maps are regenerated.
-MAPS_V = 5
+MAPS_V = 6
 
 
 def app_version():
@@ -725,6 +725,6 @@ def index():
 
 if __name__ == "__main__":
     try:
-        app.run(host="127.0.0.1", port=8501, debug=True)
+        app.run(host="127.0.0.1", port=7007, debug=True)
     except KeyboardInterrupt:
         print('Exiting...')

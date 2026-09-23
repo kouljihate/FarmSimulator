@@ -716,3 +716,10 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     over a dimmed backdrop during long ops (shows after 250 ms, ref-counted
     for parallel requests); all JSON ops go through `api()` which drives it,
     upload/sector ops wrapped directly; new i18n key `LOADING` (EN+AR).
+78. v0.42.0: **drag pipe lines on map** — per-row Edit arms draggable vertex
+    handles on that pipe (principal included); Save finalizes via `pipe-edit`
+    message (full path persisted); Escape cancels; no new keys.
+79. v0.42.1: **principal editable fix** — derived chain vertices could sit
+    outside the land (fringe existing-sectors), failing every re-save
+    validation; chain vertices and taps now snap inside the land
+    (`_inside_land`); `MAPS_V=6` regenerates cached maps.

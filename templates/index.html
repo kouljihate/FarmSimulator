@@ -296,7 +296,8 @@
 
 <script>
 (function () {
-  var S = { token: null, plan: null, cfgid: null, valveSectors: [], valveRows: false, pipeSector: null, pipeTypes: [] };
+  var S = { token: null, plan: null, cfgid: null, valveSectors: [], valveRows: false, pipeSector: null, pipeTypes: [], ovSeq: 0, stageSeq: 0 };
+  var pipeEditArmed = null;
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
@@ -454,12 +455,15 @@
     body.cfgid = parseInt(cfg, 10);
     body.action = action;
     loaderOn();
+    var mySe = ++S.ovSeq;
     fetch('/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }).then(function (req) { return req.json(); }).then(function (data) {
       loaderOff();
+      if (mySe !== S.ovSeq) return;
+      if (mySe !== S.ovSeq) return;
       if (!data.ok) { if (data.error) showError(data.error); else showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       if (!data.sectors_html) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       hideError();
@@ -476,6 +480,7 @@
     S.token = payload.token;
     S.plan = payload.plan;
     S.cfgid = null;
+    S.ovSeq++;
     resetSectorState();
     var bc = document.getElementById('basin-card');
     var be = document.getElementById('basin-empty');
@@ -518,7 +523,8 @@
     });
   }
 
-  function fillOverview(data, silent) {
+  function fillOverview(data, silent, my) {
+    if (my !== undefined && my !== S.ovSeq) return;
     S.cfgid = data.cfgid;
     var map = [['zones-result', 'zones-empty', data.zones_html],
                ['rows-result', 'rows-empty', data.rows_html],
@@ -542,8 +548,18 @@
     for (var vi = 0; vi < vboxes.length; vi++) {
       if (vboxes[vi].checked) S.valveSectors.push(vboxes[vi].value);
     }
-    valveStaged = {};
+    if (my === undefined || my > (S.stageSeq || 0)) {
+      valveStaged = {};
+    } else {
+      for (var svid in valveStaged) {
+        if (Object.prototype.hasOwnProperty.call(valveStaged, svid)) {
+          var sp = valveStaged[svid];
+          markValveDirty(svid, sp.lon, sp.lat);
+        }
+      }
+    }
     updateValveSaveBtn();
+    pipeEditArmed = null;
     var vrt = document.getElementById('valve-rows-toggle');
     if (vrt) vrt.checked = !!S.valveRows;
     var pf = document.getElementById('pipes-sector-filter');
@@ -559,9 +575,11 @@
 
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
+    var my = ++S.ovSeq;
     api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sectors: S.valveSectors, vrows: S.valveRows || '', psector: S.pipeSector || '', ptypes: S.pipeTypes }).then(function (data) {
+      if (my !== S.ovSeq) return;
       if (!data.ok) { apiFail(data); return; }
-      fillOverview(data, silent);
+      fillOverview(data, silent, my);
     }).catch(function () { showError(terrHtml('tnet')); });
   }
 
@@ -572,22 +590,29 @@
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
+    var myZa = ++S.ovSeq;
     mutate(body).then(function (data) {
+      if (myZa !== S.ovSeq) return;
       if (!data.ok) { apiFail(data); return; }
       hideError();
-      fillOverview(data, true);
+      fillOverview(data, true, myZa);
       if (dCfg != null) openDetailModal(String(dCfg), dIdx, dName, true);
     }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
+  function valveAction(cfgid, action, extra, after) {
     if (!S.token) { showError(terrHtml('tnet')); return; }
     var body = extra || {};
     body.op = 'valve_action';
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
+    var my = ++S.ovSeq;
     mutate(body).then(function (data) {
+      if (my !== S.ovSeq) return;
       if (!data.ok) { apiFail(data); return; }
       hideError();
-      fillOverview(data, true);
+      fillOverview(data, true, my);
       if (after) after(data);
       else if (pendingValveId) selectValveById(pendingValveId);
       pendingValveId = null;
@@ -738,10 +763,13 @@
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
+    var my = ++S.ovSeq;
     mutate(body).then(function (data) {
+      if (my !== S.ovSeq) return;
       if (!data.ok) { apiFail(data); return; }
       hideError();
-      fillOverview(data, true);
+      fillOverview(data, true, my);
+      if (dCfg != null) openDetailModal(String(dCfg), dIdx, dName, true);
     }).catch(function () { showError(terrHtml('tnet')); });
   }
 
@@ -911,12 +939,14 @@
     var cr = e.target && e.target.closest ? e.target.closest('.confirm-rows-btn') : null;
     if (cr) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      var myCr = ++S.ovSeq;
       api({ op: 'rows_save', token: S.token, cfgid: parseInt(cr.getAttribute('data-cfg'), 10),
             confirm: true }).then(function (data) {
+        if (myCr !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, myCr);
         goTab('tab-valve');
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -942,11 +972,13 @@
                        dist: tdd ? tdd.value : 5,
                        pct: tpp ? tpp.value : 100 };
       }
+      var myTs = ++S.ovSeq;
       api({ op: 'tree_save', token: S.token, cfgid: parseInt(ts.getAttribute('data-cfg'), 10), trees: trees }).then(function (data) {
+        if (myTs !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, myTs);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -954,12 +986,14 @@
     if (rs) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
       var rsp = document.getElementById('rows-spacing');
+      var myRs = ++S.ovSeq;
       api({ op: 'rows_save', token: S.token, cfgid: parseInt(rs.getAttribute('data-cfg'), 10),
             spacing: rsp ? rsp.value : 5 }).then(function (data) {
+        if (myRs !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, myRs);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -980,20 +1014,25 @@
         if (ss) st.size = parseFloat(ss.value);
         layers[lk] = st;
       }
+      var myRc = ++S.ovSeq;
       mutate({ op: 'recap_save', token: S.token, cfgid: parseInt(rc.getAttribute('data-cfg'), 10), layers: layers }).then(function (data) {
+        if (myRc !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
-        fillOverview(data, true);
+        toastOk();
+        fillOverview(data, true, myRc);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
     var od = e.target && e.target.closest ? e.target.closest('.other-del-btn') : null;
     if (od) {
       if (!S.token) return;
+      var myOd = ++S.ovSeq;
       api({ op: 'other_remove', token: S.token, cfgid: parseInt(od.getAttribute('data-cfg'), 10), id: od.getAttribute('data-id') }).then(function (data) {
+        if (myOd !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, myOd);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -1012,10 +1051,12 @@
     var pai = e.target && e.target.closest ? e.target.closest('#pipe-ai-btn') : null;
     if (pai) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      var myPai = ++S.ovSeq;
       mutate({ op: 'pipe_ai', token: S.token, cfgid: parseInt(pai.getAttribute('data-cfg'), 10) }).then(function (data) {
+        if (myPai !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
-        fillOverview(data, true);
+        fillOverview(data, true, myPai);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -1050,7 +1091,11 @@
         diameter_mm: pe.getAttribute('data-diam'), sector: pe.getAttribute('data-sector'),
         zone: pe.getAttribute('data-zone'), len_m: plen
       });
-      withPipesMap(function (w) { w.focusPipe(pe.getAttribute('data-pid')); });
+      withPipesMap(function (w) {
+        w.focusPipe(pe.getAttribute('data-pid'));
+        w.cancelPipeEdit();
+        if (w.editPipe(pe.getAttribute('data-pid'))) pipeEditArmed = pe.getAttribute('data-pid');
+      });
       var pf3 = document.getElementById('pipes-map-frame');
       if (pf3) pf3.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -1081,6 +1126,10 @@
     var ps = e.target && e.target.closest ? e.target.closest('#pipe-save-btn') : null;
     if (ps) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      if (pipeEditArmed) {
+        withPipesMap(function (w) { w.finishPipeEdit(); });
+        return;
+      }
       var ptt = document.getElementById('pipe-target');
       var ppid = ptt ? ptt.value : '';
       if (!ppid || ppid === '__new__') { showError(terrHtml('tnet')); return; }
@@ -1122,12 +1171,14 @@
     if (sa) {
       if (!S.token) return;
       var sf = document.getElementById('sim-form');
+      var mySa = ++S.ovSeq;
       api({ op: 'sim_save', token: S.token, cfgid: parseInt(sa.getAttribute('data-cfg'), 10), use_ai: true,
             years: sf ? document.getElementById('sim-years').value : 10,
             crop: sf ? document.getElementById('sim-crop').value : 'vegetables' }).then(function (data) {
+        if (mySa !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, mySa);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -1146,12 +1197,14 @@
       if (!S.token) { showError(terrHtml('tnet')); return; }
       var row = ra.closest ? ra.closest('tr') : null;
       var inp = row ? row.querySelector('.row-angle-input') : null;
+      var myRa = ++S.ovSeq;
       mutate({ op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
                sector_idx: rIdx, zone_name: ra.getAttribute('data-zone'),
                angle: inp ? inp.value : NaN }).then(function (data) {
+        if (myRa !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
-        fillOverview(data, true);
+        fillOverview(data, true, myRa);
         openRowsModal(rCfg, rIdx, null);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -1183,14 +1236,31 @@
     }
     if (e.target && e.target.id === 'valve-rows-toggle') {
       hideError();
-      S.valveRows = !!e.target.checked;
-      loadOverview(S.cfgid, true);
+      var vr = !!e.target.checked;
+      if (Object.keys(valveStaged).length) {
+        saveStagedValves(S.cfgid, function () {
+          S.valveRows = vr;
+          loadOverview(S.cfgid, true);
+        });
+      } else {
+        S.valveRows = vr;
+        loadOverview(S.cfgid, true);
+      }
       return;
     }
     if (e.target && e.target.id === 'pipes-sector-filter') {
       hideError();
-      S.pipeSector = e.target.value || null;
-      loadOverview(S.cfgid, true);
+      pipeEditArmed = null;
+      var psv = e.target.value || null;
+      if (Object.keys(valveStaged).length) {
+        saveStagedValves(S.cfgid, function () {
+          S.pipeSector = psv;
+          loadOverview(S.cfgid, true);
+        });
+      } else {
+        S.pipeSector = psv;
+        loadOverview(S.cfgid, true);
+      }
       return;
     }
     if (e.target && e.target.classList && e.target.classList.contains('pipe-type-chk')) {
@@ -1201,8 +1271,16 @@
       for (var pti = 0; pti < pb.length; pti++) {
         if (pb[pti].checked) picked.push(pb[pti].value);
       }
-      S.pipeTypes = picked;
-      loadOverview(S.cfgid, true);
+      pipeEditArmed = null;
+      if (Object.keys(valveStaged).length) {
+        saveStagedValves(S.cfgid, function () {
+          S.pipeTypes = picked;
+          loadOverview(S.cfgid, true);
+        });
+      } else {
+        S.pipeTypes = picked;
+        loadOverview(S.cfgid, true);
+      }
       return;
     }
     if (e.target && e.target.id === 'pipe-target') {
@@ -1653,6 +1731,7 @@
       var allBoxes = vfb2 ? vfb2.querySelectorAll('.valve-sector-chk') : [];
       if (S.valveSectors.length && S.valveSectors.length < allBoxes.length) {
         valveStaged[vid] = { lon: vlon, lat: vlat };
+        S.stageSeq = S.ovSeq;
         markValveDirty(vid, vlon, vlat);
         return;
       }
@@ -1673,6 +1752,17 @@
           zone: e.data.pipe.zone, len_m: e.data.pipe.len_m
         });
       }
+      return;
+    }
+    if (e.data.type === 'pipe-edit') {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var pdc = document.getElementById('pipe-diam');
+      pipeEditArmed = null;
+      pipeAction(S.cfgid, 'change', {
+        pipe_id: e.data.pipe_id,
+        diameter: pdc ? parseInt(pdc.value, 10) : NaN,
+        path: e.data.path
+      });
       return;
     }
     if (e.data.type === 'other-map-click') {
@@ -1816,15 +1906,17 @@
     if (of) {
       e.preventDefault();
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      var myOf = ++S.ovSeq;
       api({ op: 'other_add', token: S.token, cfgid: parseInt(of.getAttribute('data-cfg'), 10),
             kind: document.getElementById('other-kind').value,
             size: document.getElementById('other-size').value,
             lon: parseFloat(document.getElementById('other-lon').value),
             lat: parseFloat(document.getElementById('other-lat').value) }).then(function (data) {
+        if (myOf !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, myOf);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -1832,16 +1924,18 @@
     if (sf2) {
       e.preventDefault();
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      var mySf = ++S.ovSeq;
       api({ op: 'sim_save', token: S.token, cfgid: parseInt(sf2.getAttribute('data-cfg'), 10),
             years: document.getElementById('sim-years').value,
             crop: document.getElementById('sim-crop').value,
             capex: document.getElementById('sim-capex').value,
             annual_cost: document.getElementById('sim-cost').value,
             annual_revenue: document.getElementById('sim-rev').value }).then(function (data) {
+        if (mySf !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
-        fillOverview(data, true);
+        fillOverview(data, true, mySf);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
@@ -1854,7 +1948,9 @@
     var latEl = document.getElementById('basin-lat');
     var lon = lonEl ? parseFloat(lonEl.value) : NaN;
     var lat = latEl ? parseFloat(latEl.value) : NaN;
+    var myBa = ++S.ovSeq;
     api({ op: 'basin', token: S.token, lon: lon, lat: lat }).then(function (data) {
+      if (myBa !== S.ovSeq) return;
       if (!data.ok) { apiFail(data); return; }
       hideError();
       toastOk();

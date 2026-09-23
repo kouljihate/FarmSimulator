@@ -275,7 +275,11 @@ def _zone_order(sector, pieces, basin_m, scan_angle):
 
 
 def _principal_chain(plan, cfg, order=None):
-    """Principal 90 mm line: basin, then sector entries in visit order."""
+    """Principal 90 mm line: basin, then sector entries in visit order.
+
+    Vertices are snapped inside the land so the chain satisfies the same
+    inside-land rule enforced on manual pipe edits.
+    """
     proj = plan["_proj"]
     if order:
         byname = {s.get("name"): s for s in cfg.get("sectors", [])}
@@ -283,9 +287,17 @@ def _principal_chain(plan, cfg, order=None):
         secs += [s for s in cfg.get("sectors", []) if s.get("name") not in (order or [])]
     else:
         secs = cfg.get("sectors", [])
-    pts = [plan["_basin_m"]] + [s["entry_m"] for s in secs]
+    pts = [_inside_land(plan, plan["_basin_m"])]
+    pts += [_inside_land(plan, s["entry_m"]) for s in secs]
     principal_m = LineString(pts)
     return principal_m, proj.to_lonlat(principal_m)
+
+
+def _inside_land(plan, pt_m):
+    land_m = plan["_land_m"]
+    if land_m.contains(pt_m) or land_m.boundary.distance(pt_m) < 1e-9:
+        return pt_m
+    return nearest_points(land_m, Point(pt_m))[0]
 
 
 def _nearest_on(line_m, pt_m):
@@ -345,13 +357,13 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             valve_ll = project.to_lonlat(valve_m)
 
             # major pipe 63 mm: nearest principal tap -> zone secondary valve
-            tap_m = _nearest_on(principal_m, valve_m)
+            tap_m = _inside_land(plan, _nearest_on(principal_m, valve_m))
             major_m = LineString([tap_m, Point(valve_m)])
             major_ll = project.to_lonlat(major_m)
 
             # minor pipe 32 mm: nearest major point -> zone water supply
             target_m = zone_m.centroid
-            tap2_m = _nearest_on(major_m, target_m)
+            tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
             minor_m = LineString([tap2_m, target_m])
             minor_ll = project.to_lonlat(minor_m)
 
@@ -876,10 +888,10 @@ def _rebuild_valves_pipes(plan, cfg):
             zone_m = z["poly_m"]
             valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
             valve_ll = proj.to_lonlat(valve_m)
-            tap_m = _nearest_on(principal_m, valve_m)
+            tap_m = _inside_land(plan, _nearest_on(principal_m, valve_m))
             major_m = LineString([tap_m, Point(valve_m)])
             target_m = zone_m.centroid
-            tap2_m = _nearest_on(major_m, target_m)
+            tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
             minor_m = LineString([tap2_m, target_m])
             z["centroid"] = proj.to_lonlat(target_m)
             valves.append({
@@ -980,9 +992,9 @@ def _apply_valve_customization(plan, cfg):
                     valve_m = proj.to_m(Point(lon, lat))
                     target_m = zon["poly_m"].centroid
                     princ_m, _ = _principal_chain(plan, cfg)
-                    tap_m = _nearest_on(princ_m, valve_m)
+                    tap_m = _inside_land(plan, _nearest_on(princ_m, valve_m))
                     major_m = LineString([tap_m, valve_m])
-                    tap2_m = _nearest_on(major_m, target_m)
+                    tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
                     minor_m = LineString([tap2_m, target_m])
                     if v.get("zone") in majors:
                         majors[v["zone"]]["line"] = proj.to_lonlat(major_m)

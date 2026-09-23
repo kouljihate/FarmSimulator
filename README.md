@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.41.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.42.1 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -37,20 +37,53 @@ place. The browser never leaves `/`.
     Moved valves keep their position through
     sector/zone/basin rebuilds (override layer); moved secondary valves pull
     their 63/32 mm pipes along; removed valves stay removed.
-5. **Piping** — 90 mm principal pipe from the basin through the sector
-   entries in AI-optimized visit order, **63 mm** majors tapped off the
-   principal at the closest point to each zone valve, 32 mm minors tapped
-   off their major at the closest point to the zone supply. The Pipes tab mirrors the Valve tab: sector + pipe-type
-   filters (single sector zooms map + table to it; type pills filter
-   principal 90 / major 63 / minor 32 / custom), large clickable map (pipe → info panel
-   with type/diameter/sector/zone/length) and one unified table with a
-   circle Locate button per pipe. A pipe management card adds full
-   Add/Change/Remove: pick a pipe (or trace start/end on the map), set
-   diameter 90/63/32 and sector/zone, then Add or Save; per-row Edit fills
-   the form and focuses the pipe. An **AI Trace** button re-optimizes the
-   whole network and reports metres saved. Changes survive rebuilds via an override
-   layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`); only the
-   principal pipe cannot be removed.
+5. **Piping** — Smart pipe network management with AI-assisted optimization and strict connection rules.
+
+**Pipe Connection Rules:**
+
+1. **Basin → Principal Pipe90**: Single connection only with appropriate connectors (90° elbows, tees). Principal pipe90 connects basin to the sector distribution network.
+
+2. **Distribution Chain**: Principal Pipe90 → Pipe63 (majors) → serves all sectors/zones → Pipe32 (minors) → per zone supply. Each pipe63 taps off principal at closest point to zone valve; each pipe32 taps off its parent pipe63 at closest point to zone.
+
+3. **Valve Integration**: All pipes connect to their assigned valves (principal/secondary already configured). Pipe endpoints must align with valve positions.
+
+4. **Sector Boundaries**: Pipes follow sector boundaries as primary routing paths. Pipe segments lie entirely within single sector — no cross-sector routing.
+
+5. **No External Pipes**: All pipe segments must stay within sector boundaries. No pipes originate or terminate outside sector polygons.
+
+**AI-Powered Suggestions:**
+
+- **Optimal routing**: AI analyzes elevation contours, sector geometry, and valve positions to suggest minimal-length pipe paths
+- **Diameter optimization**: Recommends pipe90/63/32 sizes based on flow requirements, distance, and elevation differential
+- **Connector placement**: AI suggests appropriate connector types (elbows, tees) at pipe junctions
+- **Metre savings**: Reports potential length reduction versus current layout
+- **Elevation-aware routing**: Avoids steep sections, suggests pump locations where elevation changes exceed thresholds
+
+**Pipe Management Interface:**
+
+- **Add Pipe**: Map-based click routing (basin → pipe90 → sector taps → pipe32 minors) or X/Y coordinate input with diameter and sector/zone assignment. Connector auto-suggestion at junctions.
+
+- **Edit Pipe**: Vertex dragging on map with real-time length/elevation feedback. X/Y coordinate editing for start/end points and intermediate vertices. Diameter change (90/63/32/custom) with flow recalculation. Sector/zone reassignment preserving connections.
+
+- **Remove Pipe**: Single-click removal with automatic network reconnection. Changes persist via override layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`). Principal pipe90 protected — cannot be removed.
+
+**AI Trace Optimization:**
+
+- Re-orders pipe network for minimal total length accounting for elevation changes and connector costs
+- Reports metres saved versus current layout
+- Preserves manual overrides and custom configurations
+
+**Technical Details:**
+
+- **Override layer**: `pipe_overrides` / `removed_pipes` / `custom_pipes` ensures changes survive sector/zone/basin rebuilds
+- **Connection validation**: Real-time feedback on invalid connections (cross-sector, missing valves, etc.)
+- **Flow consistency**: System validates that pipe diameters match flow requirements for each zone
+- **Persistent storage**: All edits saved to Firestore with version tracking
+
+6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
+   elbows, filters, booster pumps placed on a big land map (click the map to
+   fill coordinates). Every added element gets a heuristic **AI analysis**
+   (necessary or not) plus a proposal for a smoother, cheaper network.
 6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
    elbows, filters, booster pumps placed on a big land map (click the map to
    fill coordinates). Every added element gets a heuristic **AI analysis**

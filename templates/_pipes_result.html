@@ -60,7 +60,7 @@
         <label class="mb-1 block text-xs text-white/60">{{ t('PIPE_TARGET') }}</label>
         <select id="pipe-target" class="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
           <option value="__new__">{{ tl('PIPE_NEW')[0] }} / {{ tl('PIPE_NEW')[1] }}</option>
-          <option value="P" data-kind="principal" data-diam="90" data-sector="" data-zone="">P — 90 mm</option>
+          <option value="P" data-kind="principal" data-diam="90" data-sector="" data-zone="" data-x1="{{ cfg.pipes.principal.line.coords[0][0] }}" data-y1="{{ cfg.pipes.principal.line.coords[0][1] }}" data-x2="{{ cfg.pipes.principal.line.coords[-1][0] }}" data-y2="{{ cfg.pipes.principal.line.coords[-1][1] }}">P — 90 mm</option>
           {% for maj in cfg.pipes.majors %}
           <option value="{{ maj.pid }}" data-kind="major" data-diam="{{ maj.diameter_mm }}" data-sector="{{ maj.sector }}" data-zone="{{ maj.zone }}" data-x1="{{ maj.line.coords[0][0] }}" data-y1="{{ maj.line.coords[0][1] }}" data-x2="{{ maj.line.coords[-1][0] }}" data-y2="{{ maj.line.coords[-1][1] }}">{{ maj.zone }} — {{ maj.diameter_mm }} mm</option>
           {% endfor %}
