@@ -263,7 +263,7 @@
 
 <script>
 (function () {
-  var S = { token: null, plan: null, cfgid: null, valveSector: null, pipeSector: null };
+  var S = { token: null, plan: null, cfgid: null, valveSectors: [], valveRows: false, pipeSector: null };
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
@@ -430,7 +430,8 @@
 
   function resetOverview() {
     S.cfgid = null;
-    S.valveSector = null;
+    S.valveSectors = [];
+    S.valveRows = false;
     S.pipeSector = null;
     var pairs = [['zones-result', 'zones-empty'], ['rows-result', 'rows-empty'],
                  ['valves-result', 'valves-empty'],
@@ -462,10 +463,16 @@
       if (e) e.style.display = m[2] ? 'none' : '';
     });
     if (data.plan) S.plan = data.plan;
-    var zf = document.getElementById('valve-sector-filter');
-    S.valveSector = (zf && zf.value) ? zf.value : null;
+    var vfb = document.getElementById('valves-result');
+    var vboxes = vfb ? vfb.querySelectorAll('.valve-sector-chk') : [];
+    S.valveSectors = [];
+    for (var vi = 0; vi < vboxes.length; vi++) {
+      if (vboxes[vi].checked) S.valveSectors.push(vboxes[vi].value);
+    }
     valveStaged = {};
     updateValveSaveBtn();
+    var vrt = document.getElementById('valve-rows-toggle');
+    if (vrt) vrt.checked = !!S.valveRows;
     var pf = document.getElementById('pipes-sector-filter');
     S.pipeSector = (pf && pf.value) ? pf.value : null;
     if (!silent) { hideError(); goTab('tab-zones'); }
@@ -473,7 +480,7 @@
 
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
-    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sector: S.valveSector || '', psector: S.pipeSector || '' }).then(function (data) {
+    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sectors: S.valveSectors, vrows: S.valveRows || '', psector: S.pipeSector || '' }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       fillOverview(data, silent);
     }).catch(function () { showError(terrHtml('tnet')); });
@@ -695,15 +702,15 @@
     })();
   }
 
-  function applyValveZoneFilter(cfgid, sector) {
+  function applyValveZoneFilter(cfgid, sectors) {
     if (!S.token) { showError(terrHtml('tnet')); return; }
     if (Object.keys(valveStaged).length) {
       saveStagedValves(cfgid, function () {
-        S.valveSector = sector || null;
+        S.valveSectors = sectors || [];
         loadOverview(cfgid, true);
       });
     } else {
-      S.valveSector = sector || null;
+      S.valveSectors = sectors || [];
       loadOverview(cfgid, true);
     }
   }
@@ -975,9 +982,21 @@
   });
 
   document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'valve-sector-filter') {
+    if (e.target && e.target.classList && e.target.classList.contains('valve-sector-chk')) {
       hideError();
-      applyValveZoneFilter(e.target.getAttribute('data-cfg'), e.target.value || null);
+      var wrap = e.target.closest ? e.target.closest('[data-cfg]') : null;
+      var boxes = wrap ? wrap.querySelectorAll('.valve-sector-chk') : [];
+      var sel = [];
+      for (var i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) sel.push(boxes[i].value);
+      }
+      applyValveZoneFilter(wrap ? wrap.getAttribute('data-cfg') : S.cfgid, sel);
+      return;
+    }
+    if (e.target && e.target.id === 'valve-rows-toggle') {
+      hideError();
+      S.valveRows = !!e.target.checked;
+      loadOverview(S.cfgid, true);
       return;
     }
     if (e.target && e.target.id === 'pipes-sector-filter') {
@@ -999,7 +1018,7 @@
       return;
     }
     var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
-    if (!box) return;
+    if (!box || !box.closest('#sectors-result')) return;
     var cfg = box.getAttribute('data-cfg');
     var idx = parseInt(box.getAttribute('data-idx'), 10);
     if (box.checked) {
@@ -1338,7 +1357,9 @@
       } : { id: vid, name: vid, kind: '', sector: '', zone: '', diameter_mm: '', lon: vlon, lat: vlat };
       hideError();
       syncValvePanel(base);
-      if (S.valveSector) {
+      var vfb2 = document.getElementById('valves-result');
+      var allBoxes = vfb2 ? vfb2.querySelectorAll('.valve-sector-chk') : [];
+      if (S.valveSectors.length && S.valveSectors.length < allBoxes.length) {
         valveStaged[vid] = { lon: vlon, lat: vlat };
         markValveDirty(vid, vlon, vlat);
         return;

@@ -151,11 +151,14 @@ def _persist(token, plan, maps=None):
         STORE.save(token, plan, maps)
 
 
-def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
+def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None,
+                    valve_rows=False):
     engine.extend(plan, cfg["id"])
-    if only_sector is not None and only_sector not in {
-            s.get("name") for s in cfg.get("sectors", [])}:
-        only_sector = None
+    sec_names = {s.get("name") for s in cfg.get("sectors", [])}
+    if isinstance(only_sector, str):
+        only_sector = [only_sector] if only_sector else None
+    if only_sector is not None:
+        only_sector = [s for s in only_sector if s in sec_names] or None
     if only_pipe_sector is not None and only_pipe_sector not in {
             s.get("name") for s in cfg.get("sectors", [])}:
         only_pipe_sector = None
@@ -197,8 +200,10 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
             "other_map": other,
             "rows_maps": rows_maps,
             "rows_spacing": cfg.get("row_spacing", engine.ROW_SPACING_DEFAULT),
-            "valves_map": mapper.map_config_valves(plan, cfg, only_sector),
-            "selected_sector": only_sector,
+            "valves_map": mapper.map_config_valves(plan, cfg, only_sector,
+                                                       bool(valve_rows)),
+            "selected_sectors": only_sector,
+            "valve_rows": bool(valve_rows),
             "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector),
             "selected_pipe_sector": only_pipe_sector,
             "tree_codes": engine.TREE_TYPES,
@@ -620,8 +625,9 @@ def index():
         if plan is None or cfg is None:
             return _err("Run not found.")
         ctx = _overview_ctx(data.get("token"), plan, cfg,
-                              data.get("sector") or None,
-                              data.get("psector") or None)
+                              data.get("sector") or data.get("sectors") or None,
+                              data.get("psector") or None,
+                              data.get("vrows"))
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)

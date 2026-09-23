@@ -361,14 +361,17 @@ def map_config_overview(plan, cfg):
     return to_html(build(lay, center, 16))
 
 
-def map_config_valves(plan, cfg, only_sector=None):
+def map_config_valves(plan, cfg, only_sector=None, show_rows=False):
     """Valve step map: sectors + zones + draggable valves (no piping).
 
-    With `only_sector` set, only that sector (emphasized), its zones and its
-    valves are drawn, centred and zoomed on the sector.
+    `only_sector` is a sector name or list of names (None = all); selected
+    sectors are emphasized. With `show_rows`, the AI crop rows overlay each
+    visible zone.
     """
+    if isinstance(only_sector, str):
+        only_sector = [only_sector] if only_sector else None
     secs = [s for s in cfg.get("sectors", [])
-            if only_sector is None or s.get("name") == only_sector]
+            if not only_sector or s.get("name") in only_sector]
     zones = [z for s in secs for z in (s.get("zones", []) or [])]
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
@@ -380,11 +383,20 @@ def map_config_valves(plan, cfg, only_sector=None):
     for z in zones:
         lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
                     "#ff7f0e", 0.08, weight=1)
+    if show_rows:
+        for z in zones:
+            for line in (z.get("rows") or {}).get("lines", []) or []:
+                lay.line(line, _ti("zone", name=z["name"], area=z["area_m2"]),
+                         "#16a34a", 2)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
-    if only_sector and secs:
+    if only_sector and len(secs) == 1:
         c0 = secs[0]["centroid"]
         center, zoom = [c0.y, c0.x], 17
+    elif only_sector and secs:
+        xs = [s["centroid"].x for s in secs]
+        ys = [s["centroid"].y for s in secs]
+        center, zoom = [sum(ys) / len(ys), sum(xs) / len(xs)], 16
     else:
         center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 16
     m = build(lay, center, zoom)
@@ -580,13 +592,15 @@ def _valve_manage_js(cfg, only_sector=None):
     popup with the full valve info; releasing a drag posts
     ``{type:'valve-drag', cfg, valve_id, lon, lat}`` so the parent can update
     the info live and persist the move. Clicks on empty map still post
-    ``{type:'valve-map-click', lon, lat}``. With `only_sector`, only that
-    sector's valves get markers.
+    ``{type:'valve-map-click', lon, lat}``. With `only_sector` (name or list),
+    only those sectors' valves get markers.
     """
     import json
+    if isinstance(only_sector, str):
+        only_sector = [only_sector] if only_sector else None
     valves = []
     for v in cfg.get("valves") or []:
-        if only_sector is not None and v.get("sector") != only_sector:
+        if only_sector is not None and v.get("sector") not in only_sector:
             continue
         valves.append({
             "id": v.get("id"),

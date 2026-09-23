@@ -628,3 +628,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
     edits like `zones_confirmed`; new i18n keys `CONFIRM_ROWS,
     ROWS_CONFIRMED, ROWS_PENDING` (EN+AR).
+57. v0.33.0: **Valve multi-sector + rows overlay** — sector filter is a
+    multi-select checkbox pill group (empty/all-checked = whole farm, subset =
+    staged Save mode); `{op:overview}` takes `sectors[]` + `vrows`;
+    `map_config_valves` draws the selected sectors and optionally overlays AI
+    crop rows; toggle state survives re-renders; sector change handler scoped
+    to `#sectors-result` so valve pills don't leak into it; white-on-white
+    native option lists fixed for pipes/tree selects; new i18n key
+    `VALVE_SHOW_ROWS` (EN+AR).
