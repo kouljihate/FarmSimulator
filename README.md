@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.27.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.28.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -41,8 +41,12 @@ place. The browser never leaves `/`.
    supply point). The Pipes tab mirrors the Valve tab: sector filter (single
    sector zooms map + table to it), large clickable map (pipe → info panel
    with type/diameter/sector/zone/length) and one unified table with a
-   circle Locate button per pipe. Pipes are derived geometry — they follow
-   their valves, so there is no move/remove (move the valve instead).
+   circle Locate button per pipe. A pipe management card adds full
+   Add/Change/Remove: pick a pipe (or trace start/end on the map), set
+   diameter 90/63/32 and sector/zone, then Add or Save; per-row Edit fills
+   the form and focuses the pipe. Changes survive rebuilds via an override
+   layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`); only the
+   principal pipe cannot be removed.
 6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
    elbows, filters, booster pumps placed on a big land map (click the map to
    fill coordinates). Every added element gets a heuristic **AI analysis**

@@ -343,6 +343,11 @@ def map_config_overview(plan, cfg):
         lay.line(maj["line"], _ti("major63", zone=maj["zone"]), "#377eb8", 3)
     for mn in cfg["pipes"]["minors"]:
         lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
+    for cu in cfg["pipes"].get("customs", []) or []:
+        lay.line(cu["line"], _ti("minor", zone=cu.get("zone") or ""),
+                 "#4daf4a" if cu.get("diameter_mm") == 32 else (
+                     "#377eb8" if cu.get("diameter_mm") == 63 else "#0b8a6f"),
+                 5 if cu.get("diameter_mm") == 90 else 3)
     for v in cfg["valves"]:
         if v.get("kind") == "principal":
             lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
@@ -417,7 +422,8 @@ def _pipe_manage_js(cfg, only_sector=None):
     pipes = []
     pr = (cfg.get("pipes") or {}).get("principal")
     if pr is not None and only_sector is None:
-        pipes.append({"pid": "P", "kind": "principal", "diameter_mm": 90,
+        pipes.append({"pid": "P", "kind": "principal",
+                      "diameter_mm": pr.get("diameter_mm", 90),
                       "sector": "", "zone": "",
                       "len_m": pr.get("len_m", 0.0),
                       "paths": _pipe_paths(pr.get("line")),
@@ -425,19 +431,33 @@ def _pipe_manage_js(cfg, only_sector=None):
     for m in (cfg.get("pipes") or {}).get("majors", []) or []:
         if only_sector is not None and m.get("sector") != only_sector:
             continue
-        pipes.append({"pid": "M:" + str(m.get("zone")), "kind": "major",
-                      "diameter_mm": 63, "sector": m.get("sector"),
+        pipes.append({"pid": m.get("pid") or ("M:" + str(m.get("zone"))),
+                      "kind": "major", "diameter_mm": m.get("diameter_mm", 63),
+                      "sector": m.get("sector"),
                       "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
                       "paths": _pipe_paths(m.get("line")),
                       "color": "#377eb8", "weight": 3, "dash": None})
     for m in (cfg.get("pipes") or {}).get("minors", []) or []:
         if only_sector is not None and m.get("sector") != only_sector:
             continue
-        pipes.append({"pid": "m:" + str(m.get("zone")), "kind": "minor",
-                      "diameter_mm": 32, "sector": m.get("sector"),
+        pipes.append({"pid": m.get("pid") or ("m:" + str(m.get("zone"))),
+                      "kind": "minor", "diameter_mm": m.get("diameter_mm", 32),
+                      "sector": m.get("sector"),
                       "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
                       "paths": _pipe_paths(m.get("line")),
                       "color": "#4daf4a", "weight": 2, "dash": "4, 2"})
+    for m in (cfg.get("pipes") or {}).get("customs", []) or []:
+        if only_sector is not None and m.get("sector") != only_sector:
+            continue
+        diam = m.get("diameter_mm", 32)
+        pipes.append({"pid": m.get("pid"), "kind": "custom",
+                      "diameter_mm": diam, "sector": m.get("sector"),
+                      "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
+                      "paths": _pipe_paths(m.get("line")),
+                      "color": "#0b8a6f" if diam == 90 else (
+                          "#377eb8" if diam == 63 else "#e879f9"),
+                      "weight": 5 if diam == 90 else 3,
+                      "dash": None if diam != 32 else "4, 2"})
     data = json.dumps(pipes)
     return "<script>" + (
         "window.addEventListener('load',function(){"
@@ -451,7 +471,9 @@ def _pipe_manage_js(cfg, only_sector=None):
         "+(p.zone?'<span>Zone: '+String(p.zone).replace(/[<>&]/g,'')+'</span><br>':'')"
         "+'<span>'+Math.round(p.len_m).toLocaleString()+' m</span></div>';}"
         "function post(o){try{window.top.postMessage(o,'*');}catch(x){}}"
-        "var marks={};"
+        "window.pipePickArmed=false;"
+        "window.setPipePick=function(v){window.pipePickArmed=!!v;};"
+        "var marks={};var pipeClicked=false;"
         "PIPES.forEach(function(p){"
         "var ls=[];"
         "p.paths.forEach(function(path){"
@@ -460,9 +482,13 @@ def _pipe_manage_js(cfg, only_sector=None):
         "pl.addTo(mp);ls.push(pl);"
         "pl.bindTooltip(p.kind+' '+p.diameter_mm+' mm'+(p.zone?' - '+p.zone:''),{sticky:true});"
         "pl.bindPopup(infoHtml(p));"
-        "pl.on('click',function(){post({type:'pipe-select',cfg:CFG,pipe:p});});"
+        "pl.on('click',function(){pipeClicked=true;"
+        "setTimeout(function(){pipeClicked=false;},0);"
+        "post({type:'pipe-select',cfg:CFG,pipe:p});});"
         "});"
         "marks[p.pid]=ls;});"
+        "mp.on('click',function(e){if(pipeClicked||!window.pipePickArmed)return;"
+        "post({type:'pipe-pick',cfg:CFG,lon:e.latlng.lng,lat:e.latlng.lat});});"
         "window.focusPipe=function(pid){var ls=marks[pid];if(!ls||!ls.length)return false;"
         "try{var g=L.featureGroup(ls);mp.fitBounds(g.getBounds().pad(0.3));ls[0].openPopup();}catch(x){}"
         "return true;};"
@@ -527,6 +553,11 @@ def map_other_elements(plan, cfg):
             lay.line(maj["line"], _ti("major63", zone=maj["zone"]), "#377eb8", 3)
         for mn in cfg["pipes"].get("minors", []):
             lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
+        for cu in cfg["pipes"].get("customs", []) or []:
+            lay.line(cu["line"], _ti("minor", zone=cu.get("zone") or ""),
+                     "#4daf4a" if cu.get("diameter_mm") == 32 else (
+                         "#377eb8" if cu.get("diameter_mm") == 63 else "#0b8a6f"),
+                     5 if cu.get("diameter_mm") == 90 else 3)
     except (KeyError, TypeError):
         pass
     for el in plan.get("other_elements") or []:

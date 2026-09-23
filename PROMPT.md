@@ -266,9 +266,11 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
 
   `config`: `id, name, angle, n_sectors, sectors[], ready, zones_confirmed`
   and after `engine.extend(plan, cid)`: `zones[], valves[], pipes`
-  (`pipes = {principal:{diameter_mm:90, line, len_m},
-              majors:[{zone,sector,diameter_mm:63,line,len_m}],
-              minors:[{zone,sector,diameter_mm:32,line,len_m}]}`)
+  (`pipes = {principal:{pid:P,diameter_mm:90, line, len_m},
+              majors:[{pid:M:zone,zone,sector,diameter_mm:63,line,len_m}],
+              minors:[{pid:m:zone,zone,sector,diameter_mm:32,line,len_m}],
+              customs:[{pid:C:hex,…}]}` + `pipe_overrides{pid:{line,len_m,
+              diameter_mm}}`, `removed_pipes[pid]`, `custom_pipes[]`)
 
 Basin editing: `engine.set_basin(plan, lon, lat)` validates the point is
 inside the land (`_land_m.distance(pt) <= 1.0`), updates `basin`,
@@ -590,3 +592,13 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 51. v0.27.1: **valves on Pipes map** — `map_config_pipes` also draws principal
     (red) + secondary (orange) valve markers, display-only, sector-filtered
     like the rest.
+52. v0.28.0: **pipe Add/Change/Remove** — pipes carry `pid` (P / M:zone /
+    m:zone); `{op:pipe_action}` → `apply_pipe_op` (add straight custom,
+    change line/diameter, remove majors/minors; principal guarded) with the
+    override layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`,
+    rekeyed on zone/sector renames, pruned on rebuilds); Pipes tab gained a
+    management card (pipe/diameter/sector/zone + X1/Y1/X2/Y2 with Trace-on-map
+    `pipe-pick`, Add/Save) and per-row Edit/Remove circle buttons; customs
+    drawn in pipes/overview/other maps and counted in totals; new i18n keys
+    `PIPE_MGMT, PIPE_MGMT_SUB, PIPE_TARGET, PIPE_NEW, PIPE_ADD, PIPE_SAVE`
+    (EN+AR) + pipe ERRORS.

@@ -80,10 +80,11 @@ def _cfg_totals(cfg):
     princ = (pipes.get("principal") or {}).get("len_m", 0.0)
     majors = sum(m.get("len_m", 0.0) for m in pipes.get("majors", []) or [])
     minors = sum(m.get("len_m", 0.0) for m in pipes.get("minors", []) or [])
+    customs = sum(m.get("len_m", 0.0) for m in pipes.get("customs", []) or [])
     n_p = sum(1 for v in cfg.get("valves", []) or [] if v.get("kind") == "principal")
     n_s = sum(1 for v in cfg.get("valves", []) or [] if v.get("kind") != "principal")
     return {"principal_m": princ, "majors_m": majors, "minors_m": minors,
-            "total_m": princ + majors + minors,
+            "total_m": princ + majors + minors + customs,
             "n_principal": n_p, "n_secondary": n_s,
             "n_zones": len(cfg.get("zones", []) or [])}
 
@@ -443,6 +444,36 @@ def index():
             valve_id=data.get("valve_id"), kind=data.get("kind"),
             lon=data.get("lon"), lat=data.get("lat"),
             sector=data.get("sector"), zone=data.get("zone"),
+        )
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(msg)))
+        doc = STORE.load(data.get("token"))
+        ov_maps = dict((doc or {}).get("overview_maps") or {})
+        sector_maps = dict((doc or {}).get("sector_maps") or {})
+        other_maps = dict((doc or {}).get("other_maps") or {})
+        for key, store in ((data.get("cfgid"), ov_maps), (str(data.get("cfgid")), ov_maps),
+                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps),
+                           (data.get("cfgid"), other_maps), (str(data.get("cfgid")), other_maps)):
+            store.pop(key, None)
+        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
+                                            "other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "pipe_action":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        ok, msg = engine.apply_pipe_op(
+            plan, cfg, data.get("action", ""),
+            pipe_id=data.get("pipe_id"), diameter=data.get("diameter"),
+            sector=data.get("sector"), zone=data.get("zone"),
+            path=data.get("path"),
         )
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))

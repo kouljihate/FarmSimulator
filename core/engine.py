@@ -346,6 +346,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             valves.append(valve)
 
             majors.append({
+                "pid": "M:{0}".format(zone["name"]),
                 "zone": zone["name"],
                 "sector": sector["name"],
                 "diameter_mm": 63,
@@ -353,6 +354,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
                 "len_m": major_m.length,
             })
             minors.append({
+                "pid": "m:{0}".format(zone["name"]),
                 "zone": zone["name"],
                 "sector": sector["name"],
                 "diameter_mm": 32,
@@ -365,12 +367,13 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
     cfg["zones"] = zones_all
     cfg["valves"] = valves
     cfg["pipes"] = {
-        "principal": {"diameter_mm": 90, "line": principal_ll, "len_m": principal_m.length},
+        "principal": {"pid": "P", "diameter_mm": 90, "line": principal_ll, "len_m": principal_m.length},
         "majors": majors,
         "minors": minors,
     }
     _apply_valve_customization(plan, cfg)
     _number_valves(cfg)
+    _apply_pipe_customization(plan, cfg)
     return cfg
 
 
@@ -592,6 +595,7 @@ def extend(plan, cfgid):
     cfg = cfg[0]
     if cfg.get("ready"):
         _number_valves(cfg)
+        _ensure_pipe_pids(cfg)
         return cfg
     return extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
 
@@ -700,6 +704,7 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         old_nm = target["name"]
         target["name"] = nm
         _rekey_sector(cfg, old_nm, nm)
+        _rekey_pipe_sector(cfg, old_nm, nm)
         recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None
 
@@ -744,6 +749,9 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         _rekey_sector(cfg, nm_a, "__swap_tmp__")
         _rekey_sector(cfg, nm_b, nm_a)
         _rekey_sector(cfg, "__swap_tmp__", nm_b)
+        _rekey_pipe_sector(cfg, nm_a, "__swap_tmp__")
+        _rekey_pipe_sector(cfg, nm_b, nm_a)
+        _rekey_pipe_sector(cfg, "__swap_tmp__", nm_b)
         recompute_sectors(plan, cfg, _current_polys(cfg))
         return True, None
 
@@ -843,19 +851,22 @@ def _rebuild_valves_pipes(plan, cfg):
                 "diameter_mm": 32, "lon": valve_ll.x, "lat": valve_ll.y,
                 "point": valve_ll, "name": "Valve secondary {0}".format(z["name"]),
             })
-            majors.append({"zone": z["name"], "sector": sector["name"], "diameter_mm": 63,
+            majors.append({"pid": "M:{0}".format(z["name"]),
+                           "zone": z["name"], "sector": sector["name"], "diameter_mm": 63,
                            "line": proj.to_lonlat(major_m), "len_m": major_m.length})
-            minors.append({"zone": z["name"], "sector": sector["name"], "diameter_mm": 32,
+            minors.append({"pid": "m:{0}".format(z["name"]),
+                           "zone": z["name"], "sector": sector["name"], "diameter_mm": 32,
                            "line": proj.to_lonlat(minor_m), "len_m": minor_m.length})
             zones_all.append(z)
     cfg["zones"] = zones_all
     cfg["valves"] = valves
-    cfg["pipes"] = {"principal": {"diameter_mm": 90, "line": principal_ll,
+    cfg["pipes"] = {"principal": {"pid": "P", "diameter_mm": 90, "line": principal_ll,
                                   "len_m": principal_m.length},
                     "majors": majors, "minors": minors}
     cfg["ready"] = True
     _apply_valve_customization(plan, cfg)
     _number_valves(cfg)
+    _apply_pipe_customization(plan, cfg)
     return cfg
 
 
@@ -1024,6 +1035,116 @@ def _rekey_valves(cfg, old_sector=None, new_sector=None,
     return cfg
 
 
+def _pipe_pid(kind, zone):
+    if kind == "principal":
+        return "P"
+    return ("M:" if kind == "major" else "m:") + str(zone)
+
+
+def _ensure_pipe_pids(cfg):
+    pipes = cfg.get("pipes") or {}
+    if isinstance(pipes.get("principal"), dict):
+        pipes["principal"].setdefault("pid", "P")
+    for m in pipes.get("majors", []) or []:
+        m.setdefault("pid", _pipe_pid("major", m.get("zone")))
+    for m in pipes.get("minors", []) or []:
+        m.setdefault("pid", _pipe_pid("minor", m.get("zone")))
+    pipes.setdefault("customs", [])
+    cfg.setdefault("pipe_overrides", {})
+    cfg.setdefault("removed_pipes", [])
+    cfg.setdefault("custom_pipes", [])
+    return cfg
+
+
+def _apply_pipe_customization(plan, cfg):
+    """Re-apply manual pipe edits on top of freshly rebuilt piping.
+
+    Geometry/diameter overrides live in ``pipe_overrides`` keyed by pipe id,
+    removals in ``removed_pipes`` and added pipes in ``custom_pipes``; stale
+    keys (zones gone after a structural edit) are pruned.
+    """
+    proj = plan["_proj"]
+    pipes = cfg.get("pipes") or {}
+    ov = cfg.get("pipe_overrides") or {}
+    removed = {r for r in (cfg.get("removed_pipes") or []) if r}
+    for key in ("majors", "minors"):
+        kept = []
+        for m in pipes.get(key, []) or []:
+            if m.get("pid") in removed:
+                continue
+            o = ov.get(m.get("pid"))
+            if o:
+                if o.get("line"):
+                    try:
+                        pts = [(float(x), float(y)) for x, y in o["line"]]
+                    except (TypeError, ValueError):
+                        pts = []
+                    if len(pts) >= 2:
+                        line_ll = LineString(pts)
+                        line_m = proj.to_m(line_ll)
+                        m["line"] = line_ll
+                        m["len_m"] = float(o.get("len_m", line_m.length))
+                if o.get("diameter_mm"):
+                    try:
+                        m["diameter_mm"] = int(o["diameter_mm"])
+                    except (TypeError, ValueError):
+                        pass
+            kept.append(m)
+        pipes[key] = kept
+    customs = []
+    for c in cfg.get("custom_pipes") or []:
+        try:
+            line_ll = c["line"] if hasattr(c.get("line"), "geom_type") else LineString(
+                [(float(x), float(y)) for x, y in c.get("line")])
+        except (TypeError, ValueError, KeyError):
+            continue
+        customs.append({"pid": c.get("id"), "zone": c.get("zone"),
+                        "sector": c.get("sector"),
+                        "diameter_mm": c.get("diameter_mm", 32),
+                        "line": line_ll, "len_m": c.get("len_m", 0.0),
+                        "custom": True})
+    pipes["customs"] = customs
+    alive = {m.get("pid") for m in (pipes.get("majors", []) or [])
+             + (pipes.get("minors", []) or [])}
+    cfg["pipe_overrides"] = {k: v for k, v in ov.items() if k in alive}
+    cfg["removed_pipes"] = sorted(removed & alive)
+    return cfg
+
+
+def _rekey_pipe_zone(cfg, old, new):
+    def swap(pid):
+        if pid == "M:" + old:
+            return "M:" + new
+        if pid == "m:" + old:
+            return "m:" + new
+        return pid
+    cfg["pipe_overrides"] = {swap(k): v for k, v in (cfg.get("pipe_overrides") or {}).items()}
+    cfg["removed_pipes"] = [swap(r) for r in (cfg.get("removed_pipes") or []) if r]
+    for c in cfg.get("custom_pipes") or []:
+        if c.get("zone") == old:
+            c["zone"] = new
+    return cfg
+
+
+def _rekey_pipe_sector(cfg, old, new):
+    pre_old, pre_new = "M:" + old + "-", "M:" + new + "-"
+    low_old, low_new = "m:" + old + "-", "m:" + new + "-"
+    def swap(pid):
+        if pid.startswith(pre_old):
+            return pre_new + pid[len(pre_old):]
+        if pid.startswith(low_old):
+            return low_new + pid[len(low_old):]
+        return pid
+    cfg["pipe_overrides"] = {swap(k): v for k, v in (cfg.get("pipe_overrides") or {}).items()}
+    cfg["removed_pipes"] = [swap(r) for r in (cfg.get("removed_pipes") or []) if r]
+    for c in cfg.get("custom_pipes") or []:
+        if c.get("sector") == old:
+            c["sector"] = new
+        if (c.get("zone") or "").startswith(old + "-"):
+            c["zone"] = new + "-" + c["zone"][len(old) + 1:]
+    return cfg
+
+
 def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
                    lon=None, lat=None, sector=None, zone=None):
     """Add / move / remove a valve. Returns (ok, message).
@@ -1100,6 +1221,131 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
     return False, "Unknown operation."
 
 
+def _pipe_line_m(plan, path):
+    """Validate an lon/lat path inside the land; returns (line_ll, len_m)."""
+    try:
+        pts = [(float(x), float(y)) for x, y in path]
+    except (TypeError, ValueError):
+        return None, "Invalid coordinates."
+    if len(pts) < 2:
+        return None, "Invalid coordinates."
+    line_ll = LineString(pts)
+    line_m = plan["_proj"].to_m(line_ll)
+    if line_m.length < 1.0:
+        return None, "Invalid coordinates."
+    for x, y in pts:
+        if plan["_land_m"].distance(plan["_proj"].to_m(Point(x, y))) > 1.0:
+            return None, "The pipe must lie inside the land boundary."
+    return (line_ll, line_m.length), None
+
+
+def _find_pipe(cfg, pid):
+    pipes = cfg.get("pipes") or {}
+    if (pipes.get("principal") or {}).get("pid") == pid:
+        return pipes["principal"]
+    for m in (pipes.get("majors", []) or []) + (pipes.get("minors", []) or []):
+        if m.get("pid") == pid:
+            return m
+    for m in pipes.get("customs", []) or []:
+        if m.get("pid") == pid:
+            return m
+    return None
+
+
+def apply_pipe_op(plan, cfg, op, pipe_id=None, diameter=None,
+                  sector=None, zone=None, path=None):
+    """Add / change / remove a pipe. Returns (ok, message).
+
+    Derived pipes (principal 90 mm, majors 63 mm, minors 32 mm) keep their
+    automatic geometry unless changed: the new line/diameter is stored in
+    ``pipe_overrides`` and re-applied after every rebuild. Removed derived
+    pipes (majors/minors only) are stored in ``removed_pipes``. Added pipes
+    are stored in ``custom_pipes`` (straight 2-point segments).
+    """
+    if op == "change":
+        target = _find_pipe(cfg, pipe_id)
+        if target is None:
+            return False, "Pipe not found."
+        try:
+            diam = int(diameter) if diameter not in (None, "") else None
+        except (TypeError, ValueError):
+            return False, "Invalid diameter."
+        if diam is not None and diam not in (90, 63, 32):
+            diam = 32 if target.get("pid", "").startswith("m:") else (
+                63 if target.get("pid", "").startswith("M:") else 90)
+        new_line, new_len = None, None
+        if path:
+            (res, err) = _pipe_line_m(plan, path)
+            if err:
+                return False, err
+            new_line, new_len = res
+        if target.get("custom"):
+            for c in cfg.get("custom_pipes") or []:
+                if c.get("id") == pipe_id:
+                    if new_line is not None:
+                        c["line"] = new_line
+                        c["len_m"] = new_len
+                    if diam is not None:
+                        c["diameter_mm"] = diam
+        else:
+            if target.get("pid") == "P" and new_line is None and diam is None:
+                return False, "Nothing to change."
+            ov = cfg.setdefault("pipe_overrides", {}).setdefault(target["pid"], {})
+            if new_line is not None:
+                ov["line"] = [[round(float(x), 6), round(float(y), 6)]
+                              for x, y in new_line.coords]
+                ov["len_m"] = new_len
+            if diam is not None:
+                ov["diameter_mm"] = diam
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    if op == "add":
+        try:
+            diam = int(diameter)
+        except (TypeError, ValueError):
+            diam = 32
+        if diam not in (90, 63, 32):
+            diam = 32
+        kind = {90: "principal", 63: "major", 32: "minor"}[diam]
+        sec = next((s for s in cfg.get("sectors", []) if s.get("name") == sector), None)
+        if sec is None:
+            return False, "Sector not found."
+        zon_name = None
+        if kind != "principal":
+            zon = next((z for z in sec.get("zones", []) if z.get("name") == zone), None)
+            if zon is None:
+                return False, "Zone not found."
+            zon_name = zon["name"]
+        (res, err) = _pipe_line_m(plan, path)
+        if err:
+            return False, err
+        new_line, new_len = res
+        cfg.setdefault("custom_pipes", []).append({
+            "id": "C:{0}".format(_uuid.uuid4().hex[:8]), "kind": kind,
+            "sector": sec["name"], "zone": zon_name or sec["name"],
+            "diameter_mm": diam, "line": new_line, "len_m": new_len,
+        })
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    if op == "remove":
+        target = _find_pipe(cfg, pipe_id)
+        if target is None:
+            return False, "Pipe not found."
+        if target.get("pid") == "P" and not target.get("custom"):
+            return False, "Cannot remove the principal pipe."
+        if target.get("custom"):
+            cfg["custom_pipes"] = [c for c in (cfg.get("custom_pipes") or [])
+                                   if c.get("id") != pipe_id]
+        else:
+            cfg.setdefault("removed_pipes", []).append(target["pid"])
+        _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
+    return False, "Unknown operation."
+
+
 def _move_zone_refs(cfg, old, new):
     for v in cfg.get("valves", []):
         if v.get("zone") == old:
@@ -1108,6 +1354,7 @@ def _move_zone_refs(cfg, old, new):
         if m.get("zone") == old:
             m["zone"] = new
     _rekey_valves(cfg, old_zone=old, new_zone=new)
+    _rekey_pipe_zone(cfg, old, new)
 
 
 def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
@@ -1273,7 +1520,7 @@ def analyse_other_element(plan, cfg, kind, lon, lat):
             best = min(best, s["poly_m"].distance(pt_m))
         except Exception:  # noqa: BLE001 - display-only
             continue
-    for m in (cfg.get("pipes", {}).get("majors", []) or []) + (cfg.get("pipes", {}).get("minors", []) or []):
+    for m in (cfg.get("pipes", {}).get("majors", []) or []) + (cfg.get("pipes", {}).get("minors", []) or []) + (cfg.get("pipes", {}).get("customs", []) or []):
         try:
             best = min(best, proj.to_m(m["line"]).distance(pt_m))
         except Exception:  # noqa: BLE001 - display-only
@@ -1355,7 +1602,8 @@ def ai_proposal(plan, cfg, crop="vegetables"):
     if cfg and cfg.get("pipes"):
         pipe_m = (cfg["pipes"]["principal"]["len_m"]
                   + sum(m["len_m"] for m in cfg["pipes"].get("majors", []))
-                  + sum(m["len_m"] for m in cfg["pipes"].get("minors", [])))
+                  + sum(m["len_m"] for m in cfg["pipes"].get("minors", []))
+                  + sum(m["len_m"] for m in cfg["pipes"].get("customs", [])))
     if area_ha < 1.0:
         plan_txt = ("Keep {0} sectors on drip with mulch; grow two vegetable cycles + one "
                     "legume to cut fertiliser cost. Add a small farm-gate stand - direct "

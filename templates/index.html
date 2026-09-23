@@ -590,6 +590,53 @@
     if (p && p.pid) highlightPipeRow(p.pid);
   }
 
+  function pipeAction(cfgid, action, extra) {
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    var body = extra || {};
+    body.op = 'pipe_action';
+    body.token = S.token;
+    body.cfgid = parseInt(cfgid, 10);
+    body.action = action;
+    api(body).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
+      hideError();
+      fillOverview(data, true);
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
+  var pipePickCount = 0, pipeTraceArmed = false;
+
+  function setPipePick(v, attempt) {
+    pipeTraceArmed = !!v;
+    var hint = document.getElementById('pipe-pick-hint');
+    if (hint) hint.classList.toggle('hidden', !v);
+    attempt = attempt || 0;
+    var done = false;
+    try {
+      var fr = document.getElementById('pipes-map-frame');
+      var w = fr && fr.contentWindow;
+      var doc = fr && fr.contentDocument;
+      if (doc) {
+        var inner = doc.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.setPipePick === 'function') { w.setPipePick(v); done = true; }
+    } catch (x) {}
+    if (!done && attempt < 30) setTimeout(function () { setPipePick(v, attempt + 1); }, 150);
+  }
+
+  function fillPipeForm(o) {
+    var map = [['pipe-diam', 'diam'], ['pipe-sector', 'sector'], ['pipe-zone', 'zone'],
+               ['pipe-x1', 'x1'], ['pipe-y1', 'y1'],
+               ['pipe-x2', 'x2'], ['pipe-y2', 'y2']];
+    map.forEach(function (m) {
+      var el = document.getElementById(m[0]);
+      if (el && o[m[1]] != null && o[m[1]] !== '') el.value = o[m[1]];
+    });
+    var pt = document.getElementById('pipe-target');
+    if (pt && o.pid) pt.value = o.pid;
+  }
+
   var valveStaged = {};
 
   function updateValveSaveBtn() {
@@ -738,6 +785,12 @@
       valveAction(vd.getAttribute('data-cfg'), 'remove', { valve_id: vd.getAttribute('data-vid') });
       return;
     }
+    var ptr = e.target && e.target.closest ? e.target.closest('#pipe-trace-btn') : null;
+    if (ptr) {
+      pipePickCount = 0;
+      setPipePick(!pipeTraceArmed);
+      return;
+    }
     var pl = e.target && e.target.closest ? e.target.closest('.pipe-locate-btn') : null;
     if (pl) {
       hideError();
@@ -749,6 +802,69 @@
       withPipesMap(function (w) { w.focusPipe(pl.getAttribute('data-pid')); });
       var pf2 = document.getElementById('pipes-map-frame');
       if (pf2) pf2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    var pe = e.target && e.target.closest ? e.target.closest('.pipe-edit-btn') : null;
+    if (pe) {
+      hideError();
+      fillPipeForm({
+        pid: pe.getAttribute('data-pid'), diam: pe.getAttribute('data-diam'),
+        sector: pe.getAttribute('data-sector'), zone: pe.getAttribute('data-zone'),
+        x1: pe.getAttribute('data-x1'), y1: pe.getAttribute('data-y1'),
+        x2: pe.getAttribute('data-x2'), y2: pe.getAttribute('data-y2')
+      });
+      var prow = pe.closest ? pe.closest('.pipe-row') : null;
+      var cells = prow ? prow.querySelectorAll('td') : [];
+      var plen = 0;
+      if (cells.length >= 5) plen = parseFloat((cells[4].textContent || '').replace(/[^0-9.]/g, '')) || 0;
+      syncPipePanel({
+        pid: pe.getAttribute('data-pid'), kind: pe.getAttribute('data-kind'),
+        diameter_mm: pe.getAttribute('data-diam'), sector: pe.getAttribute('data-sector'),
+        zone: pe.getAttribute('data-zone'), len_m: plen
+      });
+      withPipesMap(function (w) { w.focusPipe(pe.getAttribute('data-pid')); });
+      var pf3 = document.getElementById('pipes-map-frame');
+      if (pf3) pf3.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    var pd = e.target && e.target.closest ? e.target.closest('.pipe-del-btn') : null;
+    if (pd) {
+      if (!S.token) return;
+      pipeAction(pd.getAttribute('data-cfg'), 'remove', { pipe_id: pd.getAttribute('data-pid') });
+      return;
+    }
+    var pa = e.target && e.target.closest ? e.target.closest('#pipe-add-btn') : null;
+    if (pa) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var pdi = document.getElementById('pipe-diam');
+      var pse = document.getElementById('pipe-sector');
+      var pzo = document.getElementById('pipe-zone');
+      pipeAction(pa.getAttribute('data-cfg'), 'add', {
+        diameter: pdi ? parseInt(pdi.value, 10) : 32,
+        sector: pse ? pse.value : '',
+        zone: pzo ? pzo.value : '',
+        path: [[parseFloat(document.getElementById('pipe-x1').value),
+                parseFloat(document.getElementById('pipe-y1').value)],
+               [parseFloat(document.getElementById('pipe-x2').value),
+                parseFloat(document.getElementById('pipe-y2').value)]]
+      });
+      return;
+    }
+    var ps = e.target && e.target.closest ? e.target.closest('#pipe-save-btn') : null;
+    if (ps) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var ptt = document.getElementById('pipe-target');
+      var ppid = ptt ? ptt.value : '';
+      if (!ppid || ppid === '__new__') { showError(terrHtml('tnet')); return; }
+      var pdi2 = document.getElementById('pipe-diam');
+      pipeAction(ps.getAttribute('data-cfg'), 'change', {
+        pipe_id: ppid,
+        diameter: pdi2 ? parseInt(pdi2.value, 10) : NaN,
+        path: [[parseFloat(document.getElementById('pipe-x1').value),
+                parseFloat(document.getElementById('pipe-y1').value)],
+               [parseFloat(document.getElementById('pipe-x2').value),
+                parseFloat(document.getElementById('pipe-y2').value)]]
+      });
       return;
     }
     var ve = e.target && e.target.closest ? e.target.closest('.valve-edit-btn') : null;
@@ -808,6 +924,18 @@
       hideError();
       S.pipeSector = e.target.value || null;
       loadOverview(S.cfgid, true);
+      return;
+    }
+    if (e.target && e.target.id === 'pipe-target') {
+      var opt = e.target.options[e.target.selectedIndex];
+      if (opt && e.target.value !== '__new__') {
+        fillPipeForm({
+          diam: opt.getAttribute('data-diam'), sector: opt.getAttribute('data-sector'),
+          zone: opt.getAttribute('data-zone'), x1: opt.getAttribute('data-x1'),
+          y1: opt.getAttribute('data-y1'), x2: opt.getAttribute('data-x2'),
+          y2: opt.getAttribute('data-y2')
+        });
+      }
       return;
     }
     var box = e.target && e.target.classList && e.target.classList.contains('sector-chk') ? e.target : null;
@@ -1110,6 +1238,19 @@
         zonePickCount += 2;
       }
       if (zonePickCount >= 4) setZonePick(false);
+      return;
+    }
+    if (e.data.type === 'pipe-pick') {
+      var pids = ['pipe-x1', 'pipe-y1', 'pipe-x2', 'pipe-y2'];
+      var pslot = pipePickCount % 4;
+      if (pslot % 2 === 0) {
+        var px = document.getElementById(pids[pslot]);
+        var py = document.getElementById(pids[pslot + 1]);
+        if (px) px.value = Number(e.data.lon).toFixed(6);
+        if (py) py.value = Number(e.data.lat).toFixed(6);
+        pipePickCount += 2;
+      }
+      if (pipePickCount >= 4) setPipePick(false);
       return;
     }
     if (e.data.type === 'valve-select') {
