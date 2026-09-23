@@ -707,3 +707,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     pipes/valves by sector field instead of name prefix.
 75. v0.40.1: **two-row nav tabs** — tab buttons use stacked `bv()` (Arabic on
     top, English below) instead of inline `bi()`.
+76. v0.40.2: **dead-button hotfix** — the tree-save `var ts` declaration was
+    lost in an edit, so `if (ts)` threw on every click and killed all handlers
+    after it (sector/rows Open, Trace, sector tools, valve/pipe buttons);
+    restored + verified end-to-end in headless Chrome; recap default colors
+    switched to hex (named colors break `<input type=color>`).

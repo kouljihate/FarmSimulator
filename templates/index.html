@@ -891,6 +891,7 @@
       goTab('tab-pipes');
       return;
     }
+    var ts = e.target && e.target.closest ? e.target.closest('.tree-save-btn') : null;
     if (ts) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
       var trees = {};

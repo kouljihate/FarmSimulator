@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.40.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.40.2 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.

@@ -790,16 +790,16 @@ RECAP_DEFAULTS = {
     "sectors": {"color": "#1f77b4", "size": 2},
     "zones": {"color": "#ff7f0e", "size": 1},
     "zone_labels": {},
-    "valves_p": {"color": "red", "size": 9},
-    "valves_s": {"color": "orange", "size": 6},
+    "valves_p": {"color": "#ff0000", "size": 9},
+    "valves_s": {"color": "#ffa500", "size": 6},
     "pipes_90": {"color": "#0b8a6f", "size": 5},
     "pipes_63": {"color": "#377eb8", "size": 3},
     "pipes_32": {"color": "#4daf4a", "size": 2},
     "rows": {"color": "#16a34a", "size": 2},
     "trees": {},
-    "others": {"color": "purple", "size": 8},
-    "basin": {"color": "brown", "size": 11},
-    "water": {"color": "blue", "size": 9},
+    "others": {"color": "#800080", "size": 8},
+    "basin": {"color": "#a52a2a", "size": 11},
+    "water": {"color": "#0000ff", "size": 9},
 }
 
 TREE_COLORS = {
