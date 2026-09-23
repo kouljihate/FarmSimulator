@@ -421,19 +421,24 @@ def _pipe_paths(geom):
         return []
 
 
-def _pipe_manage_js(cfg, only_sector=None):
+def _pipe_manage_js(cfg, only_sector=None, only_types=None):
     """Script for the Pipes step map.
 
     Draws the principal 90 mm, major 63 mm and minor 32 mm pipes as clickable
     Leaflet polylines. Clicking one posts
     ``{type:'pipe-select', cfg, pipe: {...}}`` to the top window and opens a
     popup with the full pipe info. With `only_sector`, only that sector's
-    pipes are drawn.
+    pipes are drawn; with `only_types` (principal/major/minor/custom list),
+    only those kinds are drawn.
     """
     import json
+    if isinstance(only_types, str):
+        only_types = [only_types] if only_types else None
+    def keep(kind):
+        return only_types is None or kind in only_types
     pipes = []
     pr = (cfg.get("pipes") or {}).get("principal")
-    if pr is not None and only_sector is None:
+    if pr is not None and only_sector is None and keep("principal"):
         pipes.append({"pid": "P", "kind": "principal",
                       "diameter_mm": pr.get("diameter_mm", 90),
                       "sector": "", "zone": "",
@@ -442,6 +447,8 @@ def _pipe_manage_js(cfg, only_sector=None):
                       "color": "#0b8a6f", "weight": 5, "dash": None})
     for m in (cfg.get("pipes") or {}).get("majors", []) or []:
         if only_sector is not None and m.get("sector") != only_sector:
+            continue
+        if not keep("major"):
             continue
         pipes.append({"pid": m.get("pid") or ("M:" + str(m.get("zone"))),
                       "kind": "major", "diameter_mm": m.get("diameter_mm", 63),
@@ -452,6 +459,8 @@ def _pipe_manage_js(cfg, only_sector=None):
     for m in (cfg.get("pipes") or {}).get("minors", []) or []:
         if only_sector is not None and m.get("sector") != only_sector:
             continue
+        if not keep("minor"):
+            continue
         pipes.append({"pid": m.get("pid") or ("m:" + str(m.get("zone"))),
                       "kind": "minor", "diameter_mm": m.get("diameter_mm", 32),
                       "sector": m.get("sector"),
@@ -460,6 +469,8 @@ def _pipe_manage_js(cfg, only_sector=None):
                       "color": "#4daf4a", "weight": 2, "dash": "4, 2"})
     for m in (cfg.get("pipes") or {}).get("customs", []) or []:
         if only_sector is not None and m.get("sector") != only_sector:
+            continue
+        if not keep("custom"):
             continue
         diam = m.get("diameter_mm", 32)
         pipes.append({"pid": m.get("pid"), "kind": "custom",
@@ -508,8 +519,14 @@ def _pipe_manage_js(cfg, only_sector=None):
     ) + "</script>"
 
 
-def map_config_pipes(plan, cfg, only_sector=None):
-    """Pipes step map: sectors + zones + clickable piping 90/63/32 mm."""
+def map_config_pipes(plan, cfg, only_sector=None, only_types=None):
+    """Pipes step map: sectors + zones + valves + clickable piping.
+
+    `only_sector` limits to one sector (emphasized, zoomed); `only_types` is
+    a list among principal/major/minor/custom (None = all).
+    """
+    if isinstance(only_types, str):
+        only_types = [only_types] if only_types else None
     lay = Layers()
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
     colors = _sector_color_map(cfg)
@@ -546,7 +563,7 @@ def map_config_pipes(plan, cfg, only_sector=None):
             [c.y, c.x],
             icon=folium.DivIcon(html=_zone_label(z["name"])),
         ).add_to(m)
-    m.get_root().html.add_child(folium.Element(_pipe_manage_js(cfg, only_sector)))
+    m.get_root().html.add_child(folium.Element(_pipe_manage_js(cfg, only_sector, only_types)))
     return to_html(m)
 
 

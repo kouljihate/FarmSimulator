@@ -287,7 +287,7 @@
 
 <script>
 (function () {
-  var S = { token: null, plan: null, cfgid: null, valveSectors: [], valveRows: false, pipeSector: null };
+  var S = { token: null, plan: null, cfgid: null, valveSectors: [], valveRows: false, pipeSector: null, pipeTypes: [] };
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
@@ -465,6 +465,7 @@
     S.valveSectors = [];
     S.valveRows = false;
     S.pipeSector = null;
+    S.pipeTypes = [];
     var pairs = [['zones-result', 'zones-empty'], ['rows-result', 'rows-empty'],
                  ['pipes-result', 'pipes-empty'], ['valves-result', 'valves-empty'],
                  ['other-result', 'other-empty'],
@@ -509,12 +510,18 @@
     if (vrt) vrt.checked = !!S.valveRows;
     var pf = document.getElementById('pipes-sector-filter');
     S.pipeSector = (pf && pf.value) ? pf.value : null;
+    var pr = document.getElementById('pipes-result');
+    var pboxes = pr ? pr.querySelectorAll('.pipe-type-chk') : [];
+    S.pipeTypes = [];
+    for (var pi = 0; pi < pboxes.length; pi++) {
+      if (pboxes[pi].checked) S.pipeTypes.push(pboxes[pi].value);
+    }
     if (!silent) { hideError(); goTab('tab-zones'); }
   }
 
   function loadOverview(cfgid, silent) {
     if (!S.token) return;
-    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sectors: S.valveSectors, vrows: S.valveRows || '', psector: S.pipeSector || '' }).then(function (data) {
+    api({ op: 'overview', token: S.token, cfgid: parseInt(cfgid, 10), sectors: S.valveSectors, vrows: S.valveRows || '', psector: S.pipeSector || '', ptypes: S.pipeTypes }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       fillOverview(data, silent);
     }).catch(function () { showError(terrHtml('tnet')); });
@@ -1126,6 +1133,18 @@
     if (e.target && e.target.id === 'pipes-sector-filter') {
       hideError();
       S.pipeSector = e.target.value || null;
+      loadOverview(S.cfgid, true);
+      return;
+    }
+    if (e.target && e.target.classList && e.target.classList.contains('pipe-type-chk')) {
+      hideError();
+      var pw = e.target.closest ? e.target.closest('[data-cfg]') : null;
+      var pb = pw ? pw.querySelectorAll('.pipe-type-chk') : [];
+      var picked = [];
+      for (var pti = 0; pti < pb.length; pti++) {
+        if (pb[pti].checked) picked.push(pb[pti].value);
+      }
+      S.pipeTypes = picked;
       loadOverview(S.cfgid, true);
       return;
     }

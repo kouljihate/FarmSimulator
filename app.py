@@ -155,13 +155,18 @@ def _persist(token, plan, maps=None):
 
 
 def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None,
-                    valve_rows=False):
+                    valve_rows=False, only_pipe_types=None):
     engine.extend(plan, cfg["id"])
     sec_names = {s.get("name") for s in cfg.get("sectors", [])}
     if isinstance(only_sector, str):
         only_sector = [only_sector] if only_sector else None
     if only_sector is not None:
         only_sector = [s for s in only_sector if s in sec_names] or None
+    if isinstance(only_pipe_types, str):
+        only_pipe_types = [only_pipe_types] if only_pipe_types else None
+    if only_pipe_types is not None:
+        only_pipe_types = [t for t in only_pipe_types
+                           if t in ("principal", "major", "minor", "custom")] or None
     if only_pipe_sector is not None and only_pipe_sector not in {
             s.get("name") for s in cfg.get("sectors", [])}:
         only_pipe_sector = None
@@ -207,8 +212,10 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None,
                                                        bool(valve_rows)),
             "selected_sectors": only_sector,
             "valve_rows": bool(valve_rows),
-            "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector),
+            "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector,
+                                                       only_pipe_types),
             "selected_pipe_sector": only_pipe_sector,
+            "selected_pipe_types": only_pipe_types,
             "tree_codes": engine.TREE_TYPES,
             "recap_map": mapper.map_recap(plan, cfg),
             "recap_layers": mapper.recap_state(cfg),
@@ -681,7 +688,7 @@ def index():
         ctx = _overview_ctx(data.get("token"), plan, cfg,
                               data.get("sector") or data.get("sectors") or None,
                               data.get("psector") or None,
-                              data.get("vrows"))
+                              data.get("vrows"), data.get("ptypes") or None)
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)

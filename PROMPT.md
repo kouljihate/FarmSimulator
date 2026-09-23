@@ -660,3 +660,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     angle ERROR.
 62. v0.35.1: **Pipes before Valves** — tab/panel order swapped (flow jumps
     unchanged: Confirm Rows still lands on Valve).
+63. v0.36.0: **Pipes sector + type filters** — sector dropdown kept, plus a
+    pipe-type pill group (principal 90 / major 63 / minor 32 / custom);
+    `{op:overview}` takes `ptypes`, map/table honor both filters; new i18n
+    keys `PIPE_TYPE, PIPE_CUSTOM` (EN+AR).
