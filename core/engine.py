@@ -1998,30 +1998,9 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
     # Validate pipe connection rules after any zone/pipe operation
     _validate_pipe_rules(plan, cfg)
     return False, "Unknown operation."
-        """Apply X/Y coordinate changes to zone.
-        When x1,y1,x2,y2 are all filled, redraws zone boundary based on the line.
-        """
-        try:
-            a = proj.to_m(Point(float(x1), float(y1)))
-            b = proj.to_m(Point(float(x2), float(y2)))
-        except (TypeError, ValueError):
-            return False, "Invalid coordinates."
-        if a.distance(b) < 1.0:
-            return False, "Invalid coordinates - points too close."
-        target = next((z for z in zones if z.get("name") == zone_name), None)
-        if target is None and zone_idx is not None:
-            target = next((z for z in zones if z.get("idx") == zone_idx), None)
-        if target is None:
-            return False, "Zone not found."
-        # Update zone centroid and redraw
-        dz = (a + b) / 2.0
-        target["poly"] = proj.to_lonlat(target["poly_m"])
-        target["centroid"] = proj.to_lonlat(dz)
-        _rebuild_valves_pipes(plan, cfg)
-        cfg["zones_confirmed"] = False
-        cfg["rows_confirmed"] = False
-        cfg["valves_confirmed"] = False
-        return True, None
+
+
+def analyse_other_element(plan, cfg, kind, lon, lat):
     # Validate pipe connection rules after any zone/pipe operation
     _validate_pipe_rules(plan, cfg)
     return False, "Unknown operation."
