@@ -37,6 +37,10 @@ OTHER_KINDS = (
     "pump_booster",
 )
 
+TREE_DIST_DEFAULT = 5.0
+TREE_DIST_MIN = 0.5
+TREE_DIST_MAX = 100.0
+
 TREE_TYPES = (
     "none",
     "olive",
@@ -353,12 +357,14 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
 
             zone = {
                 "idx": zidx,
-                "name": "{0}-Z{1:d}".format(sector["name"], zidx),
+                "name": "S{0}Z{1:d}".format(sector["idx"], zidx),
                 "poly_m": zone_m,
                 "poly": zone_ll,
                 "area_m2": zone_m.area,
                 "centroid": project.to_lonlat(target_m),
                 "tree": "none",
+                "tree_dist": TREE_DIST_DEFAULT,
+                "tree_pct": 100.0,
             }
             zones_all.append(zone)
 
@@ -1013,31 +1019,40 @@ def _apply_valve_customization(plan, cfg):
     return cfg
 
 
+def _zone_num(name):
+    """Trailing Z number of a zone name (S1Z2 -> 2), else None."""
+    m = _re.search(r"Z(\d+)\s*$", name or "")
+    return int(m.group(1)) if m else None
+
+
 def _rekey_sector(cfg, old, new):
     """Migrate valve keys after a sector rename (or one side of a swap).
 
-    A sector rename regenerates that sector's zones as ``{new}-Z{k}``, so both
-    the sector and the ``{old}-`` zone prefix move to the new name.
+    Auto zones are ``S<idx>Z<k>``, so a renamed sector's zone keys move to
+    the sector's current index with the same trailing Z number.
     """
-    pre_old, pre_new = old + "-", new + "-"
+    sec = next((s for s in cfg.get("sectors", []) if s.get("name") == new), None)
+    idx = sec.get("idx") if sec is not None else None
+
+    def zone_map(zon):
+        k = _zone_num(zon)
+        if k is not None and idx is not None:
+            return "S{0}Z{1:d}".format(idx, k)
+        return zon
+
     ov = cfg.get("valve_overrides") or {}
     cfg["valve_overrides"] = {
-        ((k[0], new, pre_new + k[2][len(pre_old):])
-         if k[1] == old and k[2].startswith(pre_old) else
-         ((k[0], new, k[2]) if k[1] == old else k)): v
+        ((k[0], new, zone_map(k[2])) if k[1] == old else k): v
         for k, v in ov.items()
     }
     cfg["removed_valves"] = [
-        ([r[0], new, pre_new + r[2][len(pre_old):]]
-         if r[1] == old and r[2].startswith(pre_old) else
-         ([r[0], new, r[2]] if r[1] == old else r))
+        ([r[0], new, zone_map(r[2])] if r[1] == old else r)
         for r in (cfg.get("removed_valves") or []) if r
     ]
     for c in cfg.get("custom_valves") or []:
         if c.get("sector") == old:
             c["sector"] = new
-        if (c.get("zone") or "").startswith(pre_old):
-            c["zone"] = pre_new + c["zone"][len(pre_old):]
+            c["zone"] = zone_map(c.get("zone"))
     return cfg
 
 
@@ -1163,21 +1178,30 @@ def _rekey_pipe_zone(cfg, old, new):
 
 
 def _rekey_pipe_sector(cfg, old, new):
-    pre_old, pre_new = "M:" + old + "-", "M:" + new + "-"
-    low_old, low_new = "m:" + old + "-", "m:" + new + "-"
+    sec = next((s for s in cfg.get("sectors", []) if s.get("name") == new), None)
+    idx = sec.get("idx") if sec is not None else None
+    zsec = {}
+    for s in cfg.get("sectors", []):
+        for z in s.get("zones", []) or []:
+            zsec[z.get("name")] = s.get("name")
+
+    def zone_map(zon):
+        k = _zone_num(zon)
+        if k is not None and idx is not None:
+            return "S{0}Z{1:d}".format(idx, k)
+        return zon
+
     def swap(pid):
-        if pid.startswith(pre_old):
-            return pre_new + pid[len(pre_old):]
-        if pid.startswith(low_old):
-            return low_new + pid[len(low_old):]
+        for pre in ("M:", "m:"):
+            if pid.startswith(pre) and zsec.get(pid[len(pre):]) == old:
+                return pre + zone_map(pid[len(pre):])
         return pid
     cfg["pipe_overrides"] = {swap(k): v for k, v in (cfg.get("pipe_overrides") or {}).items()}
     cfg["removed_pipes"] = [swap(r) for r in (cfg.get("removed_pipes") or []) if r]
     for c in cfg.get("custom_pipes") or []:
         if c.get("sector") == old:
             c["sector"] = new
-        if (c.get("zone") or "").startswith(old + "-"):
-            c["zone"] = new + "-" + c["zone"][len(old) + 1:]
+            c["zone"] = zone_map(c.get("zone"))
     return cfg
 
 
@@ -1607,23 +1631,60 @@ def apply_row_direction(plan, cfg, sector_idx=None, zone_name=None, angle=None):
 
 
 def apply_tree_op(plan, cfg, trees):
-    """Set the tree type of zones. Returns (ok, message).
+    """Set tree type, spacing and coverage of zones. Returns (ok, message).
 
-    ``trees`` maps zone names to tree-type keys (see ``TREE_TYPES``); every
-    zone keeps its own type so layouts can be mixed.
+    ``trees`` maps zone names to a tree-type key or to
+    ``{tree, dist, pct}``; every zone keeps its own values so layouts can
+    be mixed. Tree count assumes a square grid: floor(area*pct/100/dist²).
     """
     if not isinstance(trees, dict):
         return False, "Invalid tree selection."
     zones = {z.get("name"): z for s in cfg.get("sectors", [])
              for z in (s.get("zones", []) or [])}
-    for zone_name, tree in trees.items():
+    for zone_name, spec in trees.items():
+        if isinstance(spec, str):
+            spec = {"tree": spec}
+        if not isinstance(spec, dict):
+            return False, "Invalid tree selection."
+        tree = spec.get("tree", "none")
         if tree not in TREE_TYPES:
             return False, "Invalid tree selection."
+        try:
+            dist = float(spec.get("dist", TREE_DIST_DEFAULT))
+        except (TypeError, ValueError):
+            return False, "Invalid tree spacing."
+        if not (TREE_DIST_MIN <= dist <= TREE_DIST_MAX):
+            return False, "Invalid tree spacing."
+        try:
+            pct = float(spec.get("pct", 100.0))
+        except (TypeError, ValueError):
+            return False, "Invalid tree percentage."
+        if not (0.0 <= pct <= 100.0):
+            return False, "Invalid tree percentage."
         target = zones.get(zone_name)
         if target is None:
             return False, "Zone not found."
         target["tree"] = tree
+        target["tree_dist"] = dist
+        target["tree_pct"] = pct
     return True, None
+
+
+def tree_stats(zone):
+    """Planted area and tree count for a zone (square-grid spacing)."""
+    area = zone.get("area_m2") or 0.0
+    dist = zone.get("tree_dist")
+    if dist is None:
+        dist = TREE_DIST_DEFAULT
+    pct = zone.get("tree_pct")
+    if pct is None:
+        pct = 100.0
+    planted = area * pct / 100.0
+    try:
+        n = int(planted // (dist * dist)) if dist > 0 else 0
+    except (TypeError, ValueError):
+        n = 0
+    return {"dist": dist, "pct": pct, "planted_m2": round(planted, 1), "n": n}
 
 
 def _move_zone_refs(cfg, old, new):
@@ -1706,7 +1767,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         survivor["area_m2"] = merged.area
         for i, z in enumerate(sorted(sector["zones"], key=lambda z: z.get("idx", 0)), start=1):
             z["idx"] = i
-            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
+            z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
@@ -1735,7 +1796,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         sector["zones"] = rest
         for i, z in enumerate(sorted(rest, key=lambda z: z.get("idx", 0)), start=1):
             z["idx"] = i
-            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
+            z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
@@ -1777,11 +1838,12 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             if not g.is_valid:
                 g = make_valid(g)
             new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g), "area_m2": g.area,
-                              "centroid": proj.to_lonlat(g.centroid), "tree": "none"})
+                              "centroid": proj.to_lonlat(g.centroid), "tree": "none",
+                              "tree_dist": TREE_DIST_DEFAULT, "tree_pct": 100.0})
         sector["zones"] = rest + new_zones
         for i, z in enumerate(sector["zones"], start=1):
             z["idx"] = i
-            z["name"] = "{0}-Z{1:d}".format(sector["name"], i)
+            z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False

@@ -13,16 +13,35 @@
       </div>
       <div class="space-y-2">
         {% for z in s.zones %}
-        <div class="flex items-center gap-2 rounded-xl bg-white/5 p-2.5">
-          <div class="min-w-0 flex-1">
-            <div class="truncate font-semibold text-white">{{ z.name }}</div>
-            <div class="text-xs text-white/50">{{ "{:,.0f}".format(z.area_m2) }} m<sup>2</sup></div>
+        {% set dist = z.get('tree_dist') if z.get('tree_dist') is not none else 5.0 %}
+        {% set pct = z.get('tree_pct') if z.get('tree_pct') is not none else 100.0 %}
+        {% set planted = z.area_m2 * pct / 100.0 %}
+        {% set ntrees = (planted / (dist * dist))|int if dist > 0 else 0 %}
+        <div class="rounded-xl bg-white/5 p-2.5" data-area="{{ z.area_m2 }}">
+          <div class="flex items-center gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-semibold text-white">{{ z.name }}</div>
+              <div class="text-xs text-white/50">{{ "{:,.0f}".format(z.area_m2) }} m<sup>2</sup></div>
+            </div>
+            <select class="tree-sel w-32 rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white/80" data-zone="{{ z.name }}">
+              {% for code in tree_codes %}
+              <option value="{{ code }}" data-name="{{ tl('TREE_' + code.upper())[0] }}" {% if (z.get('tree') or 'none') == code %}selected{% endif %}>{{ t('TREE_' + code.upper()) }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <select class="tree-sel w-36 rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white/80" data-zone="{{ z.name }}">
-            {% for code in tree_codes %}
-            <option value="{{ code }}" {% if (z.get('tree') or 'none') == code %}selected{% endif %}>{{ t('TREE_' + code.upper()) }}</option>
-            {% endfor %}
-          </select>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <div>
+              <label class="mb-1 block text-xs text-white/60">{{ t('TREE_DISTANCE') }}</label>
+              <input type="number" min="0.5" max="100" step="0.5" value="{{ dist }}" class="tree-dist w-full rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white/80" data-zone="{{ z.name }}">
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-white/60">{{ t('TREE_PERCENT') }}</label>
+              <input type="number" min="0" max="100" step="1" value="{{ pct }}" class="tree-pct w-full rounded-xl border border-white/15 bg-white/5 px-2 py-1.5 text-sm text-white/80" data-zone="{{ z.name }}">
+            </div>
+          </div>
+          <textarea readonly rows="3" class="tree-result mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 font-mono text-xs text-cyan-100">{{ tl('TREE_' + (z.get('tree') or 'none').upper())[0] }} / {{ tl('TREE_' + (z.get('tree') or 'none').upper())[1] }} · {{ dist }} m · {{ pct }} %
+{{ tl('TREE_PLANTED')[0] }} / {{ tl('TREE_PLANTED')[1] }}: {{ "{:,.0f}".format(planted) }} m2
+{{ tl('TREE_COUNT')[0] }} / {{ tl('TREE_COUNT')[1] }}: {{ ntrees }}</textarea>
         </div>
         {% endfor %}
       </div>

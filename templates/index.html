@@ -285,7 +285,8 @@
      data-tzoneswap="{{ ts('ZONE_SWAP_NEED') }}" data-tzonemerge="{{ ts('ZONE_MERGE_NEED') }}"
      data-tsaved="{{ ts('SAVED_OK') }}" data-trowzone="{{ ts('ZONE') }}"
      data-trowdir="{{ ts('ROW_DIRECTION') }}" data-trownew="{{ ts('ROW_NEW_ANGLE') }}"
-     data-trowapply="{{ ts('APPLY') }}"></div>
+     data-trowapply="{{ ts('APPLY') }}" data-tplanted="{{ tl('TREE_PLANTED')[0] }} / {{ tl('TREE_PLANTED')[1] }}"
+     data-tcount="{{ tl('TREE_COUNT')[0] }} / {{ tl('TREE_COUNT')[1] }}"></div>
 
 <script>
 (function () {
@@ -895,7 +896,14 @@
       var trees = {};
       var tr = document.getElementById('trees-result');
       var sels = tr ? tr.querySelectorAll('.tree-sel') : [];
-      for (var ti = 0; ti < sels.length; ti++) trees[sels[ti].getAttribute('data-zone')] = sels[ti].value;
+      for (var ti = 0; ti < sels.length; ti++) {
+        var tzn = sels[ti].getAttribute('data-zone');
+        var tdd = tr.querySelector('.tree-dist[data-zone="' + tzn + '"]');
+        var tpp = tr.querySelector('.tree-pct[data-zone="' + tzn + '"]');
+        trees[tzn] = { tree: sels[ti].value,
+                       dist: tdd ? tdd.value : 5,
+                       pct: tpp ? tpp.value : 100 };
+      }
       api({ op: 'tree_save', token: S.token, cfgid: parseInt(ts.getAttribute('data-cfg'), 10), trees: trees }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
@@ -1704,6 +1712,38 @@
       if (isFinite(lon) && isFinite(lat)) basinSetMarker(lon, lat);
     }
   });
+
+  document.addEventListener('input', updateTreeResult);
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.classList && e.target.classList.contains('tree-sel')) updateTreeResult(e);
+  });
+
+  function updateTreeResult(e) {
+    var t = e.target;
+    if (!t || !t.classList) return;
+    if (!t.classList.contains('tree-sel') && !t.classList.contains('tree-dist')
+        && !t.classList.contains('tree-pct')) return;
+    var box = t.closest ? t.closest('[data-area]') : null;
+    if (!box) return;
+    var area = parseFloat(box.getAttribute('data-area'));
+    var sel = box.querySelector('.tree-sel');
+    var dd = box.querySelector('.tree-dist');
+    var pp = box.querySelector('.tree-pct');
+    var out = box.querySelector('.tree-result');
+    if (!sel || !out || !isFinite(area)) return;
+    var opt = sel.options[sel.selectedIndex];
+    var nm = (opt && opt.getAttribute('data-name')) || sel.value;
+    var d = dd ? parseFloat(dd.value) : 5;
+    var p = pp ? parseFloat(pp.value) : 100;
+    var planted = area * (isFinite(p) ? p : 0) / 100.0;
+    var n = (isFinite(d) && d > 0) ? Math.floor(planted / (d * d)) : 0;
+    var st = document.getElementById('sector-i18n');
+    var pl = (st && st.dataset.tplanted) || 'Planted';
+    var ct = (st && st.dataset.tcount) || 'Trees';
+    out.value = nm + ' · ' + dd.value + ' m · ' + pp.value + ' %\n'
+      + pl + ': ' + Math.round(planted).toLocaleString() + ' m2\n'
+      + ct + ': ' + n.toLocaleString();
+  }
 
   function toast(html, kind) {
     var box = document.getElementById('toasts');

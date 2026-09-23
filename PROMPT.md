@@ -694,3 +694,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     ignore per-move server rejections (e.g. dragged outside the land) and
     still toasted success; it now aborts on the first rejection, shows the
     real bilingual error, and keeps the remaining staged moves for retry.
+73. v0.39.0: **Trees distance/%/count** — per zone: tree type, spacing (m),
+    coverage % plus a readonly result (planted m² + tree count on a square
+    grid, live-updated while typing); `{op:tree_save}` takes
+    `{tree,dist,pct}` per zone (validated); new i18n keys `TREE_DISTANCE,
+    TREE_PERCENT, TREE_PLANTED, TREE_COUNT` (EN+AR) + spacing/percentage
+    ERRORS.

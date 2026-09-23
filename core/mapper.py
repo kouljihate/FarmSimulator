@@ -740,14 +740,14 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
         pr = cfg["pipes"]["principal"]
         lay.line(pr["line"], _ti("principal"), "#0b8a6f", 4)
         for maj in cfg["pipes"]["majors"]:
-            if maj["zone"].startswith(sector["name"] + "-"):
+            if maj.get("sector") == sector["name"]:
                 lay.line(maj["line"], _ti("major63", zone=maj["zone"]), "#377eb8", 3)
         for mn in cfg["pipes"]["minors"]:
-            if mn["zone"].startswith(sector["name"] + "-"):
+            if mn.get("sector") == sector["name"]:
                 lay.line(mn["line"], _ti("minor", zone=mn["zone"]), "#4daf4a", 2, dash="4, 2")
     if valves:
         for v in cfg["valves"]:
-            if v["zone"].startswith(sector["name"] + "-") or v.get("sector") == sector["name"]:
+            if v.get("sector") == sector["name"]:
                 if v.get("kind") == "principal":
                     lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
                 else:
