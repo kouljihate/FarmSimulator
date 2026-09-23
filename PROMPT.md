@@ -516,7 +516,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     **Final Result** now draws zones + both valve kinds + other elements
     and adds a detailed land **report + Export PDF** (`window.print` +
     print CSS); new partials `_other_result` / `_simulation_result`;
-    tab bar is Load/Upload/Basin/Sectors/Zones/Rows/Valve/Pipes/Other
+    tab bar is Load/Upload/Basin/Sectors/Zones/Rows/Pipes/Valve/Other
     Elements/Trees/Simulation/Final Result.
 36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
     the Valve tab (see data-model note above for the override-layer design).
@@ -622,18 +622,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     length tables + spacing control); i18n keys `TAB_ROWS, ROWS_SUB,
     ROW_SPACING, ROW_TRACE, ROW_TREE, ROW_DIRECTION, ROW_SLOPE, ROW_ROWS`
     (EN+AR) + spacing ERROR; tab bar is Load/Upload/Basin/Sectors/Zones/Rows/
-    Valve/Pipes/Other Elements/Trees/Simulation/Recap/Final Result.
+    Pipes/Valve/Other Elements/Trees/Simulation/Recap/Final Result.
 56. v0.32.0: **Rows confirm step** — Confirm Zones now jumps to Rows; Rows tab
     gained a Confirm Rows button (`rows_save` with `confirm:true` →
     `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
     edits like `zones_confirmed`; new i18n keys `CONFIRM_ROWS,
     ROWS_CONFIRMED, ROWS_PENDING` (EN+AR).
-61. v0.35.0: **Rows Open modal** — per-sector Open button (same 3-column
-    label) opens a modal with the big rows map + per-zone direction table
-    (current angle, new-angle input, Apply); `{op:row_direction}` →
-    `apply_row_direction` stores `rows_manual` and re-traces that zone only;
-    manual angles survive recomputes; new i18n keys `ROW_NEW_ANGLE` (EN+AR) +
-    angle ERROR.
 57. v0.33.0: **Valve multi-sector + rows overlay** — sector filter is a
     multi-select checkbox pill group (empty/all-checked = whole farm, subset =
     staged Save mode); `{op:overview}` takes `sectors[]` + `vrows`;
@@ -658,3 +652,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 60. v0.34.2: **accordion Arabic once** — sector info card left labels now use
     EN-only `tl()[0]` instead of bilingual `t()`, so each row reads EN label,
     value, AR label (was AR twice).
+61. v0.35.0: **Rows Open modal** — per-sector Open button (same 3-column
+    label) opens a modal with the big rows map + per-zone direction table
+    (current angle, new-angle input, Apply); `{op:row_direction}` →
+    `apply_row_direction` stores `rows_manual` and re-traces that zone only;
+    manual angles survive recomputes; new i18n keys `ROW_NEW_ANGLE` (EN+AR) +
+    angle ERROR.
+62. v0.35.1: **Pipes before Valves** — tab/panel order swapped (flow jumps
+    unchanged: Confirm Rows still lands on Valve).

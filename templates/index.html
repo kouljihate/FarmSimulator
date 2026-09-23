@@ -12,8 +12,8 @@
     <button type="button" class="tab-btn" data-tab-target="tab-sectors">{{ bi('TAB_SECTORS') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-zones">{{ bi('TAB_ZONES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-rows">{{ bi('TAB_ROWS') }}</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-valve">{{ bi('TAB_VALVE') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-pipes">{{ bi('TAB_PIPES') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-valve">{{ bi('TAB_VALVE') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-other">{{ bi('TAB_OTHER') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-trees">{{ bi('TAB_TREES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-sim">{{ bi('TAB_SIM') }}</button>
@@ -153,18 +153,18 @@
       </div>
     </div>
 
-    <div class="tab-panel" id="tab-valve">
-      <div id="valves-result"></div>
-      <div id="valves-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_VALVE') }}</h2>
-        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
-      </div>
-    </div>
-
     <div class="tab-panel" id="tab-pipes">
       <div id="pipes-result"></div>
       <div id="pipes-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
         <h2 class="text-lg font-semibold text-white">{{ bi('TAB_PIPES') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-valve">
+      <div id="valves-result"></div>
+      <div id="valves-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_VALVE') }}</h2>
         <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
       </div>
     </div>
@@ -466,8 +466,8 @@
     S.valveRows = false;
     S.pipeSector = null;
     var pairs = [['zones-result', 'zones-empty'], ['rows-result', 'rows-empty'],
-                 ['valves-result', 'valves-empty'],
-                 ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
+                 ['pipes-result', 'pipes-empty'], ['valves-result', 'valves-empty'],
+                 ['other-result', 'other-empty'],
                  ['trees-result', 'trees-empty'],
                  ['sim-result', 'sim-empty'], ['recap-result', 'recap-empty'],
                  ['final-result', 'final-empty']];
@@ -483,8 +483,8 @@
     S.cfgid = data.cfgid;
     var map = [['zones-result', 'zones-empty', data.zones_html],
                ['rows-result', 'rows-empty', data.rows_html],
-               ['valves-result', 'valves-empty', data.valves_html],
                ['pipes-result', 'pipes-empty', data.pipes_html],
+               ['valves-result', 'valves-empty', data.valves_html],
                ['other-result', 'other-empty', data.other_html],
                ['trees-result', 'trees-empty', data.trees_html],
                ['sim-result', 'sim-empty', data.sim_html],

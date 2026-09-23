@@ -70,7 +70,7 @@ Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
  (right-aligned). The home page has a
- centred tab bar: **Load, Upload, Basin, Sectors, Zones, Rows, Valve, Pipes,
+ centred tab bar: **Load, Upload, Basin, Sectors, Zones, Rows, Pipes, Valve,
  Other Elements, Trees, Simulation, Recap, Final Result**
 (the pipeline stages; last five are placeholders for future parts). The
 "Accepted formats" and "What Part 1 produces"
