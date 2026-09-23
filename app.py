@@ -207,6 +207,8 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None,
             "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector),
             "selected_pipe_sector": only_pipe_sector,
             "tree_codes": engine.TREE_TYPES,
+            "recap_map": mapper.map_recap(plan, cfg),
+            "recap_layers": mapper.recap_state(cfg),
             "sim": sim}
 
 
@@ -218,6 +220,7 @@ def _overview_fragments(ctx):
         "pipes_html": render_template("_pipes_result.html", **ctx),
         "other_html": render_template("_other_result.html", **ctx),
         "trees_html": render_template("_trees_result.html", **ctx),
+        "recap_html": render_template("_recap_result.html", **ctx),
         "sim_html": render_template("_simulation_result.html", **ctx),
         "final_html": render_template("_final_result.html", **ctx),
     }
@@ -553,6 +556,37 @@ def index():
         other_maps.pop(data.get("cfgid"), None)
         other_maps.pop(str(data.get("cfgid")), None)
         STORE.save_maps(data.get("token"), {"other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "recap_save":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        layers = data.get("layers") or {}
+        if not isinstance(layers, dict):
+            return jsonify(ok=False, error=str(i18n.err("Invalid layers.")))
+        keys = {k for k, _ in mapper.RECAP_LAYERS}
+        clean = {}
+        for key, val in layers.items():
+            if key not in keys or not isinstance(val, dict):
+                continue
+            try:
+                size = float(val.get("size", 3))
+            except (TypeError, ValueError):
+                continue
+            color = str(val.get("color", ""))
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                color = (mapper.RECAP_DEFAULTS.get(key) or {}).get("color", "#ffffff")
+            clean[key] = {"show": bool(val.get("show", True)),
+                          "color": color,
+                          "size": max(1.0, min(20.0, size))}
+        cfg["recap"] = clean
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))

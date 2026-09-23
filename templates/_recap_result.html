@@ -1,0 +1,48 @@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
+</div>
+<div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('RECAP_FILTER') }}</h3></div>
+  <div class="p-5">
+    <p class="mb-3 text-sm text-white/55">{{ t('RECAP_HINT') }}</p>
+    {% set labels = {'sectors': t('LG_SECTOR'), 'zones': t('LG_ZONES'), 'zone_labels': t('RECAP_LABELS'), 'valves_p': t('LG_VALVE90'), 'valves_s': t('LG_VALVE32'), 'pipes_90': t('LG_P90'), 'pipes_63': t('LG_P50'), 'pipes_32': t('LG_P32'), 'rows': t('ROW_ROWS'), 'trees': t('TAB_TREES'), 'others': t('LG_OTHER'), 'basin': t('LG_BASIN'), 'water': t('LG_WATER')} %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-white/75">
+        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+          <tr>
+            <th class="px-4 py-2 font-medium">{{ t('RECAP_SHOW') }}</th>
+            <th class="px-4 py-2 font-medium">{{ t('RECAP_LAYER') }}</th>
+            <th class="px-4 py-2 font-medium">{{ t('RECAP_COLOR') }}</th>
+            <th class="px-4 py-2 font-medium">{{ t('RECAP_SIZE') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          {% for lyr in recap_layers %}
+          <tr>
+            <td class="px-4 py-2"><input type="checkbox" class="zone-chk recap-show" data-layer="{{ lyr.key }}" {% if lyr.show %}checked{% endif %}></td>
+            <td class="px-4 py-2 font-semibold text-white">{{ labels[lyr.key] }}</td>
+            <td class="px-4 py-2">
+              {% if lyr.kind in ('polygon', 'marker', 'line') %}
+              <input type="color" class="recap-color h-8 w-12 cursor-pointer rounded-lg border border-white/15 bg-white/5" data-layer="{{ lyr.key }}" value="{{ lyr.color }}">
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-2">
+              {% if lyr.kind in ('polygon', 'marker', 'line') %}
+              <input type="range" class="recap-size w-32" data-layer="{{ lyr.key }}" min="1" max="{% if lyr.kind == 'marker' %}20{% else %}10{% endif %}" step="1" value="{{ lyr.size }}">
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 text-center">
+      <button type="button" id="recap-save-btn" data-cfg="{{ cfg.id }}" class="glow-btn rounded-2xl px-8 py-3 text-base font-bold">{{ bv('RECAP_SAVE') }}</button>
+    </div>
+  </div>
+</div>
+<div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <div class="p-5">
+    <iframe id="recap-map-frame" data-cfg="{{ cfg.id }}" class="map valve-xl" width="100%" height="620" srcdoc="{{ recap_map|e }}"></iframe>
+  </div>
+</div>

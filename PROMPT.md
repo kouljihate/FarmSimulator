@@ -90,10 +90,10 @@ token must return `ok:false`.
   runs list). Everything else is `POST /`: multipart `file` = upload;
    otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
    basin | sector_coords | sector_action | zone_action | valve_action |
-   pipe_action | rows_save | tree_save |
+   pipe_action | rows_save | tree_save | recap_save |
    overview | other_add | other_remove | sim_save`. Responses carry server-rendered
   fragments (`basin_html`, `sectors_html`, `zones/rows/valves/pipes/other/trees/
-  sim/final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
+  recap/sim/final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
   with `updated_str`). Client state `S = {token, plan, cfgid}` in
   `index.html`; tab bodies are injected in place, never navigated.
   `fillOverview(data, silent)` fills all six result tabs at once
@@ -622,7 +622,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     length tables + spacing control); i18n keys `TAB_ROWS, ROWS_SUB,
     ROW_SPACING, ROW_TRACE, ROW_TREE, ROW_DIRECTION, ROW_SLOPE, ROW_ROWS`
     (EN+AR) + spacing ERROR; tab bar is Load/Upload/Basin/Sectors/Zones/Rows/
-    Valve/Pipes/Other Elements/Trees/Simulation/Final Result.
+    Valve/Pipes/Other Elements/Trees/Simulation/Recap/Final Result.
 56. v0.32.0: **Rows confirm step** — Confirm Zones now jumps to Rows; Rows tab
     gained a Confirm Rows button (`rows_save` with `confirm:true` →
     `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
@@ -636,3 +636,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     to `#sectors-result` so valve pills don't leak into it; white-on-white
     native option lists fixed for pipes/tree selects; new i18n key
     `VALVE_SHOW_ROWS` (EN+AR).
+58. v0.34.0: **Recap tab + global toasts** — Recap (before Final) shows a big
+    map with every component in its own layer group plus a filter/style card:
+    per-layer show checkbox, color and size apply live via `recapToggle` /
+    `recapStyle`, Save persists to `cfg.recap` (`{op:recap_save}`, validated);
+    trees render as tree-colored zone fills; all feedback is now 5 s
+    top-right toasts (`#toasts`, ok/error styles; `mutate()` wrapper toasts
+    every successful mutation); new i18n keys `TAB_RECAP, RECAP_FILTER,
+    RECAP_HINT, RECAP_SHOW, RECAP_LAYER, RECAP_COLOR, RECAP_SIZE, RECAP_SAVE,
+    RECAP_LABELS, SAVED_OK` (EN+AR) + layers ERROR.

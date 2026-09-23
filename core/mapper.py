@@ -753,6 +753,204 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
     return to_html(m)
 
 
+RECAP_LAYERS = (
+    ("sectors", "polygon"),
+    ("zones", "polygon"),
+    ("zone_labels", "labels"),
+    ("valves_p", "marker"),
+    ("valves_s", "marker"),
+    ("pipes_90", "line"),
+    ("pipes_63", "line"),
+    ("pipes_32", "line"),
+    ("rows", "line"),
+    ("trees", "trees"),
+    ("others", "marker"),
+    ("basin", "marker"),
+    ("water", "marker"),
+)
+
+RECAP_DEFAULTS = {
+    "sectors": {"color": "#1f77b4", "size": 2},
+    "zones": {"color": "#ff7f0e", "size": 1},
+    "zone_labels": {},
+    "valves_p": {"color": "red", "size": 9},
+    "valves_s": {"color": "orange", "size": 6},
+    "pipes_90": {"color": "#0b8a6f", "size": 5},
+    "pipes_63": {"color": "#377eb8", "size": 3},
+    "pipes_32": {"color": "#4daf4a", "size": 2},
+    "rows": {"color": "#16a34a", "size": 2},
+    "trees": {},
+    "others": {"color": "purple", "size": 8},
+    "basin": {"color": "brown", "size": 11},
+    "water": {"color": "blue", "size": 9},
+}
+
+TREE_COLORS = {
+    "none": "#9ca3af",
+    "olive": "#4d7c0f",
+    "citrus": "#ea8c1e",
+    "almond": "#d4a373",
+    "pomegranate": "#9d0208",
+    "apple": "#e63946",
+    "date_palm": "#8a5a00",
+    "grape": "#6a4c93",
+    "fig": "#386641",
+}
+
+
+def recap_state(cfg):
+    """Effective recap prefs: saved overrides merged over defaults."""
+    saved = cfg.get("recap") or {}
+    out = []
+    for key, kind in RECAP_LAYERS:
+        dflt = RECAP_DEFAULTS.get(key) or {}
+        cur = saved.get(key) or {}
+        out.append({"key": key, "kind": kind,
+                    "show": cur.get("show", True),
+                    "color": cur.get("color", dflt.get("color", "#ffffff")),
+                    "size": cur.get("size", dflt.get("size", 3))})
+    return out
+
+
+def _tree_tip(zone_name, tree):
+    en, ar = i18n.tl("TREE_" + str(tree or "none").upper())
+    return i18n.bl_style("{0} - {1}".format(zone_name, en),
+                         "{0} - {1}".format(zone_name, ar))
+
+
+def map_recap(plan, cfg):
+    """Big recap map: every component in its own toggleable layer group."""
+    import json
+    state = {s["key"]: s for s in recap_state(cfg)}
+    data = {"sectors": [], "zones": [], "labels": [], "trees": [],
+            "valves_p": [], "valves_s": [], "pipes_90": [], "pipes_63": [],
+            "pipes_32": [], "rows": [], "others": []}
+    for s in cfg.get("sectors", []):
+        data["sectors"].append({"locs": _poly_locations(s["poly"]),
+                                "tip": _ti("sector", name=s["name"], area=s["area_m2"])})
+    for z in cfg.get("zones", []):
+        data["zones"].append({"locs": _poly_locations(z["poly"]),
+                              "tip": _ti("zone", name=z["name"], area=z["area_m2"])})
+        c = z.get("centroid")
+        if c is not None:
+            data["labels"].append({"lat": c.y, "lon": c.x,
+                                   "html": _zone_label(z["name"])})
+        tree = z.get("tree") or "none"
+        data["trees"].append({"locs": _poly_locations(z["poly"]),
+                              "tip": _tree_tip(z["name"], tree),
+                              "color": TREE_COLORS.get(tree, "#9ca3af")})
+        for line in (z.get("rows") or {}).get("lines", []) or []:
+            data["rows"].append({"paths": _line_locations(line),
+                                 "tip": _ti("zone", name=z["name"], area=z["area_m2"])})
+    for v in cfg.get("valves", []) or []:
+        data["valves_p" if v.get("kind") == "principal" else "valves_s"].append(
+            {"lat": v["lat"], "lon": v["lon"],
+             "tip": _ti("valve90" if v.get("kind") == "principal" else "valve32",
+                        zone=v.get("sector") or v.get("zone"))})
+    pipes = cfg.get("pipes") or {}
+    if pipes.get("principal") is not None:
+        data["pipes_90"].append({"paths": _pipe_paths(pipes["principal"].get("line")),
+                                 "tip": _ti("principal")})
+    for m in pipes.get("majors", []) or []:
+        data["pipes_63"].append({"paths": _pipe_paths(m.get("line")),
+                                 "tip": _ti("major63", zone=m.get("zone"))})
+    for m in pipes.get("minors", []) or []:
+        data["pipes_32"].append({"paths": _pipe_paths(m.get("line")),
+                                 "tip": _ti("minor", zone=m.get("zone"))})
+    for m in pipes.get("customs", []) or []:
+        data["pipes_32"].append({"paths": _pipe_paths(m.get("line")),
+                                 "tip": _ti("minor", zone=m.get("zone") or "")})
+    for el in plan.get("other_elements") or []:
+        data["others"].append({"lat": el["lat"], "lon": el["lon"],
+                               "tip": _bn("{0} ({1})".format(el.get("kind"), el.get("size") or ""))})
+    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
+    lay = Layers()
+    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
+    m = build(lay, center, 16)
+    prefs = {k: {"show": s["show"], "color": s["color"], "size": s["size"]}
+             for k, s in state.items()}
+    m.get_root().html.add_child(folium.Element(_recap_js(
+        data, prefs, plan["basin"], plan["water"])))
+    return to_html(m)
+
+
+def _recap_js(data, prefs, basin, water):
+    """Draws every recap layer into its own group + live toggle/style API."""
+    import json
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp||!window.L)return;"
+        "var DATA=" + json.dumps(data) + ";"
+        "var PREFS=" + json.dumps(prefs) + ";"
+        "var BASIN=" + json.dumps(basin) + ";"
+        "var WATER=" + json.dumps(water) + ";"
+        "var G={};"
+        "function grp(key){if(!G[key]){G[key]=L.layerGroup();}return G[key];}"
+        "function show(key){var p=PREFS[key]||{};return p.show!==false;}"
+        "function col(key,dflt){var p=PREFS[key]||{};return p.color||dflt;}"
+        "function siz(key,dflt){var p=PREFS[key]||{};var v=parseFloat(p.size);"
+        "return isFinite(v)?v:dflt;}"
+        "DATA.sectors.forEach(function(o){"
+        "o.locs.forEach(function(ring){"
+        "L.polygon(ring,{color:col('sectors','#1f77b4'),weight:siz('sectors',2),"
+        "opacity:.9,fill:true,fillColor:col('sectors','#1f77b4'),fillOpacity:.10})"
+        ".addTo(grp('sectors')).bindTooltip(o.tip,{sticky:true});});});"
+        "DATA.zones.forEach(function(o){"
+        "o.locs.forEach(function(ring){"
+        "L.polygon(ring,{color:col('zones','#ff7f0e'),weight:siz('zones',1),"
+        "opacity:.9,fill:true,fillColor:col('zones','#ff7f0e'),fillOpacity:.08})"
+        ".addTo(grp('zones')).bindTooltip(o.tip,{sticky:true});});});"
+        "DATA.labels.forEach(function(o){"
+        "L.marker([o.lat,o.lon],{icon:L.divIcon({className:'',html:o.html}),"
+        "interactive:false}).addTo(grp('zone_labels'));});"
+        "DATA.trees.forEach(function(o){"
+        "o.locs.forEach(function(ring){"
+        "L.polygon(ring,{color:o.color,weight:1,opacity:.9,fill:true,"
+        "fillColor:o.color,fillOpacity:.25})"
+        ".addTo(grp('trees')).bindTooltip(o.tip,{sticky:true});});});"
+        "function dot(o,key,dfltC,dfltR){"
+        "return L.circleMarker([o.lat,o.lon],{radius:siz(key,dfltR),"
+        "color:col(key,dfltC),weight:2,fill:true,fillOpacity:.85})"
+        ".addTo(grp(key)).bindTooltip(o.tip,{sticky:true});}"
+        "DATA.valves_p.forEach(function(o){dot(o,'valves_p','red',9);});"
+        "DATA.valves_s.forEach(function(o){dot(o,'valves_s','orange',6);});"
+        "DATA.others.forEach(function(o){dot(o,'others','purple',8);});"
+        "dot({lat:BASIN.lat,lon:BASIN.lon,tip:'basin'},'basin','brown',11);"
+        "dot({lat:WATER.lat,lon:WATER.lon,tip:'water'},'water','blue',9);"
+        "function line(o,key,dfltC,dfltW,dash){"
+        "o.paths.forEach(function(path){if(path.length<2)return;"
+        "L.polyline(path,{color:col(key,dfltC),weight:siz(key,dfltW),"
+        "opacity:.95,dashArray:dash})"
+        ".addTo(grp(key)).bindTooltip(o.tip,{sticky:true});});}"
+        "DATA.pipes_90.forEach(function(o){line(o,'pipes_90','#0b8a6f',5,null);});"
+        "DATA.pipes_63.forEach(function(o){line(o,'pipes_63','#377eb8',3,null);});"
+        "DATA.pipes_32.forEach(function(o){line(o,'pipes_32','#4daf4a',2,'4, 2');});"
+        "DATA.rows.forEach(function(o){line(o,'rows','#16a34a',2,null);});"
+        "for(var k in G){if(show(k))G[k].addTo(mp);}"
+        "window.recapToggle=function(key,on){"
+        "PREFS[key]=PREFS[key]||{};PREFS[key].show=!!on;"
+        "if(!G[key])return false;"
+        "try{if(on)G[key].addTo(mp);else mp.removeLayer(G[key]);}catch(x){}"
+        "return true;};"
+        "window.recapStyle=function(key,st){"
+        "PREFS[key]=PREFS[key]||{};"
+        "if(st.color)PREFS[key].color=st.color;"
+        "if(isFinite(st.size))PREFS[key].size=st.size;"
+        "if(!G[key])return false;"
+        "G[key].eachLayer(function(l){"
+        "try{"
+        "if(l.setRadius){l.setStyle({color:PREFS[key].color});l.setRadius(PREFS[key].size);}"
+        "else if(l.setStyle){var o={color:PREFS[key].color,weight:PREFS[key].size};"
+        "if(l.options&&l.options.fillColor)o.fillColor=PREFS[key].color;"
+        "l.setStyle(o);}"
+        "}catch(x){}});"
+        "return true;};"
+        "});"
+    ) + "</script>"
+
+
 def map_sector_rows(plan, cfg, sector):
     """Sector detail map with AI-traced crop rows per zone."""
     lay = Layers()

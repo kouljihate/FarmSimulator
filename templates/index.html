@@ -2,6 +2,7 @@
 {% block content %}
 
 <div id="top-error" class="mb-6 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-red-200 backdrop-blur" style="display:none"></div>
+<div id="toasts" aria-live="polite"></div>
 
 <div class="mb-4 flex justify-center pt-1">
   <div class="flex flex-wrap justify-center gap-1 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur">
@@ -16,6 +17,7 @@
     <button type="button" class="tab-btn" data-tab-target="tab-other">{{ bi('TAB_OTHER') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-trees">{{ bi('TAB_TREES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-sim">{{ bi('TAB_SIM') }}</button>
+    <button type="button" class="tab-btn" data-tab-target="tab-recap">{{ bi('TAB_RECAP') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-final">{{ bi('TAB_FINAL') }}</button>
   </div>
 </div>
@@ -191,6 +193,14 @@
       </div>
     </div>
 
+    <div class="tab-panel" id="tab-recap">
+      <div id="recap-result"></div>
+      <div id="recap-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+        <h2 class="text-lg font-semibold text-white">{{ bi('TAB_RECAP') }}</h2>
+        <p class="mt-1 text-white/50">{{ t('UPLOAD_FIRST') }}</p>
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-final">
       <div id="final-result"></div>
       <div id="final-empty" class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
@@ -259,7 +269,8 @@
      data-tcancel="{{ ts('CANCEL') }}" data-tsaving="{{ ts('SAVING') }}"
      data-tnet="{{ ts('NETWORK_ERROR') }}" data-tswap="{{ ts('SWAP_NEED') }}"
      data-tvalvepick="{{ ts('VALVE_PICK') }}" data-tzoneone="{{ ts('ZONE_ONE_NEED') }}"
-     data-tzoneswap="{{ ts('ZONE_SWAP_NEED') }}" data-tzonemerge="{{ ts('ZONE_MERGE_NEED') }}"></div>
+     data-tzoneswap="{{ ts('ZONE_SWAP_NEED') }}" data-tzonemerge="{{ ts('ZONE_MERGE_NEED') }}"
+     data-tsaved="{{ ts('SAVED_OK') }}"></div>
 
 <script>
 (function () {
@@ -290,6 +301,13 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(function (r) { return r.json(); });
+  }
+
+  function mutate(payload) {
+    return api(payload).then(function (data) {
+      if (data && data.ok) toastOk();
+      return data;
+    });
   }
 
   function apiFail(err) {
@@ -394,6 +412,7 @@
       if (!data.ok) { if (data.error) showError(data.error); else showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       if (!data.sectors_html) { showError(terrHtml('tnet')); resetTool(cfg, null); return; }
       hideError();
+      toastOk();
       var sp = document.getElementById('sectors-result');
       if (sp) sp.innerHTML = data.sectors_html;
       if (data.plan) S.plan = data.plan;
@@ -437,7 +456,8 @@
                  ['valves-result', 'valves-empty'],
                  ['pipes-result', 'pipes-empty'], ['other-result', 'other-empty'],
                  ['trees-result', 'trees-empty'],
-                 ['sim-result', 'sim-empty'], ['final-result', 'final-empty']];
+                 ['sim-result', 'sim-empty'], ['recap-result', 'recap-empty'],
+                 ['final-result', 'final-empty']];
     pairs.forEach(function (p) {
       var r = document.getElementById(p[0]);
       var e = document.getElementById(p[1]);
@@ -455,6 +475,7 @@
                ['other-result', 'other-empty', data.other_html],
                ['trees-result', 'trees-empty', data.trees_html],
                ['sim-result', 'sim-empty', data.sim_html],
+               ['recap-result', 'recap-empty', data.recap_html],
                ['final-result', 'final-empty', data.final_html]];
     map.forEach(function (m) {
       var r = document.getElementById(m[0]);
@@ -493,22 +514,19 @@
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
-    api(body).then(function (data) {
+    mutate(body).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       hideError();
       fillOverview(data, true);
       if (dCfg != null) openDetailModal(String(dCfg), dIdx, dName, true);
     }).catch(function () { showError(terrHtml('tnet')); });
-  }
-
-  function valveAction(cfgid, action, extra, after) {
     if (!S.token) { showError(terrHtml('tnet')); return; }
     var body = extra || {};
     body.op = 'valve_action';
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
-    api(body).then(function (data) {
+    mutate(body).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       hideError();
       fillOverview(data, true);
@@ -593,6 +611,42 @@
     if (attempt < 40) setTimeout(function () { withPipesMap(fn, attempt + 1); }, 100);
   }
 
+  function withRecapMap(fn, attempt) {
+    var frame = document.getElementById('recap-map-frame');
+    if (!frame) return;
+    attempt = attempt || 0;
+    try {
+      var w = frame.contentWindow;
+      if (frame.contentDocument) {
+        var inner = frame.contentDocument.querySelector('iframe');
+        if (inner && inner.contentWindow) w = inner.contentWindow;
+      }
+      if (w && typeof w.recapToggle === 'function') { fn(w); return; }
+    } catch (x) {}
+    if (attempt < 40) setTimeout(function () { withRecapMap(fn, attempt + 1); }, 100);
+  }
+
+  function recapRowStyle(row) {
+    var out = {};
+    if (!row) return out;
+    var c = row.querySelector('.recap-color');
+    var s = row.querySelector('.recap-size');
+    if (c) out.color = c.value;
+    if (s) out.size = parseFloat(s.value);
+    return out;
+  }
+
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.classList
+        && (e.target.classList.contains('recap-color')
+            || e.target.classList.contains('recap-size'))) {
+      var row = e.target.closest ? e.target.closest('tr') : null;
+      var layer = e.target.getAttribute('data-layer');
+      if (!layer) return;
+      withRecapMap(function (w) { w.recapStyle(layer, recapRowStyle(row)); });
+    }
+  });
+
   function pipeInfoHtml(p) {
     return '<div class="font-bold text-white">' + esc(p.kind || '') + ' · ' + esc(p.diameter_mm || '') + ' mm</div>'
       + (p.zone ? '<div class="mt-1 text-white/70">Zone: ' + esc(p.zone) + '</div>' : '')
@@ -626,7 +680,7 @@
     body.token = S.token;
     body.cfgid = parseInt(cfgid, 10);
     body.action = action;
-    api(body).then(function (data) {
+    mutate(body).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       hideError();
       fillOverview(data, true);
@@ -692,7 +746,7 @@
     if (!ids.length || !S.token) { if (done) done(); return; }
     var i = 0;
     (function next() {
-      if (i >= ids.length) { valveStaged = {}; if (done) done(); return; }
+      if (i >= ids.length) { valveStaged = {}; toastOk(); if (done) done(); return; }
       var vid = ids[i++];
       var p = valveStaged[vid];
       api({ op: 'valve_action', token: S.token, cfgid: parseInt(cfgid, 10),
@@ -755,6 +809,7 @@
         if (btn) btn.disabled = false;
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
         setPlan(data);
       }).catch(function () { if (btn) btn.disabled = false; showError(terrHtml('tnet')); });
     });
@@ -769,6 +824,7 @@
       if (!confirm('Delete ' + nm + '?')) return;
       api({ op: 'delete_run', token: del.getAttribute('data-del-token') }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
+        toastOk();
         if (S.token === del.getAttribute('data-del-token')) {
           S.token = null; S.plan = null; S.cfgid = null;
           resetOverview();
@@ -806,6 +862,7 @@
             confirm: true }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
         fillOverview(data, true);
         goTab('tab-valve');
       }).catch(function () { showError(terrHtml('tnet')); });
@@ -821,6 +878,7 @@
       api({ op: 'tree_save', token: S.token, cfgid: parseInt(ts.getAttribute('data-cfg'), 10), trees: trees }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -833,6 +891,31 @@
             spacing: rsp ? rsp.value : 5 }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
+        fillOverview(data, true);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
+    var rc = e.target && e.target.closest ? e.target.closest('#recap-save-btn') : null;
+    if (rc) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var layers = {};
+      var rr = document.getElementById('recap-result');
+      var rows = rr ? rr.querySelectorAll('tbody tr') : [];
+      for (var ri = 0; ri < rows.length; ri++) {
+        var show = rows[ri].querySelector('.recap-show');
+        if (!show) continue;
+        var lk = show.getAttribute('data-layer');
+        var st = { show: show.checked };
+        var cc = rows[ri].querySelector('.recap-color');
+        var ss = rows[ri].querySelector('.recap-size');
+        if (cc) st.color = cc.value;
+        if (ss) st.size = parseFloat(ss.value);
+        layers[lk] = st;
+      }
+      mutate({ op: 'recap_save', token: S.token, cfgid: parseInt(rc.getAttribute('data-cfg'), 10), layers: layers }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -842,6 +925,7 @@
       if (!S.token) return;
       api({ op: 'other_remove', token: S.token, cfgid: parseInt(od.getAttribute('data-cfg'), 10), id: od.getAttribute('data-id') }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
+        toastOk();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -965,6 +1049,7 @@
             years: sf ? document.getElementById('sim-years').value : 10,
             crop: sf ? document.getElementById('sim-crop').value : 'vegetables' }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
+        toastOk();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -991,6 +1076,12 @@
         if (boxes[i].checked) sel.push(boxes[i].value);
       }
       applyValveZoneFilter(wrap ? wrap.getAttribute('data-cfg') : S.cfgid, sel);
+      return;
+    }
+    if (e.target && e.target.classList && e.target.classList.contains('recap-show')) {
+      var layer = e.target.getAttribute('data-layer');
+      if (!layer) return;
+      withRecapMap(function (w) { w.recapToggle(layer, e.target.checked); });
       return;
     }
     if (e.target && e.target.id === 'valve-rows-toggle') {
@@ -1459,11 +1550,22 @@
     }
   });
 
+  function toast(html, kind) {
+    var box = document.getElementById('toasts');
+    if (!box) return;
+    var d = document.createElement('div');
+    d.className = 'toast toast-' + (kind || 'ok');
+    d.innerHTML = html;
+    box.appendChild(d);
+    setTimeout(function () {
+      d.classList.add('toast-out');
+      setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 300);
+    }, 5000);
+  }
+  function toastOk() { toast(terrHtml('tsaved'), 'ok'); }
   function showError(html) {
-    var e = document.getElementById('top-error');
-    if (!e) return;
-    e.innerHTML = html;
-    e.style.display = '';
+    hideError();
+    toast(html, 'error');
   }
   function hideError() {
     var e = document.getElementById('top-error');
@@ -1488,6 +1590,7 @@
             lat: parseFloat(document.getElementById('other-lat').value) }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -1504,6 +1607,7 @@
             annual_revenue: document.getElementById('sim-rev').value }).then(function (data) {
         if (!data.ok) { apiFail(data); return; }
         hideError();
+        toastOk();
         fillOverview(data, true);
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
@@ -1520,6 +1624,7 @@
     api({ op: 'basin', token: S.token, lon: lon, lat: lat }).then(function (data) {
       if (!data.ok) { apiFail(data); return; }
       hideError();
+      toastOk();
       if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
       if (latEl) latEl.value = data.basin.lat.toFixed(6);
       setBasinInfo(data.basin.lon, data.basin.lat, data.basin.dist_water_m);

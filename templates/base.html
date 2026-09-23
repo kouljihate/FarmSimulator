@@ -256,6 +256,34 @@
   #pipe-target option, #pipe-diam option, #pipe-sector option, #pipe-zone option,
   .tree-sel option { color: #0b1220; }
 
+  #toasts {
+    position: fixed;
+    top: 4.5rem;
+    right: 1rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    max-width: min(22rem, calc(100vw - 2rem));
+  }
+  .toast {
+    background: rgba(13,21,36,.94);
+    border: 1px solid rgba(34,211,238,.35);
+    border-radius: .9rem;
+    box-shadow: 0 0 24px rgba(34,211,238,.18), 0 12px 28px rgba(0,0,0,.5);
+    color: #fff;
+    padding: .7rem 1rem;
+    font-size: .82rem;
+    animation: toast-in .25s ease;
+  }
+  .toast-ok { border-color: rgba(52,211,153,.55); box-shadow: 0 0 24px rgba(52,211,153,.22), 0 12px 28px rgba(0,0,0,.5); }
+  .toast-error { border-color: rgba(248,113,113,.55); box-shadow: 0 0 24px rgba(248,113,113,.25), 0 12px 28px rgba(0,0,0,.5); }
+  .toast-out { opacity: 0; transform: translateX(24px); transition: all .3s ease; }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: none; }
+  }
+
   @media print {
     nav, footer, .tab-btn, #top-error, #sector-modal, #sector-detail-modal,
     #other-form, #sim-form, .confirm-zones-btn, .confirm-rows-btn, .use-config-btn { display: none !important; }
