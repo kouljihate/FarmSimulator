@@ -84,6 +84,22 @@ place. The browser never leaves `/`.
    elbows, filters, booster pumps placed on a big land map (click the map to
    fill coordinates). Every added element gets a heuristic **AI analysis**
    (necessary or not) plus a proposal for a smoother, cheaper network.
+3. **Principal Pipe Boundary**: Principal pipe90 must be set within land boundary
+   or sector boundaries. It connects the basin to sector entries and cannot
+   route outside approved areas. System validates pipe90 stays within permitted
+   boundaries after each sector/zone rebuild.
+
+4. **Sector Checkbox Filter**: UI replaces sector list with checkbox interface:
+   - Individual sector checkboxes (select specific sectors)
+   - "Select All" checkbox (selects/deselects all sectors)
+   - "Unselect All" checkbox (deselects all sectors)
+   Filter controls which sectors' pipes are displayed/edited.
+
+5. **Pipes Display Fix**: Ensured displayed pipes correctly follow sector
+   boundaries with proper connection chain: principal90 → major63 → minor32.
+   Invalid cross-sector pipes are filtered out. AI suggestion validates and
+   corrects pipe routing against sector boundaries and valve positions.
+
 6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
    elbows, filters, booster pumps placed on a big land map (click the map to
    fill coordinates). Every added element gets a heuristic **AI analysis**
@@ -102,7 +118,7 @@ placeholder headings for future tabs (Zones, Valve, Pipes, Final Result) are
 also bilingual. Config headings show Arabic translations of their base names
 (Balanced grid → شبكة متوازنة; Mosaic → فسيفساء; Fine → دقيق; Existing sectors
 → قطاعات موجودة) with the count localised (cells → خلايا, polygons → مضلّعات).
-Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
+Styling is **Tailwind CSS** (CDN) with the **Futuristic Dark Theme** (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
  (right-aligned). The home page has a
