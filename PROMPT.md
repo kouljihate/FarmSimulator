@@ -628,6 +628,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
     edits like `zones_confirmed`; new i18n keys `CONFIRM_ROWS,
     ROWS_CONFIRMED, ROWS_PENDING` (EN+AR).
+61. v0.35.0: **Rows Open modal** — per-sector Open button (same 3-column
+    label) opens a modal with the big rows map + per-zone direction table
+    (current angle, new-angle input, Apply); `{op:row_direction}` →
+    `apply_row_direction` stores `rows_manual` and re-traces that zone only;
+    manual angles survive recomputes; new i18n keys `ROW_NEW_ANGLE` (EN+AR) +
+    angle ERROR.
 57. v0.33.0: **Valve multi-sector + rows overlay** — sector filter is a
     multi-select checkbox pill group (empty/all-checked = whole farm, subset =
     staged Save mode); `{op:overview}` takes `sectors[]` + `vrows`;

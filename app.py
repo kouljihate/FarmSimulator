@@ -70,7 +70,10 @@ def _sector_summary(s):
         "centroid": _pt(s["centroid"]) if s.get("centroid") is not None else None,
         "entry": _pt(s["entry"]) if s.get("entry") is not None else None,
         "zone_angle": s.get("zone_angle"),
-        "zones": [{"name": z.get("name"), "area_m2": z.get("area_m2")}
+        "zones": [{"name": z.get("name"), "area_m2": z.get("area_m2"),
+                   "tree": z.get("tree") or "none",
+                   "angle": (z.get("rows") or {}).get("angle"),
+                   "manual": bool((z.get("rows") or {}).get("manual"))}
                   for z in s.get("zones") or []],
     }
 
@@ -604,6 +607,23 @@ def index():
             ok, msg = True, None
         else:
             ok, msg = engine.apply_rows_op(plan, cfg, data.get("spacing"))
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(msg)))
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "row_direction":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        ok, msg = engine.apply_row_direction(
+            plan, cfg, sector_idx=data.get("sector_idx"),
+            zone_name=data.get("zone_name"), angle=data.get("angle"))
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)

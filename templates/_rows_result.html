@@ -26,6 +26,7 @@
         <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-white/80">{{ "{:,.0f}".format(s.area_m2) }} m<sup>2</sup></span>
       </div>
       <iframe class="map mb-2" srcdoc="{{ rows_maps[s.name]|e }}"></iframe>
+      <button type="button" class="glow-btn mt-2 block w-full truncate whitespace-nowrap rounded-xl px-4 py-2.5 text-center font-semibold rows-open-btn" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" data-name="{{ s.name }}"><span class="flex flex-nowrap items-center justify-between gap-2 whitespace-nowrap"><span class="en shrink-0">{{ tl('OPEN')[0] }}</span><span class="min-w-0 truncate">&quot;{{ s.name }}&quot;</span><span class="ar shrink-0">{{ tl('OPEN')[1] }}</span></span></button>
       <div class="mt-2 overflow-x-auto rounded-xl border border-white/10">
         <table class="w-full text-sm text-white/75">
           <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">

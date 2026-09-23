@@ -262,6 +262,17 @@
   </div>
 </div>
 
+<div id="rows-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none">
+  <div class="sector-modal-card max-h-[90vh] w-full max-w-4xl overflow-y-auto p-6">
+    <h3 id="rows-detail-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
+    <iframe id="rows-detail-map" class="map big mb-4" width="100%" height="440"></iframe>
+    <div id="rows-detail-zones" class="mb-4 overflow-x-auto rounded-xl border border-white/10"></div>
+    <div class="flex flex-wrap items-center justify-end gap-3">
+      <button type="button" id="rows-detail-close" class="sector-modal-btn">{{ bv('CLOSE') }}</button>
+    </div>
+  </div>
+</div>
+
 <div id="sector-i18n" style="display:none"
      data-tsel="{{ ts('SELECT_HINT') }}" data-tneed="{{ ts('SELECT_NEEDED') }}"
      data-tmerge="{{ ts('MERGE_PICK') }}" data-tdraw="{{ ts('DRAW_HINT') }}"
@@ -270,7 +281,9 @@
      data-tnet="{{ ts('NETWORK_ERROR') }}" data-tswap="{{ ts('SWAP_NEED') }}"
      data-tvalvepick="{{ ts('VALVE_PICK') }}" data-tzoneone="{{ ts('ZONE_ONE_NEED') }}"
      data-tzoneswap="{{ ts('ZONE_SWAP_NEED') }}" data-tzonemerge="{{ ts('ZONE_MERGE_NEED') }}"
-     data-tsaved="{{ ts('SAVED_OK') }}"></div>
+     data-tsaved="{{ ts('SAVED_OK') }}" data-trowzone="{{ ts('ZONE') }}"
+     data-trowdir="{{ ts('ROW_DIRECTION') }}" data-trownew="{{ ts('ROW_NEW_ANGLE') }}"
+     data-trowapply="{{ ts('APPLY') }}"></div>
 
 <script>
 (function () {
@@ -1059,6 +1072,26 @@
       openDetailModal(ob.getAttribute('data-cfg'), parseInt(ob.getAttribute('data-idx'), 10), ob.getAttribute('data-name'));
       return;
     }
+    var rb = e.target && e.target.closest ? e.target.closest('.rows-open-btn') : null;
+    if (rb) {
+      openRowsModal(rb.getAttribute('data-cfg'), parseInt(rb.getAttribute('data-idx'), 10), rb.getAttribute('data-name'));
+      return;
+    }
+    var ra = e.target && e.target.closest ? e.target.closest('.rows-apply-btn') : null;
+    if (ra) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var row = ra.closest ? ra.closest('tr') : null;
+      var inp = row ? row.querySelector('.row-angle-input') : null;
+      mutate({ op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
+               sector_idx: rIdx, zone_name: ra.getAttribute('data-zone'),
+               angle: inp ? inp.value : NaN }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        fillOverview(data, true);
+        openRowsModal(rCfg, rIdx, null);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
     var gb = e.target && e.target.closest ? e.target.closest('[data-go-tab]') : null;
     if (gb) {
       goTab(gb.getAttribute('data-go-tab'));
@@ -1268,6 +1301,7 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         if (modal.style.display === 'flex') { modalMode = null; hideModal(); }
+        else if (rModal && rModal.style.display === 'flex') hideRowsModal();
         else hideDetailModal();
       }
     });
@@ -1367,6 +1401,72 @@
   });
   if (dClose) dClose.addEventListener('click', hideDetailModal);
   if (dModal) dModal.addEventListener('click', function (e) { if (e.target === dModal) hideDetailModal(); });
+
+  var rModal = document.getElementById('rows-detail-modal');
+  var rTitle = document.getElementById('rows-detail-title');
+  var rMap = document.getElementById('rows-detail-map');
+  var rZones = document.getElementById('rows-detail-zones');
+  var rCfg = null, rIdx = null;
+
+  function hideRowsModal() {
+    if (rModal) rModal.style.display = 'none';
+  }
+  function rowsSector() {
+    var out = null;
+    (S.plan.configs || []).forEach(function (c) {
+      if (String(c.id) === String(rCfg)) {
+        (c.sectors || []).forEach(function (s) {
+          if (s.idx === rIdx || String(s.idx) === String(rIdx)) out = s;
+        });
+      }
+    });
+    return out;
+  }
+  function openRowsModal(cfg, idx, name) {
+    rCfg = cfg; rIdx = idx;
+    var sec = rowsSector();
+    if (rTitle) rTitle.textContent = (sec && sec.name) || name || '';
+    if (rMap) {
+      var card = null;
+      var rr = document.getElementById('rows-result');
+      if (rr) {
+        var btn = rr.querySelector('.rows-open-btn[data-cfg="' + cfg + '"][data-idx="' + idx + '"]');
+        if (btn && btn.parentElement) card = btn.parentElement;
+      }
+      var src = card ? card.querySelector('iframe.map') : null;
+      if (src) rMap.setAttribute('srcdoc', src.getAttribute('srcdoc') || '');
+      else rMap.removeAttribute('srcdoc');
+    }
+    if (rZones && sec) {
+      var rst = document.getElementById('sector-i18n');
+      var rtxt = function (k) {
+        var raw = (rst && rst.dataset[k]) || ' | ';
+        var p = String(raw).split(' | ');
+        return { en: p[0], ar: p[1] || p[0] };
+      };
+      var hZ = rtxt('trowzone'), hD = rtxt('trowdir'), hN = rtxt('trownew'), hA = rtxt('trowapply');
+      var rbl = function (t) {
+        return '<span class="bv"><span class="ar">' + t.ar + '</span><span class="en">' + t.en + '</span></span>';
+      };
+      var inl = function (t) { return t.en + ' <span class="ar">' + t.ar + '</span>'; };
+      var html = '<table class="w-full text-sm text-white/75"><thead class="border-b border-white/10 bg-white/5 text-left text-white/55">'
+        + '<tr><th class="px-4 py-2 font-medium">' + inl(hZ) + '</th>'
+        + '<th class="px-4 py-2 font-medium">' + inl(hD) + '</th>'
+        + '<th class="px-4 py-2 font-medium">' + inl(hN) + '</th><th></th></tr></thead>'
+        + '<tbody class="divide-y divide-white/10">';
+      (sec.zones || []).forEach(function (z) {
+        html += '<tr><td class="px-4 py-2 font-semibold text-white">' + esc(z.name) + '</td>'
+          + '<td class="px-4 py-2">' + (z.angle != null ? Number(z.angle).toFixed(0) + '°' : '—') + '</td>'
+          + '<td class="px-4 py-2"><input type="number" min="0" max="180" step="0.5" data-zone="' + esc(z.name) + '" class="row-angle-input w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80"></td>'
+          + '<td class="px-4 py-2 text-right"><button type="button" class="tool-btn rows-apply-btn" data-zone="' + esc(z.name) + '">' + rbl(hA) + '</button></td></tr>';
+      });
+      rZones.innerHTML = html + '</tbody></table>';
+    }
+    if (rModal) rModal.style.display = 'flex';
+  }
+  var rClose = document.getElementById('rows-detail-close');
+  if (rClose) rClose.addEventListener('click', hideRowsModal);
+  if (rModal) rModal.addEventListener('click', function (e) { if (e.target === rModal) hideRowsModal(); });
   if (zTrace) zTrace.addEventListener('click', function () { zonePickCount = 0; setZonePick(!zoneTraceArmed); });
   if (zSplit) zSplit.addEventListener('click', function () {
     var sel = checkedZones();

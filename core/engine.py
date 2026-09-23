@@ -1461,6 +1461,36 @@ def _trace_rows(zone_m, angle, spacing):
     return rows
 
 
+def _compute_zone_rows(plan, pts_m, z, spacing):
+    proj = plan["_proj"]
+    zone_m = z.get("poly_m")
+    fit = _zone_row_fit(pts_m, zone_m) if len(pts_m) >= 3 and zone_m is not None else None
+    manual = z.get("rows_manual")
+    if manual is not None:
+        try:
+            angle = float(manual) % 180.0
+        except (TypeError, ValueError):
+            angle = None
+        if angle is None:
+            manual = None
+    else:
+        angle = None
+    if fit is None:
+        auto, slope, elev = main_axis_angle(zone_m) % 180.0, 0.0, False
+    else:
+        auto, slope, elev = fit[0], fit[1], True
+    if angle is None:
+        angle = auto
+    lines_m = _trace_rows(zone_m, angle, spacing)
+    z["rows"] = {"angle": round(angle, 1), "spacing_m": spacing,
+                 "slope_pct": slope, "has_elev": elev,
+                 "manual": manual is not None,
+                 "n": len(lines_m),
+                 "total_m": round(sum(g.length for g in lines_m), 1),
+                 "lines": [proj.to_lonlat(g) for g in lines_m]}
+    return z["rows"]
+
+
 def compute_rows(plan, cfg, spacing=None):
     """AI row tracing: contour-following rows per zone from the elevation.
 
@@ -1480,18 +1510,7 @@ def compute_rows(plan, cfg, spacing=None):
     pts_m = [(proj.to_m(Point(lon, lat)), z) for lon, lat, z in raw]
     for sector in cfg.get("sectors", []):
         for z in sector.get("zones", []):
-            zone_m = z.get("poly_m")
-            fit = _zone_row_fit(pts_m, zone_m) if len(pts_m) >= 3 and zone_m is not None else None
-            if fit is None:
-                angle, slope, elev = main_axis_angle(zone_m) % 180.0, 0.0, False
-            else:
-                angle, slope, elev = fit[0], fit[1], True
-            lines_m = _trace_rows(zone_m, angle, spacing)
-            z["rows"] = {"angle": round(angle, 1), "spacing_m": spacing,
-                         "slope_pct": slope, "has_elev": elev,
-                         "n": len(lines_m),
-                         "total_m": round(sum(g.length for g in lines_m), 1),
-                         "lines": [proj.to_lonlat(g) for g in lines_m]}
+            _compute_zone_rows(plan, pts_m, z, spacing)
     cfg["row_spacing"] = spacing
     return cfg
 
@@ -1504,6 +1523,29 @@ def apply_rows_op(plan, cfg, spacing=None):
     if not (ROW_SPACING_MIN <= sp <= ROW_SPACING_MAX):
         return False, "Invalid spacing."
     compute_rows(plan, cfg, sp)
+    cfg["rows_confirmed"] = False
+    return True, None
+
+
+def apply_row_direction(plan, cfg, sector_idx=None, zone_name=None, angle=None):
+    """Set a manual row direction for one zone and re-trace it."""
+    sector = next((s for s in cfg.get("sectors", []) if s.get("idx") == sector_idx), None)
+    if sector is None:
+        return False, "Sector not found."
+    target = next((z for z in sector.get("zones", []) if z.get("name") == zone_name), None)
+    if target is None:
+        return False, "Zone not found."
+    try:
+        ang = float(angle)
+    except (TypeError, ValueError):
+        return False, "Invalid angle."
+    proj = plan["_proj"]
+    raw = [(lon, lat, z) for lon, lat, z in (plan.get("vertices_z") or [])
+           if z not in (None, 0)]
+    pts_m = [(proj.to_m(Point(lon, lat)), z) for lon, lat, z in raw]
+    target["rows_manual"] = round(ang % 180.0, 1)
+    spacing = cfg.get("row_spacing", ROW_SPACING_DEFAULT)
+    _compute_zone_rows(plan, pts_m, target, spacing)
     cfg["rows_confirmed"] = False
     return True, None
 
