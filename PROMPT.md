@@ -516,7 +516,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     **Final Result** now draws zones + both valve kinds + other elements
     and adds a detailed land **report + Export PDF** (`window.print` +
     print CSS); new partials `_other_result` / `_simulation_result`;
-    tab bar is Load/Upload/Basin/Sectors/Zones/Rows/Pipes/Valve/Other
+    tab bar is Load/Upload/Basin/Sectors/Zones/Rows/Valve/Pipes/Other
     Elements/Trees/Simulation/Final Result.
 36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
     the Valve tab (see data-model note above for the override-layer design).
@@ -622,7 +622,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     length tables + spacing control); i18n keys `TAB_ROWS, ROWS_SUB,
     ROW_SPACING, ROW_TRACE, ROW_TREE, ROW_DIRECTION, ROW_SLOPE, ROW_ROWS`
     (EN+AR) + spacing ERROR; tab bar is Load/Upload/Basin/Sectors/Zones/Rows/
-    Pipes/Valve/Other Elements/Trees/Simulation/Recap/Final Result.
+    Valve/Pipes/Other Elements/Trees/Simulation/Recap/Final Result.
 56. v0.32.0: **Rows confirm step** — Confirm Zones now jumps to Rows; Rows tab
     gained a Confirm Rows button (`rows_save` with `confirm:true` →
     `rows_confirmed`, then Valve); `rows_confirmed` resets on sector/zone/rows
@@ -660,8 +660,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     angle ERROR.
 62. v0.35.1: **Pipes before Valves** — tab/panel order swapped (flow jumps
     unchanged: Confirm Rows still lands on Valve).
-66. v0.36.3: **flow Rows → Pipes → Valves** — Confirm Rows now lands on Pipes,
-    following the tab order (was Valve).
 63. v0.36.0: **Pipes sector + type filters** — sector dropdown kept, plus a
     pipe-type pill group (principal 90 / major 63 / minor 32 / custom);
     `{op:overview}` takes `ptypes`, map/table honor both filters; new i18n
@@ -672,3 +670,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 65. v0.36.2: **accordion Arabic right** — the sector info card Arabic column
     used logical `text-end` with `direction:rtl`, which resolves left;
     switched to physical `text-right` so Arabic sits flush right.
+66. v0.36.3: **flow Rows → Pipes → Valves** — Confirm Rows now lands on Pipes,
+    following the tab order (was Valve).
+67. v0.36.4: **Valve before Pipes again** — pipes derive from valves so Valve
+    comes first; Confirm Rows lands back on Valve.
