@@ -664,3 +664,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     pipe-type pill group (principal 90 / major 63 / minor 32 / custom);
     `{op:overview}` takes `ptypes`, map/table honor both filters; new i18n
     keys `PIPE_TYPE, PIPE_CUSTOM` (EN+AR).
+64. v0.36.1: **Load rows on one row** — runs render as a single flex row
+    (name+token | no-wrap date | Load+Delete); `#runs-list .di` forced
+    no-wrap so the bilingual date never stacks.
+65. v0.36.2: **accordion Arabic right** — the sector info card Arabic column
+    used logical `text-end` with `direction:rtl`, which resolves left;
+    switched to physical `text-right` so Arabic sits flush right.

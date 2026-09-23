@@ -31,13 +31,13 @@
         <div class="p-5 md:p-6">
           <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-del-label='{{ t('DELETE') }}' data-saved-at='{{ t('SAVED_AT') }}'>
             {% for run in runs %}
-            <li class="grid grid-cols-1 items-center gap-3 rounded-xl bg-white/5 p-3 sm:grid-cols-3">
-              <div>
-                <div class="font-semibold text-white">{{ run.name }}</div>
-                <div class="text-xs text-white/30">{{ run.token }}</div>
+            <li class="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-semibold text-white">{{ run.name }}</div>
+                <div class="truncate text-xs text-white/30">{{ run.token }}</div>
               </div>
-              <div class="text-center text-sm text-white/50">{{ t('SAVED_AT') }}: {{ run.updated_str }}</div>
-              <div class="flex gap-2 sm:justify-end">
+              <div class="shrink-0 whitespace-nowrap text-sm text-white/50">{{ t('SAVED_AT') }}: {{ run.updated_str }}</div>
+              <div class="flex shrink-0 gap-2">
                 <button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="{{ run.token }}">{{ t('LOAD') }}</button>
                 <button type="button" class="tool-btn tool-btn-danger" data-del-token="{{ run.token }}">{{ t('DELETE') }}</button>
               </div>
@@ -801,11 +801,11 @@
       var savedAt = list.dataset.savedAt || '';
       var html = '';
       data.runs.forEach(function (r) {
-        html += '<li class="grid grid-cols-1 items-center gap-3 rounded-xl bg-white/5 p-3 sm:grid-cols-3">'
-          + '<div><div class="font-semibold text-white">' + esc(r.name) + '</div>'
-          + '<div class="text-xs text-white/30">' + esc(r.token) + '</div></div>'
-          + '<div class="text-center text-sm text-white/50">' + savedAt + ': ' + esc(r.updated_str || '') + '</div>'
-          + '<div class="flex gap-2 sm:justify-end">'
+        html += '<li class="flex items-center gap-3 rounded-xl bg-white/5 p-3">'
+          + '<div class="min-w-0 flex-1"><div class="truncate font-semibold text-white">' + esc(r.name) + '</div>'
+          + '<div class="truncate text-xs text-white/30">' + esc(r.token) + '</div></div>'
+          + '<div class="shrink-0 whitespace-nowrap text-sm text-white/50">' + savedAt + ': ' + esc(r.updated_str || '') + '</div>'
+          + '<div class="flex shrink-0 gap-2">'
           + '<button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="'
           + esc(r.token) + '">' + loadLabel + '</button>'
           + '<button type="button" class="tool-btn tool-btn-danger" data-del-token="'
