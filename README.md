@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.37.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.38.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -37,16 +37,18 @@ place. The browser never leaves `/`.
     Moved valves keep their position through
     sector/zone/basin rebuilds (override layer); moved secondary valves pull
     their 63/32 mm pipes along; removed valves stay removed.
-5. **Piping** — 90 mm principal pipe (basin → sector entries), **63 mm** major
-   pipes (sector valve → each zone valve), 32 mm minor pipes (valve → zone
-   supply point). The Pipes tab mirrors the Valve tab: sector + pipe-type
+5. **Piping** — 90 mm principal pipe from the basin through the sector
+   entries in AI-optimized visit order, **63 mm** majors tapped off the
+   principal at the closest point to each zone valve, 32 mm minors tapped
+   off their major at the closest point to the zone supply. The Pipes tab mirrors the Valve tab: sector + pipe-type
    filters (single sector zooms map + table to it; type pills filter
    principal 90 / major 63 / minor 32 / custom), large clickable map (pipe → info panel
    with type/diameter/sector/zone/length) and one unified table with a
    circle Locate button per pipe. A pipe management card adds full
    Add/Change/Remove: pick a pipe (or trace start/end on the map), set
    diameter 90/63/32 and sector/zone, then Add or Save; per-row Edit fills
-   the form and focuses the pipe. Changes survive rebuilds via an override
+   the form and focuses the pipe. An **AI Trace** button re-optimizes the
+   whole network and reports metres saved. Changes survive rebuilds via an override
    layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`); only the
    principal pipe cannot be removed.
 6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,

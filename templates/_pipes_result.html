@@ -103,10 +103,23 @@
     </div>
     <div class="flex flex-wrap gap-2">
       <button type="button" id="pipe-add-btn" data-cfg="{{ cfg.id }}" class="glow-btn rounded-xl px-4 py-2 text-sm font-bold">{{ bv('PIPE_ADD') }}</button>
+      <button type="button" id="pipe-ai-btn" data-cfg="{{ cfg.id }}" class="glow-btn rounded-xl px-4 py-2 text-sm font-bold">{{ bv('PIPE_AI_TRACE') }}</button>
       <button type="button" id="pipe-save-btn" data-cfg="{{ cfg.id }}" class="tool-btn">{{ bv('PIPE_SAVE') }}</button>
     </div>
+    <p class="text-xs text-white/45">{{ t('PIPE_AI_SUB') }}</p>
   </div>
 </div>
+{% if cfg.pipe_report %}
+<div class="mb-4 overflow-hidden rounded-2xl border border-emerald-400/20 bg-white/5">
+  <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('PIPE_AI_TRACE') }}</h3></div>
+  <div class="grid grid-cols-2 gap-3 p-5 text-sm text-white/75 lg:grid-cols-4">
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('T_PRINCIPAL') }} 90</div><div class="font-bold text-white">{{ "{:,.0f}".format(cfg.pipe_report.principal_before) }} → {{ "{:,.0f}".format(cfg.pipe_report.principal_after) }} m</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('PIPES') }}</div><div class="font-bold text-white">{{ "{:,.0f}".format(cfg.pipe_report.total_before) }} → {{ "{:,.0f}".format(cfg.pipe_report.total_after) }} m</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('PIPE_SAVED') }}</div><div class="font-bold text-emerald-300">{{ "{:,.0f}".format(cfg.pipe_report.saved_m) }} m ({{ cfg.pipe_report.saved_pct }} %)</div></div>
+    <div class="rounded-xl bg-white/5 p-3"><div class="text-white/50">{{ t('SECTOR') }}</div><div class="font-bold text-white">{{ cfg.pipe_report.order|join(' → ') }}</div></div>
+  </div>
+</div>
+{% endif %}
 <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
   <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('PIPES') }}</h3></div>
   <div class="overflow-x-auto">

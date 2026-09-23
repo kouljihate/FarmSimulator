@@ -681,3 +681,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     confirmed/pending), jumps to Pipes; `valves_confirmed` resets on
     sector/zone/valve edits like the other flags; new i18n keys
     `CONFIRM_VALVES, VALVES_CONFIRMED, VALVES_PENDING` (EN+AR).
+70. v0.38.0: **pipe hierarchy + AI Trace** — principal 90 starts at the basin
+    (no max-elev lead); majors tap the principal at the nearest point, minors
+    tap their major at the nearest point; `{op:pipe_ai}` → `optimize_pipes`
+    (greedy shortest principal order stored as `principal_order`, closest-tap
+    rebuild, savings report card); new i18n keys `PIPE_AI_TRACE, PIPE_AI_SUB,
+    PIPE_SAVED` (EN+AR).

@@ -521,6 +521,32 @@ def index():
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
+    if op == "pipe_ai":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        ok, report = engine.optimize_pipes(plan, cfg)
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(report)))
+        doc = STORE.load(data.get("token"))
+        ov_maps = dict((doc or {}).get("overview_maps") or {})
+        sector_maps = dict((doc or {}).get("sector_maps") or {})
+        other_maps = dict((doc or {}).get("other_maps") or {})
+        for key, store in ((data.get("cfgid"), ov_maps), (str(data.get("cfgid")), ov_maps),
+                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps),
+                           (data.get("cfgid"), other_maps), (str(data.get("cfgid")), other_maps)):
+            store.pop(key, None)
+        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
+                                            "other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
+                     report=report)
+        return jsonify(frags)
+
     if op == "other_add":
         plan = _get_plan(data.get("token"))
         cfg = next((c for c in (plan or {}).get("configs", [])

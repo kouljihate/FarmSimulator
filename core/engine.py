@@ -270,6 +270,24 @@ def _zone_order(sector, pieces, basin_m, scan_angle):
     return order
 
 
+def _principal_chain(plan, cfg, order=None):
+    """Principal 90 mm line: basin, then sector entries in visit order."""
+    proj = plan["_proj"]
+    if order:
+        byname = {s.get("name"): s for s in cfg.get("sectors", [])}
+        secs = [byname[n] for n in order if n in byname]
+        secs += [s for s in cfg.get("sectors", []) if s.get("name") not in (order or [])]
+    else:
+        secs = cfg.get("sectors", [])
+    pts = [plan["_basin_m"]] + [s["entry_m"] for s in secs]
+    principal_m = LineString(pts)
+    return principal_m, proj.to_lonlat(principal_m)
+
+
+def _nearest_on(line_m, pt_m):
+    return nearest_points(line_m, Point(pt_m))[0]
+
+
 def extend_config(plan, project, cfg, basin_m, max_elev_m):
     """Add zones, valves and pipes to a chosen sectorisation config.
 
@@ -281,15 +299,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
     if cfg.get("ready"):
         return cfg
 
-    principal_pts = []
-    if max_elev_m is not None:
-        principal_pts.append(max_elev_m)
-    principal_pts.append(basin_m)
-    for s in cfg["sectors"]:
-        principal_pts.append(s["entry_m"])
-
-    principal_m = LineString(principal_pts)
-    principal_ll = project.to_lonlat(principal_m)
+    principal_m, principal_ll = _principal_chain(plan, cfg)
 
     zones_all = []
     valves = []
@@ -330,13 +340,15 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
             valve_ll = project.to_lonlat(valve_m)
 
-            # major pipe 63 mm: sector entry valve -> zone secondary valve
-            major_m = LineString([Point(entry_m), Point(valve_m)])
+            # major pipe 63 mm: nearest principal tap -> zone secondary valve
+            tap_m = _nearest_on(principal_m, valve_m)
+            major_m = LineString([tap_m, Point(valve_m)])
             major_ll = project.to_lonlat(major_m)
 
-            # minor pipe 32 mm: zone valve -> zone water supply (centroid)
+            # minor pipe 32 mm: nearest major point -> zone water supply
             target_m = zone_m.centroid
-            minor_m = LineString([valve_m, target_m])
+            tap2_m = _nearest_on(major_m, target_m)
+            minor_m = LineString([tap2_m, target_m])
             minor_ll = project.to_lonlat(minor_m)
 
             zone = {
@@ -698,7 +710,7 @@ def recompute_sectors(plan, cfg, polys):
     cfg["zones_confirmed"] = False
     cfg["rows_confirmed"] = False
     cfg["valves_confirmed"] = False
-    for k in ("zones", "valves", "pipes"):
+    for k in ("zones", "valves", "pipes", "principal_order", "pipe_report"):
         cfg.pop(k, None)
     extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
     return cfg
@@ -842,16 +854,7 @@ def _find_zone(cfg, sector_idx, zone_idx=None, zone_name=None):
 
 def _rebuild_valves_pipes(plan, cfg):
     proj = plan["_proj"]
-    basin_m = plan["_basin_m"]
-    max_elev_m = plan.get("max_elev_m")
-    principal_pts = []
-    if max_elev_m is not None:
-        principal_pts.append(max_elev_m)
-    principal_pts.append(basin_m)
-    for s in cfg["sectors"]:
-        principal_pts.append(s["entry_m"])
-    principal_m = LineString(principal_pts)
-    principal_ll = proj.to_lonlat(principal_m)
+    principal_m, principal_ll = _principal_chain(plan, cfg, cfg.get("principal_order"))
     valves, majors, minors, zones_all = [], [], [], []
     for sector in cfg["sectors"]:
         entry_m = sector["entry_m"]
@@ -866,9 +869,11 @@ def _rebuild_valves_pipes(plan, cfg):
             zone_m = z["poly_m"]
             valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
             valve_ll = proj.to_lonlat(valve_m)
-            major_m = LineString([Point(entry_m), Point(valve_m)])
+            tap_m = _nearest_on(principal_m, valve_m)
+            major_m = LineString([tap_m, Point(valve_m)])
             target_m = zone_m.centroid
-            minor_m = LineString([valve_m, target_m])
+            tap2_m = _nearest_on(major_m, target_m)
+            minor_m = LineString([tap2_m, target_m])
             z["centroid"] = proj.to_lonlat(target_m)
             valves.append({
                 "id": _valve_id("secondary", sector["name"], z["name"]),
@@ -966,10 +971,12 @@ def _apply_valve_customization(plan, cfg):
                 zon = zones.get(v.get("zone"))
                 if sec is not None and zon is not None:
                     valve_m = proj.to_m(Point(lon, lat))
-                    entry_m = sec["entry_m"]
                     target_m = zon["poly_m"].centroid
-                    major_m = LineString([Point(entry_m), Point(valve_m)])
-                    minor_m = LineString([valve_m, target_m])
+                    princ_m, _ = _principal_chain(plan, cfg)
+                    tap_m = _nearest_on(princ_m, valve_m)
+                    major_m = LineString([tap_m, valve_m])
+                    tap2_m = _nearest_on(major_m, target_m)
+                    minor_m = LineString([tap2_m, target_m])
                     if v.get("zone") in majors:
                         majors[v["zone"]]["line"] = proj.to_lonlat(major_m)
                         majors[v["zone"]]["len_m"] = major_m.length
@@ -1285,6 +1292,46 @@ def _find_pipe(cfg, pid):
         if m.get("pid") == pid:
             return m
     return None
+
+
+def _pipe_totals(cfg):
+    pipes = cfg.get("pipes") or {}
+    princ = (pipes.get("principal") or {}).get("len_m", 0.0)
+    majors = sum(m.get("len_m", 0.0) for m in pipes.get("majors", []) or [])
+    minors = sum(m.get("len_m", 0.0) for m in pipes.get("minors", []) or [])
+    customs = sum(m.get("len_m", 0.0) for m in pipes.get("customs", []) or [])
+    return princ, majors + minors + customs, princ + majors + minors + customs
+
+
+def optimize_pipes(plan, cfg):
+    """AI optimal trace: shortest principal visit order, closest taps.
+
+    Orders the principal 90 mm chain greedily (nearest entry next) from the
+    basin, then rebuilds every 63/32 mm pipe from its closest tap point.
+    Stores the visit order for future rebuilds plus a savings report.
+    """
+    before_p, _, before_t = _pipe_totals(cfg)
+    remaining = [(s.get("name"), s["entry_m"]) for s in cfg.get("sectors", [])]
+    order, cur = [], plan["_basin_m"]
+    while remaining:
+        i = min(range(len(remaining)), key=lambda k: remaining[k][1].distance(cur))
+        name, pt = remaining.pop(i)
+        order.append(name)
+        cur = pt
+    cfg["principal_order"] = order
+    _rebuild_valves_pipes(plan, cfg)
+    after_p, _, after_t = _pipe_totals(cfg)
+    saved = max(0.0, before_t - after_t)
+    cfg["pipe_report"] = {
+        "principal_before": round(before_p, 1),
+        "principal_after": round(after_p, 1),
+        "total_before": round(before_t, 1),
+        "total_after": round(after_t, 1),
+        "saved_m": round(saved, 1),
+        "saved_pct": round(100.0 * saved / before_t, 1) if before_t > 0 else 0.0,
+        "order": list(order),
+    }
+    return True, cfg["pipe_report"]
 
 
 def apply_pipe_op(plan, cfg, op, pipe_id=None, diameter=None,
