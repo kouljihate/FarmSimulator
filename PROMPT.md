@@ -674,3 +674,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     following the tab order (was Valve).
 67. v0.36.4: **Valve before Pipes again** — pipes derive from valves so Valve
     comes first; Confirm Rows lands back on Valve.
+68. v0.36.5: **Load row exact format** — `Name(token)` + `Last saved DATE
+    آخر حفظ` (no colon, EN/date/AR inline) + the 2 buttons, server rows and
+    JS builder identical.

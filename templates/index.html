@@ -29,14 +29,13 @@
       <div id="runs-card" class="overflow-hidden rounded-2xl border border-white/10 bg-white/5" {% if not runs %}style="display:none"{% endif %}>
         <div class="border-b border-white/10 px-5 py-3"><h2 class="text-lg font-semibold text-white">{{ t('LOAD_TITLE') }}</h2></div>
         <div class="p-5 md:p-6">
-          <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-del-label='{{ t('DELETE') }}' data-saved-at='{{ t('SAVED_AT') }}'>
+          <ul id="runs-list" class="space-y-2" data-load-label='{{ t('LOAD') }}' data-del-label='{{ t('DELETE') }}' data-saved-en="{{ tl('SAVED_AT')[0] }}" data-saved-ar="{{ tl('SAVED_AT')[1] }}">
             {% for run in runs %}
             <li class="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-              <div class="min-w-0 flex-1">
-                <div class="truncate font-semibold text-white">{{ run.name }}</div>
-                <div class="truncate text-xs text-white/30">{{ run.token }}</div>
+              <div class="min-w-0 flex-1 truncate">
+                <span class="font-semibold text-white">{{ run.name }}</span><span class="text-xs text-white/30">({{ run.token }})</span>
               </div>
-              <div class="shrink-0 whitespace-nowrap text-sm text-white/50">{{ t('SAVED_AT') }}: {{ run.updated_str }}</div>
+              <div class="shrink-0 whitespace-nowrap text-sm text-white/50"><span class="en">{{ tl('SAVED_AT')[0] }}</span> {{ run.updated_str }}   <span class="ar">{{ tl('SAVED_AT')[1] }}</span></div>
               <div class="flex shrink-0 gap-2">
                 <button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="{{ run.token }}">{{ t('LOAD') }}</button>
                 <button type="button" class="tool-btn tool-btn-danger" data-del-token="{{ run.token }}">{{ t('DELETE') }}</button>
@@ -798,13 +797,14 @@
       if (!list || !card || !empty) return;
       var loadLabel = list.dataset.loadLabel || 'Load';
       var delLabel = list.dataset.delLabel || 'Delete';
-      var savedAt = list.dataset.savedAt || '';
+      var savedEn = list.dataset.savedEn || 'Last saved';
+      var savedAr = list.dataset.savedAr || '';
       var html = '';
       data.runs.forEach(function (r) {
         html += '<li class="flex items-center gap-3 rounded-xl bg-white/5 p-3">'
-          + '<div class="min-w-0 flex-1"><div class="truncate font-semibold text-white">' + esc(r.name) + '</div>'
-          + '<div class="truncate text-xs text-white/30">' + esc(r.token) + '</div></div>'
-          + '<div class="shrink-0 whitespace-nowrap text-sm text-white/50">' + savedAt + ': ' + esc(r.updated_str || '') + '</div>'
+          + '<div class="min-w-0 flex-1 truncate"><span class="font-semibold text-white">' + esc(r.name) + '</span>'
+          + '<span class="text-xs text-white/30">(' + esc(r.token) + ')</span></div>'
+          + '<div class="shrink-0 whitespace-nowrap text-sm text-white/50"><span class="en">' + esc(savedEn) + '</span> ' + esc(r.updated_str || '') + '   <span class="ar">' + esc(savedAr) + '</span></div>'
           + '<div class="flex shrink-0 gap-2">'
           + '<button type="button" class="glow-btn rounded-xl px-4 py-2 font-semibold" data-load-token="'
           + esc(r.token) + '">' + loadLabel + '</button>'
