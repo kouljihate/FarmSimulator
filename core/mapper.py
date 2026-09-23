@@ -330,6 +330,16 @@ def map_config_overview(plan, cfg):
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
 
     colors = _sector_color_map(cfg)
+    # Add sector labels layer
+    sector_labels = []
+    for s in cfg["sectors"]:
+        # Add sector centroid marker with name
+        nm = s["poly"].centroid
+        sector_labels.append({
+            "lat": nm.y, "lon": nm.x,
+            "html": f'<div class="text-white text-sm font-bold text-center py-1 px-2 rounded bg-cyan-600/30">{s["name"]}</div>'
+        })
+    # Add sector polygons
     for s in cfg["sectors"]:
         lay.polygon(s["poly"], _ti("sector", name=s["name"], area=s["area_m2"]),
                     colors[s["idx"]], 0.10, weight=2)
@@ -802,6 +812,7 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
 RECAP_LAYERS = (
     ("sectors", "polygon"),
     ("zones", "polygon"),
+    ("sector_labels", "labels"),
     ("zone_labels", "labels"),
     ("valves_p", "marker"),
     ("valves_s", "marker"),
@@ -868,7 +879,7 @@ def map_recap(plan, cfg):
     """Big recap map: every component in its own toggleable layer group."""
     import json
     state = {s["key"]: s for s in recap_state(cfg)}
-    data = {"sectors": [], "zones": [], "labels": [], "trees": [],
+    data = {"sectors": [], "zones": [], "labels": [], "sector_labels": [], "trees": [],
             "valves_p": [], "valves_s": [], "pipes_90": [], "pipes_63": [],
             "pipes_32": [], "rows": [], "others": []}
     for s in cfg.get("sectors", []):
@@ -951,6 +962,9 @@ def _recap_js(data, prefs, basin, water):
         "DATA.labels.forEach(function(o){"
         "L.marker([o.lat,o.lon],{icon:L.divIcon({className:'',html:o.html}),"
         "interactive:false}).addTo(grp('zone_labels'));});"
+        "DATA.sector_labels.forEach(function(o){"
+        "L.marker([o.lat,o.lon],{icon:L.divIcon({className:'',html:o.html}),"
+        "interactive:false}).addTo(grp('sector_labels'));});"
         "DATA.trees.forEach(function(o){"
         "o.locs.forEach(function(ring){"
         "L.polygon(ring,{color:o.color,weight:1,opacity:.9,fill:true,"
