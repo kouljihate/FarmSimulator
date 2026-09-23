@@ -352,6 +352,12 @@
       loadingT = null;
       if (loadingN > 0) l.style.display = 'flex';
     }, 250);
+    // Adapt button text when loader starts
+    var activeBtn = document.querySelector('.glow-btn.primary, .glow-btn.danger, .tool-btn.primary, .tool-btn.danger');
+    if (activeBtn && !activeBtn.dataset.originalText) {
+      activeBtn.dataset.originalText = activeBtn.innerText;
+      activeBtn.innerText = '{{ bv('SAVING') }}';
+    }
   }
 
   function loaderOff() {
@@ -360,6 +366,12 @@
     if (loadingT) { clearTimeout(loadingT); loadingT = null; }
     var l = document.getElementById('page-loader');
     if (l) l.style.display = 'none';
+    // Revert button text when loader stops
+    var activeBtn = document.querySelector('.glow-btn.primary, .glow-btn.danger, .tool-btn.primary, .tool-btn.danger');
+    if (activeBtn && activeBtn.dataset.originalText) {
+      activeBtn.innerText = activeBtn.dataset.originalText;
+      delete activeBtn.dataset.originalText;
+    }
   }
 
   function mutate(payload) {

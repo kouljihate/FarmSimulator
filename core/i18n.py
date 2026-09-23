@@ -223,6 +223,7 @@ EN = {
     "SECTOR_RENAMED": "Sector renamed.",
     "SECTOR_NAME_TAKEN": "That sector name is already used. Pick a unique name.",
     "NETWORK_ERROR": "Request failed. Please try again.",
+    "SAVING": "Saving...",
     "SAVED_OK": "Saved.",
     "LOADING": "Loading…",
     "SAVING": "Saving...",
