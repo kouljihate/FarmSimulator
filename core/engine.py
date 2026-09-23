@@ -635,6 +635,7 @@ def extend(plan, cfgid):
         raise ValueError("Unknown config")
     cfg = cfg[0]
     if cfg.get("ready"):
+        _migrate_zone_names(cfg)
         _number_valves(cfg)
         _ensure_pipe_pids(cfg)
         return cfg
@@ -1685,6 +1686,49 @@ def tree_stats(zone):
     except (TypeError, ValueError):
         n = 0
     return {"dist": dist, "pct": pct, "planted_m2": round(planted, 1), "n": n}
+
+
+def _migrate_zone_names(cfg):
+    """Rename old auto zones ``{sector}-Z<k>`` to ``S<idx>Z<k>``.
+
+    Custom zone names are left alone. Valve/pipe keys and ids follow the
+    rename so manual tweaks survive it.
+    """
+    for s in cfg.get("sectors", []):
+        sec, idx = s.get("name"), s.get("idx")
+        for z in s.get("zones", []) or []:
+            m = _re.match(r"^{0}-Z(\d+)\s*$".format(_re.escape(sec or "")),
+                          z.get("name") or "")
+            if not m:
+                continue
+            old, new = z["name"], "S{0}Z{1:d}".format(idx, int(m.group(1)))
+            if old == new:
+                continue
+            z["name"] = new
+            for v in cfg.get("valves", []) or []:
+                if v.get("zone") == old:
+                    v["zone"] = new
+                    if v.get("id") == "S:" + old:
+                        v["id"] = "S:" + new
+            _rekey_valves(cfg, old_zone=old, new_zone=new)
+            for lst, pre in (("majors", "M:"), ("minors", "m:")):
+                for m_ in (cfg.get("pipes", {}).get(lst, []) or []):
+                    if m_.get("zone") == old:
+                        m_["zone"] = new
+                        m_["pid"] = pre + new
+            ov = cfg.get("pipe_overrides") or {}
+            cfg["pipe_overrides"] = {
+                next((pre + new for pre in ("M:", "m:") if k == pre + old), k): v
+                for k, v in ov.items()
+            }
+            cfg["removed_pipes"] = [
+                next((pre + new for pre in ("M:", "m:") if r == pre + old), r)
+                for r in (cfg.get("removed_pipes") or []) if r
+            ]
+            for c in (cfg.get("custom_pipes") or []) + (cfg.get("custom_valves") or []):
+                if c.get("zone") == old:
+                    c["zone"] = new
+    return cfg
 
 
 def _move_zone_refs(cfg, old, new):

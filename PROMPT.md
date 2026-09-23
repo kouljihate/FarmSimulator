@@ -292,7 +292,7 @@ plus the `"Point is outside the land boundary."` error.
 `sector`: `idx (1-based), name (S{idx}), poly_m, poly (lonlat), centroid,
 area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
-`zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid, tree, rows{angle,spacing_m,slope_pct,has_elev,n,total_m,lines}`
+`zone`: `idx (1-based), name (S1Z1…), poly_m, poly, area_m2, centroid, tree, rows{angle,spacing_m,slope_pct,has_elev,n,total_m,lines}`
 
    `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
    point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
@@ -700,3 +700,8 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `{tree,dist,pct}` per zone (validated); new i18n keys `TREE_DISTANCE,
     TREE_PERCENT, TREE_PLANTED, TREE_COUNT` (EN+AR) + spacing/percentage
     ERRORS.
+74. v0.40.0: **zones S1Z1** — auto zones named `S<sector-idx>Z<k>` (was
+    `{sector}-Z<k>`); old runs migrate on load (`_migrate_zone_names`, custom
+    names untouched, valve/pipe keys+ids follow, idempotent); sector
+    rename/swap rekey by trailing Z-number; `map_sector` matches
+    pipes/valves by sector field instead of name prefix.
