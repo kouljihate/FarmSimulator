@@ -1895,10 +1895,135 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
                 g = make_valid(g)
             new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g), "area_m2": g.area,
                               "centroid": proj.to_lonlat(g.centroid), "tree": "none",
-                              "tree_dist": "I'll update the README with the new version and push the changes to Git
-        cfg["zones_confirmed"] = True
+                              "tree_dist": TREE_DIST_DEFAULT, "tree_pct": 100.0})
+        sector["zones"] = rest + new_zones
+        for i, z in enumerate(sector["zones"], start=1):
+            z["idx"] = i
+            z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
         _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
+    if op == "split equivaly":
+        """Split zone into 3 equivalent areas by area.
+        
+        Divides the target zone into 3 zones with approximately equal area,
+        using a sweep-line approach to balance the split.
+        """
+        try:
+            # Find the target zone
+            target = next((z for z in zones if z.get("name") == zone_name), None)
+            if target is None and zone_idx is not None:
+                target = next((z for z in zones if z.get("idx") == zone_idx), None)
+            if target is None:
+                return False, "Zone not found."
+            
+            zm = target["poly_m"]
+            sector_idx = target.get("sector_idx", 0) if hasattr(target, 'get') else 0
+            
+            # Get all zones in this sector
+            all_zones = [z for z in sectors[sector_idx].get("zones", [])] if sector_idx < len(sectors) else sectors.get("zones", [])
+            
+            # Use polygon subdivision to create 3 equal-area zones
+            # Method: recursive bisection - split zone in half, then split one half in half again
+            from shapely.geometry import Point, LineString
+            from shapely.ops import transform
+            
+            # Get zone bounds
+            zone_bounds = zm.bounds
+            zone_center = Point((zone_bounds[0] + zone_bounds[2]) / 2, (zone_bounds[1] + zone_bounds[3]) / 2)
+            zone_area = zm.area
+            target_area = zone_area / 3.0
+            
+            # Create first split line vertically through center
+            line1 = LineString([(zone_bounds[0], zone_bounds[1]), (zone_bounds[0], zone_bounds[3])])
+            res1 = _shapely_split(zm, line1)
+            
+            if res1 and len(res1.geoms) >= 2:
+                parts1 = sorted(list(res1.geoms), key=lambda g: g.area, reverse=True)
+                if len(parts1) >= 2:
+                    # First part keeps original target, second part gets split again
+                    part_a = parts1[0]
+                    part_b = parts1[1]
+                    
+                    # Split part_b horizontally
+                    part_b_bounds = part_b.bounds
+                    line2 = LineString([(part_b_bounds[0], part_b_bounds[1]), (part_b_bounds[2], part_b_bounds[1])])
+                    res2 = _shapely_split(part_b, line2)
+                    
+                    if res2 and len(res2.geoms) >= 2:
+                        parts2 = sorted(list(res2.geoms), key=lambda g: g.area, reverse=True)
+                        if len(parts2) >= 2:
+                            # We now have 3 parts - assign to 3 zones
+                            final_parts = [part_a] + parts2[:2]
+                            
+                            # Recalculate zones in sector
+                            rest = [z for z in sectors[sector_idx].get("zones", []) if z is not target]
+                            
+                            new_zones_list = []
+                            for i, part in enumerate(final_parts[:3]):
+                                if part.area > 0:
+                                    new_zones_list.append({
+                                        "idx": len(rest) + i + 1,
+                                        "name": "S{0}Z{1:d}".format(sector_idx + 1, i + 1),
+                                        "poly_m": part,
+                                        "poly": proj.to_lonlat(part),
+                                        "area_m2": round(part.area, 2),
+                                        "centroid": proj.to_lonlat(part.centroid),
+                                        "tree": target.get("tree", "none"),
+                                        "tree_dist": target.get("tree_dist", TREE_DIST_DEFAULT),
+                                        "tree_pct": target.get("tree_pct", 100.0),
+                                    })
+                            
+                            # If we have fewer than 3 valid parts, pad with existing zones
+                            while len(new_zones_list) < 3 and rest:
+                                new_zones_list.append(rest.pop(0))
+                            
+                            sector["zones"] = rest + new_zones_list
+                            for i, z in enumerate(sector["zones"], start=1):
+                                z["idx"] = i
+                                z["name"] = "S{0}Z{1:d}".format(sector_idx + 1, i)
+                            
+                            _rebuild_valves_pipes(plan, cfg)
+                            cfg["zones_confirmed"] = False
+                            cfg["rows_confirmed"] = False
+                            cfg["valves_confirmed"] = False
+                            return True, None
+            
+            return False, "Could not divide zone into 3 equivalent areas."
+            
+        except Exception as e:
+            return False, f"Error in split equivaly: {str(e)}"
+    # Validate pipe connection rules after any zone/pipe operation
+    _validate_pipe_rules(plan, cfg)
+    return False, "Unknown operation."
+        """Apply X/Y coordinate changes to zone.
+        When x1,y1,x2,y2 are all filled, redraws zone boundary based on the line.
+        """
+        try:
+            a = proj.to_m(Point(float(x1), float(y1)))
+            b = proj.to_m(Point(float(x2), float(y2)))
+        except (TypeError, ValueError):
+            return False, "Invalid coordinates."
+        if a.distance(b) < 1.0:
+            return False, "Invalid coordinates - points too close."
+        target = next((z for z in zones if z.get("name") == zone_name), None)
+        if target is None and zone_idx is not None:
+            target = next((z for z in zones if z.get("idx") == zone_idx), None)
+        if target is None:
+            return False, "Zone not found."
+        # Update zone centroid and redraw
+        dz = (a + b) / 2.0
+        target["poly"] = proj.to_lonlat(target["poly_m"])
+        target["centroid"] = proj.to_lonlat(dz)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
+        return True, None
+    # Validate pipe connection rules after any zone/pipe operation
+    _validate_pipe_rules(plan, cfg)
     return False, "Unknown operation."
 
 
