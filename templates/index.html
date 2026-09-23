@@ -213,8 +213,11 @@
 
 <div id="sector-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none"
      data-title-rename="{{ ts('SECTOR_RENAME') }}" data-title-remove="{{ ts('SECTOR_REMOVE') }}"
+     data-title-delete="{{ ts('DELETE') }}"
      data-ok-confirm="{{ ts('CONFIRM') }}" data-ok-remove="{{ ts('SECTOR_REMOVE') }}"
-     data-msg-remove="{{ tsf('REMOVE_ASK', name='__N__') }}" data-ph-new="{{ ts('NEW_NAME') }}">
+     data-ok-delete="{{ ts('DELETE') }}"
+     data-msg-remove="{{ tsf('REMOVE_ASK', name='__N__') }}"
+     data-msg-delete="{{ tsf('DELETE_ASK', name='__N__') }}" data-ph-new="{{ ts('NEW_NAME') }}">
   <div class="sector-modal-card w-full max-w-sm p-6">
     <h3 id="sector-modal-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
     <input id="sector-modal-name" type="text">
@@ -841,16 +844,7 @@
       hideError();
       var row = del.closest('li');
       var nm = row ? row.querySelector('.font-semibold').textContent : del.getAttribute('data-del-token');
-      if (!confirm('Delete ' + nm + '?')) return;
-      api({ op: 'delete_run', token: del.getAttribute('data-del-token') }).then(function (data) {
-        if (!data.ok) { apiFail(data); return; }
-        toastOk();
-        if (S.token === del.getAttribute('data-del-token')) {
-          S.token = null; S.plan = null; S.cfgid = null;
-          resetOverview();
-        }
-        refreshRuns();
-      }).catch(function () { showError(terrHtml('tnet')); });
+      openDeleteModal(del.getAttribute('data-del-token'), nm);
       return;
     }
     var lb = e.target && e.target.closest ? e.target.closest('[data-load-token]') : null;
@@ -1275,7 +1269,7 @@
   var modalMsg = document.getElementById('sector-modal-msg');
   var modalOk = document.getElementById('sector-modal-ok');
   var modalCancel = document.getElementById('sector-modal-cancel');
-  var modalMode = null, modalCfg = null, modalIdx = null;
+  var modalMode = null, modalCfg = null, modalIdx = null, modalToken = null;
 
   function modalH(text) {
     var p = String(text).split(' | ');
@@ -1314,6 +1308,29 @@
     modalOk.className = 'sector-modal-btn danger';
     modal.style.display = 'flex';
   }
+  function openDeleteModal(token, name) {
+    if (!modal) return;
+    modalMode = 'delete'; modalToken = token;
+    modalTitle.innerHTML = modalH(modal.dataset.titleDelete);
+    modalName.style.display = 'none';
+    modalName.value = '';
+    modalMsg.style.display = '';
+    modalMsg.innerHTML = modalV((modal.dataset.msgDelete || '').replace(/__N__/g, name));
+    modalOk.innerHTML = modalV(modal.dataset.okDelete);
+    modalOk.className = 'sector-modal-btn danger';
+    modal.style.display = 'flex';
+  }
+  function doDeleteRun(token) {
+    if (!token) return;
+    mutate({ op: 'delete_run', token: token }).then(function (data) {
+      if (!data.ok) { apiFail(data); return; }
+      if (S.token === token) {
+        S.token = null; S.plan = null; S.cfgid = null;
+        resetOverview();
+      }
+      refreshRuns();
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
   function confirmSectorModal() {
     if (!modal || modalMode === null) return;
     if (modalMode === 'rename') {
@@ -1322,6 +1339,8 @@
       applySectorOp(modalCfg, 'rename', { idx: modalIdx, name: nm });
     } else if (modalMode === 'remove') {
       applySectorOp(modalCfg, 'remove', { idx: modalIdx });
+    } else if (modalMode === 'delete') {
+      doDeleteRun(modalToken);
     }
     modalMode = null;
     hideModal();

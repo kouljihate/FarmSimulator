@@ -687,3 +687,6 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     (greedy shortest principal order stored as `principal_order`, closest-tap
     rebuild, savings report card); new i18n keys `PIPE_AI_TRACE, PIPE_AI_SUB,
     PIPE_SAVED` (EN+AR).
+71. v0.38.1: **delete confirm modal** — Load Delete opens the themed bilingual
+    modal (`DELETE_ASK` with land name, danger confirm) instead of native
+    `confirm()`; no new keys.
