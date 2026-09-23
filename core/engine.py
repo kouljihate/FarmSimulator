@@ -881,19 +881,23 @@ def _valve_key(v):
 
 
 def _number_valves(cfg):
-    """Name valves: principal ``<sector>V1``, others ``<sector>V11…``."""
+    """Name valves: principal ``S<idx>V1``, others ``S<idx>V11…``."""
+    idx_of = {s.get("name"): s.get("idx") for s in cfg.get("sectors", [])}
     for v in cfg.get("valves") or []:
         if not v.get("custom") and v.get("kind") == "principal" and v.get("sector"):
-            v["name"] = "{0}V1".format(v["sector"])
+            i = idx_of.get(v.get("sector"))
+            if i is not None:
+                v["name"] = "S{0}V1".format(i)
     counters = {}
     for v in cfg.get("valves") or []:
         if not v.get("custom") and v.get("kind") == "principal":
             continue
         sec = v.get("sector")
-        if not sec:
+        i = idx_of.get(sec)
+        if i is None:
             continue
         counters[sec] = max(counters.get(sec, 10), 10) + 1
-        v["name"] = "{0}V{1:d}".format(sec, counters[sec])
+        v["name"] = "S{0}V{1:d}".format(i, counters[sec])
     return cfg
 
 

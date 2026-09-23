@@ -295,8 +295,8 @@ area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
    `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
    point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
-   lon, lat, point, name}` — display `name` is always principal `<sector>V1`
-   (S1V1) and secondaries `<sector>V11…` (S1V11, S1V12…; customs continue;
+   lon, lat, point, name}` — display `name` is always principal `S<idx>V1`
+   (S1V1) and secondaries `S<idx>V11…` (S1V11, S1V12…; customs continue;
    `_number_valves`, also
    applied to already-ready configs in `extend`)
    (added valves get `id:C:<hex>` + `custom:true`;
@@ -583,6 +583,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `<sector>V1` and secondaries `<sector>V11…` (customs continue) after every
     rebuild; `extend` renumbers already-ready configs so old runs migrate on
     next load; zone ops no longer touch valve names.
+53. v0.29.0: **short valve names** — prefix is the sector index (`S1V1`,
+    `S1V11…`) instead of the full sector name (`Sector 1V1`); the table Sector
+    column still shows the full name.
 50. v0.27.0: **Pipes mirror Valves** — sector filter (`pipes-sector-filter`,
     `{op:overview}` `psector`, `selected_pipe_sector`), large clickable pipes
     map (`_pipe_manage_js`: JS-drawn polylines, `pipe-select` → info panel,
