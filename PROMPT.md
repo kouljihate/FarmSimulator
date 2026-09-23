@@ -690,3 +690,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 71. v0.38.1: **delete confirm modal** — Load Delete opens the themed bilingual
     modal (`DELETE_ASK` with land name, danger confirm) instead of native
     `confirm()`; no new keys.
+72. v0.38.2: **staged Save honesty** — the sequential valve-save chain used to
+    ignore per-move server rejections (e.g. dragged outside the land) and
+    still toasted success; it now aborts on the first rejection, shows the
+    real bilingual error, and keeps the remaining staged moves for retry.

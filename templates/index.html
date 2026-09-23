@@ -768,13 +768,14 @@
     if (!ids.length || !S.token) { if (done) done(); return; }
     var i = 0;
     (function next() {
-      if (i >= ids.length) { valveStaged = {}; toastOk(); if (done) done(); return; }
+      if (i >= ids.length) { valveStaged = {}; updateValveSaveBtn(); toastOk(); if (done) done(); return; }
       var vid = ids[i++];
       var p = valveStaged[vid];
       api({ op: 'valve_action', token: S.token, cfgid: parseInt(cfgid, 10),
-            action: 'move', valve_id: vid, lon: p.lon, lat: p.lat }).then(next).catch(function () {
-        showError(terrHtml('tnet'));
-      });
+            action: 'move', valve_id: vid, lon: p.lon, lat: p.lat }).then(function (data) {
+        if (!data.ok) { apiFail(data); return; }
+        next();
+      }).catch(function () { showError(terrHtml('tnet')); });
     })();
   }
 
