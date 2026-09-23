@@ -114,6 +114,7 @@ def plan_summary(plan):
             "name": c.get("name"),
             "n_sectors": c.get("n_sectors"),
             "zones_confirmed": bool(c.get("zones_confirmed")),
+            "valves_confirmed": bool(c.get("valves_confirmed")),
             "totals": _cfg_totals(c),
             "sectors": [_sector_summary(s) for s in c.get("sectors") or []],
         } for c in plan.get("configs") or []],

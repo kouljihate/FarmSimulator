@@ -888,7 +888,13 @@
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
-    var ts = e.target && e.target.closest ? e.target.closest('.tree-save-btn') : null;
+    var cv = e.target && e.target.closest ? e.target.closest('.confirm-valves-btn') : null;
+    if (cv) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      valveAction(cv.getAttribute('data-cfg'), 'confirm', {});
+      goTab('tab-pipes');
+      return;
+    }
     if (ts) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
       var trees = {};

@@ -677,3 +677,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 68. v0.36.5: **Load row exact format** — `Name(token)` + `Last saved DATE
     آخر حفظ` (no colon, EN/date/AR inline) + the 2 buttons, server rows and
     JS builder identical.
+69. v0.37.0: **Confirm Valves button** — end of Valve tab (badges
+    confirmed/pending), jumps to Pipes; `valves_confirmed` resets on
+    sector/zone/valve edits like the other flags; new i18n keys
+    `CONFIRM_VALVES, VALVES_CONFIRMED, VALVES_PENDING` (EN+AR).

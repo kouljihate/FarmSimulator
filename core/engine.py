@@ -543,6 +543,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     for c in configs:
         c.setdefault("zones_confirmed", False)
         c.setdefault("rows_confirmed", False)
+        c.setdefault("valves_confirmed", False)
     return {
         "name": parsed.get("name") or "Untitled plot",
         "all_boundaries": [{
@@ -605,6 +606,7 @@ def set_basin(plan, lon, lat):
     for c in plan["configs"]:
         c.setdefault("zones_confirmed", False)
         c.setdefault("rows_confirmed", False)
+        c.setdefault("valves_confirmed", False)
     return True, None
 
 
@@ -695,6 +697,7 @@ def recompute_sectors(plan, cfg, polys):
     cfg["ready"] = False
     cfg["zones_confirmed"] = False
     cfg["rows_confirmed"] = False
+    cfg["valves_confirmed"] = False
     for k in ("zones", "valves", "pipes"):
         cfg.pop(k, None)
     extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
@@ -1181,6 +1184,9 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
     the 63/32 mm pipes following moved secondary valves. Added valves are
     stored in ``custom_valves`` (markers only, no pipes).
     """
+    if op == "confirm":
+        cfg["valves_confirmed"] = True
+        return True, None
     if op == "move":
         v = next((x for x in cfg.get("valves", []) if x.get("id") == valve_id), None)
         if v is None:
@@ -1198,6 +1204,7 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
         else:
             cfg.setdefault("valve_overrides", {})[_valve_key(v)] = [lon_f, lat_f]
         _rebuild_valves_pipes(plan, cfg)
+        cfg["valves_confirmed"] = False
         return True, None
 
     if op == "add":
@@ -1228,6 +1235,7 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
             "name": "Valve {0} {1}".format(kind, label),
         })
         _rebuild_valves_pipes(plan, cfg)
+        cfg["valves_confirmed"] = False
         return True, None
 
     if op == "remove":
@@ -1242,6 +1250,7 @@ def apply_valve_op(plan, cfg, op, valve_id=None, kind=None,
             cfg.setdefault("removed_valves", []).append(list(key))
             (cfg.get("valve_overrides") or {}).pop(key, None)
         _rebuild_valves_pipes(plan, cfg)
+        cfg["valves_confirmed"] = False
         return True, None
 
     return False, "Unknown operation."
@@ -1608,6 +1617,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
     if op == "swap":
         a = next((z for z in zones if z.get("name") == zone_name), None)
@@ -1627,6 +1637,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
     if op == "merge":
         wanted = {n for n in (zone_names or []) if n}
@@ -1652,6 +1663,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
     if op == "remove":
         wanted = {n for n in (zone_names or []) if n}
@@ -1680,6 +1692,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
     if op == "split":
         try:
@@ -1725,6 +1738,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         _rebuild_valves_pipes(plan, cfg)
         cfg["zones_confirmed"] = False
         cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
     if op == "confirm":
         cfg["zones_confirmed"] = True
