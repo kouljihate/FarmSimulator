@@ -705,3 +705,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     names untouched, valve/pipe keys+ids follow, idempotent); sector
     rename/swap rekey by trailing Z-number; `map_sector` matches
     pipes/valves by sector field instead of name prefix.
+75. v0.40.1: **two-row nav tabs** — tab buttons use stacked `bv()` (Arabic on
+    top, English below) instead of inline `bi()`.
