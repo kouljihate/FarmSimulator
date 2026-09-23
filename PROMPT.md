@@ -90,9 +90,10 @@ token must return `ok:false`.
   runs list). Everything else is `POST /`: multipart `file` = upload;
    otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
    basin | sector_coords | sector_action | zone_action | valve_action |
+   pipe_action | rows_save | tree_save |
    overview | other_add | other_remove | sim_save`. Responses carry server-rendered
-  fragments (`basin_html`, `sectors_html`, `zones/valves/pipes/other/sim/
-  final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
+  fragments (`basin_html`, `sectors_html`, `zones/rows/valves/pipes/other/trees/
+  sim/final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
   with `updated_str`). Client state `S = {token, plan, cfgid}` in
   `index.html`; tab bodies are injected in place, never navigated.
   `fillOverview(data, silent)` fills all six result tabs at once
@@ -291,7 +292,7 @@ plus the `"Point is outside the land boundary."` error.
 `sector`: `idx (1-based), name (S{idx}), poly_m, poly (lonlat), centroid,
 area_m2, entry, entry_m, zone_angle` (+ post-extend `zones[]`)
 
-`zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid, tree`
+`zone`: `idx (1-based), name (S1-Z1…), poly_m, poly, area_m2, centroid, tree, rows{angle,spacing_m,slope_pct,has_elev,n,total_m,lines}`
 
    `valve`: principal `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat,
    point, name}` + secondary `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32,
@@ -515,7 +516,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     **Final Result** now draws zones + both valve kinds + other elements
     and adds a detailed land **report + Export PDF** (`window.print` +
     print CSS); new partials `_other_result` / `_simulation_result`;
-    tab bar is Load/Upload/Basin/Sectors/Zones/Valve/Pipes/Other
+    tab bar is Load/Upload/Basin/Sectors/Zones/Rows/Valve/Pipes/Other
     Elements/Trees/Simulation/Final Result.
 36. v0.18.0: **valve management** — every valve is Add/Edit/Remove-able from
     the Valve tab (see data-model note above for the override-layer design).
@@ -611,3 +612,14 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     map/confirm side effects); zone dicts carry `tree` (default none); new
     partial `_trees_result`, i18n keys `TAB_TREES, TREE_SUB, TREE_SAVE,
     TREE_<TYPE>` (EN+AR) + tree ERROR.
+55. v0.31.0: **Rows tab** (after Zones) — AI row tracing per zone:
+    least-squares slope fit over IDW-interpolated KML altitudes, rows run
+    along contours (long-axis fallback without elevation); `compute_rows` /
+    `{op:rows_save}` (spacing 1–20 m) store `rows{angle,spacing_m,slope_pct,
+    has_elev,n,total_m,lines}` per zone + `row_spacing` per config, lazy
+    recompute in `_overview_ctx`; `map_sector_rows` draws row lines; new
+    partial `_rows_result` (per-sector maps + zone/tree/direction/slope/rows/
+    length tables + spacing control); i18n keys `TAB_ROWS, ROWS_SUB,
+    ROW_SPACING, ROW_TRACE, ROW_TREE, ROW_DIRECTION, ROW_SLOPE, ROW_ROWS`
+    (EN+AR) + spacing ERROR; tab bar is Load/Upload/Basin/Sectors/Zones/Rows/
+    Valve/Pipes/Other Elements/Trees/Simulation/Final Result.

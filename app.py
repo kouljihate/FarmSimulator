@@ -177,6 +177,11 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
             per_sector[s["name"]] = mapper.map_sector(plan, cfg, s,
                                                       valves=False, pipes=False)
     sector_maps[cfg["id"]] = per_sector
+    if any("rows" not in z for s in cfg["sectors"] for z in s.get("zones", [])):
+        engine.compute_rows(plan, cfg)
+    rows_maps = {}
+    for s in cfg["sectors"]:
+        rows_maps[s["name"]] = mapper.map_sector_rows(plan, cfg, s)
     other = other_maps.get(cfg["id"])
     if other is None:
         other = mapper.map_other_elements(plan, cfg)
@@ -190,6 +195,8 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
     return {"token": token, "plan": plan, "cfg": cfg,
             "overview_map": ov, "per_sector": per_sector,
             "other_map": other,
+            "rows_maps": rows_maps,
+            "rows_spacing": cfg.get("row_spacing", engine.ROW_SPACING_DEFAULT),
             "valves_map": mapper.map_config_valves(plan, cfg, only_sector),
             "selected_sector": only_sector,
             "pipes_map": mapper.map_config_pipes(plan, cfg, only_pipe_sector),
@@ -201,6 +208,7 @@ def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None):
 def _overview_fragments(ctx):
     return {
         "zones_html": render_template("_zones_result.html", **ctx),
+        "rows_html": render_template("_rows_result.html", **ctx),
         "valves_html": render_template("_valves_result.html", **ctx),
         "pipes_html": render_template("_pipes_result.html", **ctx),
         "other_html": render_template("_other_result.html", **ctx),
@@ -540,6 +548,21 @@ def index():
         other_maps.pop(data.get("cfgid"), None)
         other_maps.pop(str(data.get("cfgid")), None)
         STORE.save_maps(data.get("token"), {"other_maps": other_maps})
+        ctx = _overview_ctx(data.get("token"), plan, cfg)
+        frags = _overview_fragments(ctx)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        return jsonify(frags)
+
+    if op == "rows_save":
+        plan = _get_plan(data.get("token"))
+        cfg = next((c for c in (plan or {}).get("configs", [])
+                    if c["id"] == data.get("cfgid")), None)
+        if plan is None or cfg is None:
+            return _err("Run not found.")
+        engine.extend(plan, data.get("cfgid"))
+        ok, msg = engine.apply_rows_op(plan, cfg, data.get("spacing"))
+        if not ok:
+            return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))

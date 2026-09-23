@@ -7,19 +7,24 @@ Pipeline (this first part):
   4. valves  -> principal 90 mm valve per sector + secondary 32 mm valve per zone
   5. piping  -> 90 mm principal, 63 mm majors, 32 mm minors
 """
+import math as _math
 import re as _re
 import uuid as _uuid
 
+from shapely.affinity import affine_transform as _affine
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.ops import nearest_points, split as _shapely_split, unary_union
 from shapely.validation import make_valid
 
-from .geo import Projector, main_axis_angle, sweep_split
+from .geo import Projector, _affine_params, main_axis_angle, sweep_split
 from .sector import partition
 
 MAX_SECTOR_AREA = 10000.0
 N_ZONES = 3
 MIN_EXISTING_COVERAGE = 0.5  # sectors already in the file must cover >= 50% of the land
+ROW_SPACING_DEFAULT = 5.0
+ROW_SPACING_MIN = 1.0
+ROW_SPACING_MAX = 20.0
 
 OTHER_KINDS = (
     "pressure_reducer",
@@ -550,6 +555,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "n_water_points": len(water_pts),
         "land": land_pkg["polygon"],
         "land_area_m2": area_m2,
+        "vertices_z": land_pkg.get("vertices_z", []),
         "water": {"lon": pick[0], "lat": pick[1]},
         "basin": basin,
         "basin_m": basin_m,
@@ -1361,6 +1367,141 @@ def apply_pipe_op(plan, cfg, op, pipe_id=None, diameter=None,
         return True, None
 
     return False, "Unknown operation."
+
+
+def _idw_z(pts_m, p):
+    num, den = 0.0, 0.0
+    for q, z in pts_m:
+        d = p.distance(q)
+        if d < 1e-6:
+            return z
+        w = 1.0 / (d * d)
+        num += w * z
+        den += w
+    return num / den if den > 0 else 0.0
+
+
+def _zone_row_fit(pts_m, zone_m):
+    """Fit a plane over IDW-interpolated samples inside the zone.
+
+    Returns (row_angle, slope_pct) with rows running along the contour
+    (perpendicular to the steepest descent), or None without elevation data.
+    """
+    minx, miny, maxx, maxy = zone_m.bounds
+    samples = [zone_m.centroid]
+    n = 6
+    for i in range(n):
+        for j in range(n):
+            p = Point(minx + (maxx - minx) * (i + 0.5) / n,
+                      miny + (maxy - miny) * (j + 0.5) / n)
+            if zone_m.intersects(p):
+                samples.append(p)
+    seen, uniq = set(), []
+    for p in samples:
+        k = (round(p.x, 3), round(p.y, 3))
+        if k not in seen:
+            seen.add(k)
+            uniq.append(p)
+    if len(uniq) < 4:
+        return None
+    xyz = [(p.x, p.y, _idw_z(pts_m, p)) for p in uniq]
+    mx = sum(s[0] for s in xyz) / len(xyz)
+    my = sum(s[1] for s in xyz) / len(xyz)
+    sxx = syy = sxy = sxz = syz = 0.0
+    for x, y, z in xyz:
+        dx, dy = x - mx, y - my
+        sxx += dx * dx
+        syy += dy * dy
+        sxy += dx * dy
+        sxz += dx * z
+        syz += dy * z
+    den = sxx * syy - sxy * sxy
+    if den <= 1e-9 * sxx * syy:
+        return None
+    a = (sxz * syy - syz * sxy) / den
+    b = (syz * sxx - sxz * sxy) / den
+    slope = _math.hypot(a, b) * 100.0
+    if slope < 1e-9:
+        return main_axis_angle(zone_m) % 180.0, 0.0
+    grad = _math.degrees(_math.atan2(b, a))
+    return (grad + 90.0) % 180.0, round(slope, 1)
+
+
+def _trace_rows(zone_m, angle, spacing):
+    """Parallel row segments across the zone, spaced `spacing` metres apart."""
+    origin = zone_m.centroid
+    fwd, inv = _affine_params(angle, origin)
+    fp = _affine(zone_m, fwd)
+    if fp.is_empty:
+        return []
+    xmin, ymin, xmax, ymax = fp.bounds
+    ext = max(xmax - xmin, ymax - ymin) + spacing
+    rows = []
+    y = ymin + spacing / 2.0
+    while y <= ymax and len(rows) < 2000:
+        a = _affine(Point(xmin - ext, y), inv)
+        b = _affine(Point(xmax + ext, y), inv)
+        inter = zone_m.intersection(LineString([(a.x, a.y), (b.x, b.y)]))
+        if inter.is_empty:
+            y += spacing
+            continue
+        if inter.geom_type == "LineString":
+            parts = [inter]
+        elif inter.geom_type == "MultiLineString":
+            parts = list(inter.geoms)
+        else:
+            parts = [g for g in getattr(inter, "geoms", []) if g.geom_type == "LineString"]
+        for g in parts:
+            if g.length >= 2.0:
+                rows.append(g)
+        y += spacing
+    return rows
+
+
+def compute_rows(plan, cfg, spacing=None):
+    """AI row tracing: contour-following rows per zone from the elevation.
+
+    Direction comes from a least-squares slope fit over IDW-interpolated
+    KML altitudes; without elevation data rows follow the zone long axis.
+    """
+    if spacing is None:
+        spacing = cfg.get("row_spacing", ROW_SPACING_DEFAULT)
+    try:
+        spacing = float(spacing)
+    except (TypeError, ValueError):
+        spacing = ROW_SPACING_DEFAULT
+    spacing = max(ROW_SPACING_MIN, min(ROW_SPACING_MAX, spacing))
+    proj = plan["_proj"]
+    raw = [(lon, lat, z) for lon, lat, z in (plan.get("vertices_z") or [])
+           if z not in (None, 0)]
+    pts_m = [(proj.to_m(Point(lon, lat)), z) for lon, lat, z in raw]
+    for sector in cfg.get("sectors", []):
+        for z in sector.get("zones", []):
+            zone_m = z.get("poly_m")
+            fit = _zone_row_fit(pts_m, zone_m) if len(pts_m) >= 3 and zone_m is not None else None
+            if fit is None:
+                angle, slope, elev = main_axis_angle(zone_m) % 180.0, 0.0, False
+            else:
+                angle, slope, elev = fit[0], fit[1], True
+            lines_m = _trace_rows(zone_m, angle, spacing)
+            z["rows"] = {"angle": round(angle, 1), "spacing_m": spacing,
+                         "slope_pct": slope, "has_elev": elev,
+                         "n": len(lines_m),
+                         "total_m": round(sum(g.length for g in lines_m), 1),
+                         "lines": [proj.to_lonlat(g) for g in lines_m]}
+    cfg["row_spacing"] = spacing
+    return cfg
+
+
+def apply_rows_op(plan, cfg, spacing=None):
+    try:
+        sp = float(spacing)
+    except (TypeError, ValueError):
+        return False, "Invalid spacing."
+    if not (ROW_SPACING_MIN <= sp <= ROW_SPACING_MAX):
+        return False, "Invalid spacing."
+    compute_rows(plan, cfg, sp)
+    return True, None
 
 
 def apply_tree_op(plan, cfg, trees):

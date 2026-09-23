@@ -737,3 +737,28 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
         ).add_to(m)
     m.get_root().html.add_child(folium.Element(_zone_pick_js()))
     return to_html(m)
+
+
+def map_sector_rows(plan, cfg, sector):
+    """Sector detail map with AI-traced crop rows per zone."""
+    lay = Layers()
+    zones = sorted(sector.get("zones", []), key=lambda z: z["idx"])
+    for i, z in enumerate(zones):
+        lay.polygon(z["poly"], _ti("zone", name=z["name"], area=z["area_m2"]),
+                    _ZONE_COLORS[i % len(_ZONE_COLORS)], 0.10, weight=2)
+    for z in zones:
+        for line in (z.get("rows") or {}).get("lines", []) or []:
+            lay.line(line, _ti("zone", name=z["name"], area=z["area_m2"]),
+                     "#16a34a", 2)
+    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
+    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)
+    center = [sector["centroid"].y, sector["centroid"].x]
+    m = build(lay, center, 18)
+    for z in zones:
+        c = z["centroid"]
+        folium.map.Marker(
+            [c.y, c.x],
+            icon=folium.DivIcon(html=_zone_label(z["name"])),
+        ).add_to(m)
+    return to_html(m)

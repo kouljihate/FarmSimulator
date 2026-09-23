@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.30.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.31.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -69,7 +69,7 @@ Styling is **Tailwind CSS** (CDN) with a futuristic dark theme (neon
 cyan/violet gradients, glassmorphism cards, glow buttons). A fixed footer of 3
 equal columns shows the app name, the Part 1 tag, and the current version
  (right-aligned). The home page has a
- centred tab bar: **Load, Upload, Basin, Sectors, Zones, Valve, Pipes,
+ centred tab bar: **Load, Upload, Basin, Sectors, Zones, Rows, Valve, Pipes,
  Other Elements, Trees, Simulation, Final Result**
 (the pipeline stages; last five are placeholders for future parts). The
 "Accepted formats" and "What Part 1 produces"
@@ -153,7 +153,9 @@ Each config card has a set of **sector checkboxes labelled with the actual
     the result is persisted so a reload keeps it.
 4. Pick a config with **Use this config** → its detail loads **in the same
      page** (no navigation): the **Zones** tab shows per-sector maps with zones
-     only (no valves, no pipes yet), the **Valve** tab shows the valves map
+     only (no valves, no pipes yet), the **Rows** tab traces AI crop rows per
+     zone along elevation contours (direction, slope, count, length + spacing
+     control), the **Valve** tab shows the valves map
      (principal 90 mm + secondary 32 mm lists), the **Pipes** tab shows the
      piping map (90 / 63 / 32 mm), **Other Elements** shows the big editable
      network map, the **Trees** tab assigns a tree type per zone (mixed
