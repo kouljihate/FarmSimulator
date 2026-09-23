@@ -645,3 +645,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     every successful mutation); new i18n keys `TAB_RECAP, RECAP_FILTER,
     RECAP_HINT, RECAP_SHOW, RECAP_LAYER, RECAP_COLOR, RECAP_SIZE, RECAP_SAVE,
     RECAP_LABELS, SAVED_OK` (EN+AR) + layers ERROR.
+59. v0.34.1: **sector select hotfix** — v0.33.0 declared `var sel = []` inside
+    the shared change listener, shadowing the global sector-selection object
+    so checking a sector never stuck (Remove/Rename/Edit always complained);
+    renamed the local to `picked`.

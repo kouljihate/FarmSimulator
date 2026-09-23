@@ -1071,11 +1071,11 @@
       hideError();
       var wrap = e.target.closest ? e.target.closest('[data-cfg]') : null;
       var boxes = wrap ? wrap.querySelectorAll('.valve-sector-chk') : [];
-      var sel = [];
+      var picked = [];
       for (var i = 0; i < boxes.length; i++) {
-        if (boxes[i].checked) sel.push(boxes[i].value);
+        if (boxes[i].checked) picked.push(boxes[i].value);
       }
-      applyValveZoneFilter(wrap ? wrap.getAttribute('data-cfg') : S.cfgid, sel);
+      applyValveZoneFilter(wrap ? wrap.getAttribute('data-cfg') : S.cfgid, picked);
       return;
     }
     if (e.target && e.target.classList && e.target.classList.contains('recap-show')) {
