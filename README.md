@@ -37,76 +37,69 @@ place. The browser never leaves `/`.
     Moved valves keep their position through
     sector/zone/basin rebuilds (override layer); moved secondary valves pull
     their 63/32 mm pipes along; removed valves stay removed.
-5. **Piping** — Smart pipe network management with AI-assisted optimization and strict connection rules.
+5. **Piping** — Smart pipe network management with strict connection rules and AI assistance.
 
-**Pipe Connection Rules:**
+**Mandatory Pipe Connection Rules:**
 
-1. **Basin → Principal Pipe90**: Single connection only with appropriate connectors (90° elbows, tees). Principal pipe90 connects basin to the sector distribution network.
+1. **Basin → Principal Pipe90**: Single connection only with appropriate connectors (90° elbows, tees). Principal pipe90 connects basin to sector entries — must route within land boundary or sector boundaries. Only one pipe90 connection allowed.
 
-2. **Distribution Chain**: Principal Pipe90 → Pipe63 (majors) → serves all sectors/zones → Pipe32 (minors) → per zone supply. Each pipe63 taps off principal at closest point to zone valve; each pipe32 taps off its parent pipe63 at closest point to zone.
+2. **Distribution Chain**: Principal Pipe90 → Pipe63 (majors) → serves all sectors/zones → Pipe32 (minors) → per zone supply. Each pipe63 taps off principal at closest point to zone valve; each pipe32 taps off its parent pipe63 at closest point to zone valve.
 
-3. **Valve Integration**: All pipes connect to their assigned valves (principal/secondary already configured). Pipe endpoints must align with valve positions.
+3. **Valve Integration**: All pipes must connect to their assigned valves (principal 90mm per sector, secondary 32mm per zone). Pipe endpoints must align with valve positions on the map.
 
-4. **Sector Boundaries**: Pipes follow sector boundaries as primary routing paths. Pipe segments lie entirely within single sector — no cross-sector routing.
+4. **Sector Boundaries**: Pipes follow sector boundaries as primary routing paths. Every pipe segment must lie entirely within a single sector — no cross-sector routing allowed.
 
-5. **No External Pipes**: All pipe segments must stay within sector boundaries. No pipes originate or terminate outside sector polygons.
+5. **No External Pipes**: No pipes may originate or terminate outside sector polygons. All pipe segments are confined within sector boundaries.
 
-**AI-Powered Suggestions:**
+**AI-Powered Pipe Suggestions:**
 
-- **Optimal routing**: AI analyzes elevation contours, sector geometry, and valve positions to suggest minimal-length pipe paths
-- **Diameter optimization**: Recommends pipe90/63/32 sizes based on flow requirements, distance, and elevation differential
-- **Connector placement**: AI suggests appropriate connector types (elbows, tees) at pipe junctions
-- **Metre savings**: Reports potential length reduction versus current layout
-- **Elevation-aware routing**: Avoids steep sections, suggests pump locations where elevation changes exceed thresholds
+- **Optimal routing**: AI analyzes elevation contours, sector geometry, and existing valve positions to suggest minimal-length pipe paths
+- **Diameter optimization**: AI recommends pipe90/63/32 sizes based on flow requirements, distance, and elevation differential between zones
+- **Connector placement**: AI suggests appropriate connector types (elbows, tees) at pipe junctions to maintain proper flow direction
+- **Metre savings**: Reports potential length reduction versus current layout after AI optimization
+- **Elevation-aware routing**: AI avoids steep sections and suggests pump locations where elevation changes exceed acceptable thresholds
 
-**Pipe Management Interface:**
+**Pipe Management Interface (Map + X/Y Input):**
 
-- **Add Pipe**: Map-based click routing (basin → pipe90 → sector taps → pipe32 minors) or X/Y coordinate input with diameter and sector/zone assignment. Connector auto-suggestion at junctions.
+- **Add Pipe**: 
+  - *Map-based*: Click basin → set principal pipe90 route → tap sectors to add pipe63 (majors) → add pipe32 minors per zone
+  - *X/Y input*: Enter precise coordinates for pipe start/end points, select diameter (90/63/32), and assign sector/zone
+  - System auto-suggests connector types at junctions
 
-- **Edit Pipe**: Vertex dragging on map with real-time length/elevation feedback. X/Y coordinate editing for start/end points and intermediate vertices. Diameter change (90/63/32/custom) with flow recalculation. Sector/zone reassignment preserving connections.
+- **Edit Pipe**: 
+  - *Vertex dragging*: Drag pipe vertices on map with real-time length and elevation feedback
+  - *X/Y coordinate editing*: Edit precise start/end points and intermediate vertex coordinates
+  - *Diameter change*: Update pipe size (90/63/32/custom) with automatic flow recalculation
+  - *Sector/zone reassignment*: Move pipe segment to different sector while preserving connections
 
-- **Remove Pipe**: Single-click removal with automatic network reconnection. Changes persist via override layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`). Principal pipe90 protected — cannot be removed.
+- **Remove Pipe**: 
+  - Single-click removal with automatic network reconnection
+  - Changes persist via override layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`)
+  - Principal pipe90 is protected — cannot be removed, only rerouted within boundaries
 
-**AI Trace Optimization:**
+**Sector Filtering (Checkbox Interface):**
 
-- Re-orders pipe network for minimal total length accounting for elevation changes and connector costs
-- Reports metres saved versus current layout
-- Preserves manual overrides and custom configurations
+- Individual sector checkboxes — select specific sectors to display/edit pipes
+- "Select All" checkbox — selects/deselects all sectors
+- "Unselect All" checkbox — deselects all sectors
+- Filter controls which sectors' pipes are displayed and editable in the Pipes Tab
 
-**Technical Details:**
+**Display Fix — Ensured Correct Pipe Routing:**
 
-- **Override layer**: `pipe_overrides` / `removed_pipes` / `custom_pipes` ensures changes survive sector/zone/basin rebuilds
-- **Connection validation**: Real-time feedback on invalid connections (cross-sector, missing valves, etc.)
-- **Flow consistency**: System validates that pipe diameters match flow requirements for each zone
-- **Persistent storage**: All edits saved to Firestore with version tracking
-
-6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
-   elbows, filters, booster pumps placed on a big land map (click the map to
-   fill coordinates). Every added element gets a heuristic **AI analysis**
-   (necessary or not) plus a proposal for a smoother, cheaper network.
-3. **Principal Pipe Boundary**: Principal pipe90 must be set within land boundary
-   or sector boundaries. It connects the basin to sector entries and cannot
-   route outside approved areas. System validates pipe90 stays within permitted
-   boundaries after each sector/zone rebuild.
-
-4. **Sector Checkbox Filter**: UI replaces sector list with checkbox interface:
-   - Individual sector checkboxes (select specific sectors)
-   - "Select All" checkbox (selects/deselects all sectors)
-   - "Unselect All" checkbox (deselects all sectors)
-   Filter controls which sectors' pipes are displayed/edited.
-
-5. **Pipes Display Fix**: Ensured displayed pipes correctly follow sector
-   boundaries with proper connection chain: principal90 → major63 → minor32.
-   Invalid cross-sector pipes are filtered out. AI suggestion validates and
-   corrects pipe routing against sector boundaries and valve positions.
+- Displayed pipes now correctly follow the chain: principal90 → major63 → minor32
+- Invalid cross-sector pipes are filtered out and not shown
+- AI suggestion validates and corrects pipe routing against sector boundaries and valve positions
+- System enforces that pipe90 stays within land/sector boundaries after each rebuild
 
 6. **Other Elements** — pressure reducers, connectors (90×63, 63×32), tees,
    elbows, filters, booster pumps placed on a big land map (click the map to
    fill coordinates). Every added element gets a heuristic **AI analysis**
    (necessary or not) plus a proposal for a smoother, cheaper network.
+
 7. **Simulation** — ROI after X years (investment, annual cost/revenue, crop)
    with a yearly table, break-even year and an **AI proposal** for a
    high-income, low-headache plan.
+
 8. **Final Result** — one map with everything (sectors, zones, valves, all
    pipes, other elements) plus a detailed land report with an **Export PDF**
    button (print).

@@ -1895,17 +1895,7 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
                 g = make_valid(g)
             new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g), "area_m2": g.area,
                               "centroid": proj.to_lonlat(g.centroid), "tree": "none",
-                              "tree_dist": TREE_DIST_DEFAULT, "tree_pct": 100.0})
-        sector["zones"] = rest + new_zones
-        for i, z in enumerate(sector["zones"], start=1):
-            z["idx"] = i
-            z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
-        _rebuild_valves_pipes(plan, cfg)
-        cfg["zones_confirmed"] = False
-        cfg["rows_confirmed"] = False
-        cfg["valves_confirmed"] = False
-        return True, None
-    if op == "confirm":
+                              "tree_dist": "I'll update the README with the new version and push the changes to Git
         cfg["zones_confirmed"] = True
         _rebuild_valves_pipes(plan, cfg)
         return True, None
