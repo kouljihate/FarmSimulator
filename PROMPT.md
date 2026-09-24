@@ -124,12 +124,19 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
     with the **actual sector name** (custom renames included,
     `max-w-20 truncate`; native checkbox square is `display:none`;
     a checked pill glows via `.sector-check:has(.sector-chk:checked)`).
-    **Multiple boxes can be checked at once**; all checked sectors are
-    highlighted in the map, each checked sector expands a **sector accordion**
-    (`.sector-accordion`, 3-column EN / data / AR grid: name, area, centroid,
-    entry point, zone angle, zone count; new i18n keys `SECTOR_NAME`,
-    `CENTROID`, `ENTRY_POINT`, `ZONE_ANGLE`, `ZONES_COUNT` EN+AR), and clicking
-    a sector *in* the map toggles its checkbox **and** its accordion.
+     **Multiple boxes can be checked at once**; all checked sectors are
+     highlighted in the map, each checked sector expands a **sector accordion**
+     (`.sector-accordion`, 3-column EN / data / AR grid: name, area, centroid,
+     entry point, zone angle, zone count; new i18n keys `SECTOR_NAME`,
+     `CENTROID`, `ENTRY_POINT`, `ZONE_ANGLE`, `ZONES_COUNT` EN+AR), and clicking
+     a sector *in* the map toggles its checkbox **and** its accordion.
+     Accordions live in a per-config **two-column grid**
+     (`.sector-acc-grid`, `grid-cols-1 md:grid-cols-2`): the first selected
+     card occupies the **left half** of the row and a second selection fills
+     the right half (hidden items don't take grid cells; `toggleSectorAcc()`
+     sets CSS `order` from a monotonic counter so **selection order** — not
+     DOM order — drives left/right placement; both the `.sector-chk` `change`
+     handler and the map's `sector-select` message route through it).
     The toolbar (`tool-btn`, rounded, two stacked lines via
     `bv(key)` = Arabic on top + English below) holds Add/Edit/Rename/Merge/Remove
     in a centred `justify-between` row: `MANAGE` EN left, buttons middle, AR
@@ -742,3 +749,16 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     keys BASIN_LIST/BASIN_ACTIVE_FORM/BASIN_ADD/BASIN_ADD_SUB/BASIN_EDIT/
     BASIN_ACTIVATE/BASIN_ACTIVE/BASIN_INACTIVE/BASIN_NAME/PIPE_DELETE_SEL
     (EN+AR) + ERRORS for basin messages; `logs/` gitignored.
+
+81. v0.44.0: **selected-sector cards side by side** — sector accordions in
+    `_sectors_result.html` now sit in a per-config two-column grid
+    (`.sector-acc-grid`, `grid-cols-1 md:grid-cols-2`): the first selected
+    info card takes the **left half** of the row, selecting a second sector
+    fills the right half of the **same row** (more wrap to the next row);
+    stacks to one column on small screens. New `toggleSectorAcc(acc, show)`
+    helper in `index.html` replaces both inline toggles (`.sector-chk`
+    `change` handler + map `sector-select` message): it flips `.hidden` and
+    assigns CSS `order` from a monotonic `sectorAccOrder` counter, so cards
+    are placed in **selection order** rather than DOM order (deselect resets
+    `order` to `''`). Empty grid collapses to zero height (all children
+    `display:none`).
