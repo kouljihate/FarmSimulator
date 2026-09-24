@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.46.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.47.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -215,12 +215,18 @@ Each config card has a set of **sector checkboxes labelled with the actual
      (principal 90 mm + secondary 32 mm lists), the **Pipes** tab shows the
      piping map (90 / 63 / 32 mm), **Other Elements** shows the big editable
      network map, the **Trees** tab assigns a tree type per zone (mixed
-      allowed), **Simulation** shows the ROI planner, the **Recap** tab shows a
-      big map of every component with per-layer show/color/size controls (it
-      is filled as soon as a KML is uploaded or loaded — land, water, basin,
-      sectors and other elements appear before overview runs), and
-      **Final Result**
-     shows the full map + legend + report with PDF export.
+       allowed), **Simulation** shows the ROI planner, the **Recap** tab shows a
+       big map of every component with per-layer show/color/size controls (it
+       is filled as soon as a KML is uploaded or loaded — land, water, basin,
+       sectors and other elements appear before overview runs), and
+       **Final Result**
+      shows the full map + legend + report with PDF export. **Final Result is
+      locked** (greyed-out tab) until you press **Confirm recap** on the Recap
+      tab; every workflow step (Upload → Basin → Sectors → Zones → Rows →
+      Valves → Pipes → Other Elements → Trees) re-locks Final, refreshes the
+      Recap map, and regenerates `files/<land>_<Step>.kml` (boundaries,
+      water, basin, sectors/zones/valves/pipes/rows and other elements).
+      Confirming Recap re-enables Final.
      Every Zones card has an **Open** button that launches a modal with a large
      map of that sector and its zones plus its zone table — with **zone
      management built in**: rename / remove a zone, or split a zone by
@@ -300,6 +306,7 @@ core/
   sector.py                smart recursive area-balanced sector partitioner
   mapper.py                folium map recipes (bilingual tooltips)
   storage.py               MongoStore / FileStore (get_store()); saves plan + all maps
+  kmlout.py                plan → KML writer: files/<name>_<Step>.kml after each step
   i18n.py                  EN/AR dictionaries + t/bt/btcfg/css helpers
 templates/                 base, index (SPA shell) + partials: _basin_result,
                            _sectors_result, _zones_result, _valves_result,
@@ -308,6 +315,7 @@ templates/                 base, index (SPA shell) + partials: _basin_result,
 static/fonts/              VIP RAWY REGULAR REGULAR.TTF (Arabic)
 samples/                   test KML + generator
 uploads/                   runtime: uploaded raw files (+ <token>.db pickle fallback)
+files/                     runtime: step KML snapshots (gitignored)
 ```
 
 ## Persistence

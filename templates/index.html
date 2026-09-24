@@ -24,7 +24,7 @@
     <button type="button" class="tab-btn" data-tab-target="tab-trees">{{ bv('TAB_TREES') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-sim">{{ bv('TAB_SIM') }}</button>
     <button type="button" class="tab-btn" data-tab-target="tab-recap">{{ bv('TAB_RECAP') }}</button>
-    <button type="button" class="tab-btn" data-tab-target="tab-final">{{ bv('TAB_FINAL') }}</button>
+    <button type="button" class="tab-btn is-locked" data-tab-target="tab-final" title="{{ t('FINAL_LOCKED') }}">{{ bv('TAB_FINAL') }}</button>
   </div>
 </div>
 
@@ -310,15 +310,36 @@
 
   var btns = document.querySelectorAll('.tab-btn');
   var panels = document.querySelectorAll('.tab-panel');
+  var finalUnlocked = false;
+  function setFinalUnlocked(on) {
+    finalUnlocked = !!on;
+    var fb = document.querySelector('.tab-btn[data-tab-target="tab-final"]');
+    if (fb) {
+      fb.classList.toggle('is-locked', !finalUnlocked);
+      fb.setAttribute('title', finalUnlocked ? '' : '{{ t("FINAL_LOCKED") }}');
+    }
+  }
+  function isFinalLocked() { return !finalUnlocked; }
+  function syncFinalFromPlan(plan) {
+    var unlocked = false;
+    var cfgs = (plan && plan.configs) || [];
+    for (var i = 0; i < cfgs.length; i++) {
+      if (cfgs[i] && cfgs[i].recap_confirmed) { unlocked = true; break; }
+    }
+    setFinalUnlocked(unlocked);
+  }
   function activate(btn) {
+    if (btn && btn.getAttribute('data-tab-target') === 'tab-final' && isFinalLocked()) return;
     btns.forEach(function (b) { b.classList.toggle('active-tab', b === btn); });
     panels.forEach(function (p) { p.classList.toggle('active', p.id === btn.getAttribute('data-tab-target')); });
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { activate(b); }); });
   function goTab(id) {
+    if (id === 'tab-final' && isFinalLocked()) return;
     var b = document.querySelector('.tab-btn[data-tab-target="' + id + '"]');
     if (b) activate(b);
   }
+  setFinalUnlocked(false);
   goTab('tab-upload');
 
   function esc(s) {
@@ -500,6 +521,13 @@
       var sp = document.getElementById('sectors-result');
       if (sp) sp.innerHTML = data.sectors_html;
       if (data.plan) S.plan = data.plan;
+      syncFinalFromPlan(S.plan);
+      if (data.recap_html) {
+        var rrS = document.getElementById('recap-result');
+        var reS = document.getElementById('recap-empty');
+        if (rrS) rrS.innerHTML = data.recap_html;
+        if (reS) reS.style.display = 'none';
+      }
       resetSectorState();
       if (S.cfgid != null) loadOverview(S.cfgid, true);
     }).catch(function () { loaderOff(); showError(terrHtml('tnet')); resetTool(cfg, null); });
@@ -537,6 +565,7 @@
       if (rr0) rr0.innerHTML = payload.recap_html;
       if (re0) re0.style.display = 'none';
     }
+    syncFinalFromPlan(payload.plan);
     refreshRuns();
   }
 
@@ -579,6 +608,7 @@
       if (e) e.style.display = m[2] ? 'none' : '';
     });
     if (data.plan) S.plan = data.plan;
+    syncFinalFromPlan(S.plan);
     var vfb = document.getElementById('valves-result');
     var vboxes = vfb ? vfb.querySelectorAll('.valve-sector-chk') : [];
     S.valveSectors = [];
@@ -834,6 +864,13 @@
       var sp = document.getElementById('sectors-result');
       if (sp && data.sectors_html) sp.innerHTML = data.sectors_html;
       if (data.plan) S.plan = data.plan;
+      syncFinalFromPlan(S.plan);
+      if (data.recap_html) {
+        var rrB = document.getElementById('recap-result');
+        var reB = document.getElementById('recap-empty');
+        if (rrB) rrB.innerHTML = data.recap_html;
+        if (reB) reB.style.display = 'none';
+      }
       if (data.sectors_html) {
         resetSectorState();
         if (S.cfgid != null) loadOverview(S.cfgid, true);
@@ -1066,9 +1103,10 @@
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }
-    var rc = e.target && e.target.closest ? e.target.closest('#recap-save-btn') : null;
+    var rc = e.target && e.target.closest ? e.target.closest('#recap-save-btn, #recap-confirm-btn') : null;
     if (rc) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
+      var isConfirm = rc.id === 'recap-confirm-btn';
       var layers = {};
       var rr = document.getElementById('recap-result');
       var rows = rr ? rr.querySelectorAll('tbody tr') : [];
@@ -1084,12 +1122,17 @@
         layers[lk] = st;
       }
       var myRc = ++S.ovSeq;
-      mutate({ op: 'recap_save', token: S.token, cfgid: parseInt(rc.getAttribute('data-cfg'), 10), layers: layers }).then(function (data) {
+      mutate({ op: 'recap_save', token: S.token, cfgid: parseInt(rc.getAttribute('data-cfg'), 10),
+               layers: layers, confirm: isConfirm }).then(function (data) {
         if (myRc !== S.ovSeq) return;
         if (!data.ok) { apiFail(data); return; }
         hideError();
         toastOk();
         fillOverview(data, true, myRc);
+        if (isConfirm) {
+          setFinalUnlocked(true);
+          goTab('tab-final');
+        }
       }).catch(function () { showError(terrHtml('tnet')); });
       return;
     }

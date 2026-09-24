@@ -16,11 +16,28 @@ from logging.handlers import TimedRotatingFileHandler
 
 from flask import Flask, jsonify, render_template, request
 
-from core import engine, i18n, mapper, parser, storage
+from core import engine, i18n, kmlout, mapper, parser, storage
 BASE = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE, "uploads")
 
 STORE = storage.get_store()
+
+# Workflow steps that regenerate files/<name>_<Step>.kml after each mutation.
+STEP_BY_OP = {
+    "basin": "Basin",
+    "sector_action": "Sectors",
+    "zone_action": "Zones",
+    "rows_save": "Rows",
+    "row_direction": "Rows",
+    "valve_action": "Valves",
+    "pipe_action": "Pipes",
+    "pipe_ai": "Pipes",
+    "other_add": "OtherElements",
+    "other_remove": "OtherElements",
+    "tree_save": "Trees",
+    "recap_save": "Recap",
+    "sim_save": "Simulation",
+}
 
 # Bump when cached map artwork changes shape: older stored maps are regenerated.
 MAPS_V = 6
@@ -121,6 +138,7 @@ def plan_summary(plan):
             "n_sectors": c.get("n_sectors"),
             "zones_confirmed": bool(c.get("zones_confirmed")),
             "valves_confirmed": bool(c.get("valves_confirmed")),
+            "recap_confirmed": bool(c.get("recap_confirmed")),
             "totals": _cfg_totals(c),
             "sectors": [_sector_summary(s) for s in c.get("sectors") or []],
         } for c in plan.get("configs") or []],
@@ -159,6 +177,46 @@ def _persist(token, plan, maps=None):
         STORE.save(token, plan, keep)
     else:
         STORE.save(token, plan, maps)
+
+
+def _quick_recap_html(token, plan, cfg=None):
+    """Lightweight Recap fragment for steps that do not run full overview."""
+    if cfg is None:
+        cfg = (plan.get("configs") or [None])[0]
+    if cfg is None:
+        return ""
+    try:
+        return render_template(
+            "_recap_result.html", token=token, plan=plan, cfg=cfg,
+            recap_map=mapper.map_recap(plan, cfg),
+            recap_layers=mapper.recap_state(cfg),
+        )
+    except Exception:  # noqa: BLE001 - never block a step on recap render
+        return ""
+
+
+def _on_step(token, plan, op, cfg=None):
+    """After every workflow step: re-lock Final, refresh KML + recap.
+
+    - clears ``recap_confirmed`` on any content change (so Final re-locks
+      until the user confirms the new Recap);
+    - writes ``files/<name>_<Step>.kml`` from the live plan;
+    - returns fresh ``recap_html`` so the Recap map stays current.
+    """
+    step = STEP_BY_OP.get(op)
+    if not step:
+        return ""
+    if op != "recap_save":
+        for c in plan.get("configs") or []:
+            c["recap_confirmed"] = False
+    elif cfg is not None and not cfg.get("recap_confirmed"):
+        for c in plan.get("configs") or []:
+            c["recap_confirmed"] = False
+    try:
+        kmlout.export_step(plan, step)
+    except Exception:  # noqa: BLE001 - KML is best-effort
+        pass
+    return _quick_recap_html(token, plan, cfg)
 
 
 def _overview_ctx(token, plan, cfg, only_sector=None, only_pipe_sector=None,
@@ -250,20 +308,14 @@ def _full_payload(token, plan, save=True):
     basin_map = mapper.map_basin(plan)
     if save:
         _persist(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
-    # Recap tab is filled immediately on upload/load so the KML contents
-    # (land, water, basin, sectors, other elements) are visible without
-    # waiting for an overview. Zones/valves/pipes appear once overview runs.
     recap_html = ""
     cfg0 = (plan.get("configs") or [None])[0]
     if cfg0 is not None:
-        try:
-            recap_html = render_template(
-                "_recap_result.html", token=token, plan=plan, cfg=cfg0,
-                recap_map=mapper.map_recap(plan, cfg0),
-                recap_layers=mapper.recap_state(cfg0),
-            )
-        except Exception:  # noqa: BLE001 - never block upload on recap render
-            recap_html = ""
+        recap_html = _quick_recap_html(token, plan, cfg0)
+    try:
+        kmlout.export_step(plan, "Upload")
+    except Exception:  # noqa: BLE001
+        pass
     return {
         "ok": True,
         "token": token,
@@ -469,6 +521,8 @@ def index():
             cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
         basin_map = mapper.map_basin(plan)
         _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+        recap_html = _on_step(data.get("token"), plan, "basin")
+        _persist(data.get("token"), plan)
         return jsonify(
             ok=True,
             basin=plan["basin"] and {
@@ -484,6 +538,7 @@ def index():
             sectors_html=render_template(
                 "_sectors_result.html", token=data.get("token"), plan=plan,
                 cfg_maps=cfg_maps),
+            recap_html=recap_html,
             plan=plan_summary(plan),
         )
 
@@ -533,11 +588,15 @@ def index():
             store.pop(key, None)
         STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
                                             "other_maps": other_maps})
+        # Sectors changed → DB (_persist) + KML step file + Recap map refresh.
+        recap_html = _on_step(data.get("token"), plan, "sector_action", cfg=cfg)
+        _persist(data.get("token"), plan)
         return jsonify(
             ok=True,
             sectors_html=render_template(
                 "_sectors_result.html", token=data.get("token"), plan=plan,
                 cfg_maps=cfg_maps),
+            recap_html=recap_html,
             plan=plan_summary(plan),
         )
 
@@ -550,15 +609,22 @@ def index():
             return _err("Run not found.")
         log_action(data.get("token"), data.get("cfgid"), "zone_action")
         engine.extend(plan, data.get("cfgid"))
-        ok, msg = engine.apply_zone_op(
-            plan, cfg, data.get("action", ""),
-            sector_idx=data.get("sector_idx"), zone_idx=data.get("zone_idx"),
-            zone_name=data.get("zone_name"), name=data.get("name"),
-            x1=data.get("x1"), y1=data.get("y1"),
-            x2=data.get("x2"), y2=data.get("y2"),
-            zone_name2=data.get("zone_name2"),
-            zone_names=data.get("zone_names"),
-        )
+        if data.get("action") == "confirm":
+            # Confirm zones is config-level (not a per-sector geometry op).
+            cfg["zones_confirmed"] = True
+            cfg["rows_confirmed"] = False
+            cfg["valves_confirmed"] = False
+            ok, msg = True, None
+        else:
+            ok, msg = engine.apply_zone_op(
+                plan, cfg, data.get("action", ""),
+                sector_idx=data.get("sector_idx"), zone_idx=data.get("zone_idx"),
+                zone_name=data.get("zone_name"), name=data.get("name"),
+                x1=data.get("x1"), y1=data.get("y1"),
+                x2=data.get("x2"), y2=data.get("y2"),
+                zone_name2=data.get("zone_name2"),
+                zone_names=data.get("zone_names"),
+            )
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))
         doc = STORE.load(data.get("token"))
@@ -573,6 +639,8 @@ def index():
                                             "other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "zone_action", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -605,6 +673,8 @@ def index():
                                             "other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "valve_action", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -637,6 +707,8 @@ def index():
                                             "other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "pipe_action", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -662,6 +734,8 @@ def index():
                                             "other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "pipe_ai", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      report=report)
         return jsonify(frags)
@@ -695,6 +769,8 @@ def index():
         STORE.save_maps(data.get("token"), {"other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "other_add", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      element=el)
         return jsonify(frags)
@@ -714,6 +790,8 @@ def index():
         STORE.save_maps(data.get("token"), {"other_maps": other_maps})
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "other_remove", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -743,9 +821,18 @@ def index():
                           "color": color,
                           "size": max(1.0, min(20.0, size))}
         cfg["recap"] = clean
+        # Confirming Recap unlocks Final Result; any earlier step re-locks it.
+        cfg["recap_confirmed"] = bool(data.get("confirm"))
+        if cfg["recap_confirmed"]:
+            for c in plan.get("configs") or []:
+                if c is not cfg:
+                    c["recap_confirmed"] = False
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
-        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
+        frags["recap_html"] = _on_step(data.get("token"), plan, "recap_save", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
+        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
+                     recap_confirmed=bool(cfg.get("recap_confirmed")))
         return jsonify(frags)
 
     if op == "rows_save":
@@ -764,6 +851,8 @@ def index():
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "rows_save", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -781,6 +870,8 @@ def index():
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "row_direction", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -796,6 +887,8 @@ def index():
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "tree_save", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -821,6 +914,8 @@ def index():
                                   "crop": data.get("crop") or "vegetables"}
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
+        frags["recap_html"] = _on_step(data.get("token"), plan, "sim_save", cfg=cfg) or frags.get("recap_html", "")
+        _persist(data.get("token"), plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      sim=ctx["sim"])
         return jsonify(frags)
