@@ -799,3 +799,23 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `_recap_js` accepts a water array (single object still works). Added
     missing `sector_labels` key to the recap layer label map and populated
     sector name labels on the recap map. VERSION 0.46.0.
+
+84. v0.47.0: **Final Result gated by Recap confirm + per-step KML export**
+    Final tab starts with `.is-locked` (CSS grey + pointer-events:none);
+    `goTab`/`activate` refuse `tab-final` until `recap_confirmed`. New
+    **Confirm recap** button (`#recap-confirm-btn`) sends
+    `{op:recap_save, confirm:true}` and sets `cfg["recap_confirmed"]=True`
+    (other configs cleared); client `setFinalUnlocked(true)` then
+    `goTab('tab-final')`. Any content step (basin/sector/zones/rows/valves/
+    pipes/other/trees/sim) clears all `recap_confirmed` flags via
+    `_on_step()` so Final re-locks. New `core/kmlout.py` writes
+    `files/<land>_<Step>.kml` after every step (Upload, Basin, Sectors,
+    Zones, Rows, Valves, Pipes, OtherElements, Trees, Recap) with
+    boundaries/water/basins/sectors/zones/valves/pipes/rows/other-elements
+    folders; `files/` is gitignored. basin and sector_action now return
+    `recap_html` so the Recap map updates every step. `plan_summary`
+    exposes `recap_confirmed`. Zone `action:confirm` is handled
+    config-level in `app.py` (sets `zones_confirmed` without needing
+    `sector_idx`). i18n: `CONFIRM_RECAP`, `CONFIRM_RECAP_HINT`,
+    `RECAP_CONFIRMED`, `FINAL_LOCKED`, `FINAL_LOCKED_HINT` (EN+AR).
+    VERSION 0.47.0.
