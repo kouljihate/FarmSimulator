@@ -300,6 +300,14 @@ def _inside_land(plan, pt_m):
     return nearest_points(land_m, Point(pt_m))[0]
 
 
+def _inside_sector(sector_m, pt_m):
+    if sector_m is None:
+        return pt_m
+    if sector_m.contains(pt_m) or sector_m.boundary.distance(pt_m) < 1e-9:
+        return pt_m
+    return nearest_points(sector_m, Point(pt_m))[0]
+
+
 def _nearest_on(line_m, pt_m):
     return nearest_points(line_m, Point(pt_m))[0]
 
@@ -728,6 +736,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             # secondary valve on sector∩zone boundary (prefer ⊥-to-rows run)
             inter_m = _boundary_intersection(sector_m, zone_m)
             valve_m = _valve_on_intersection(sector_m, zone_m, entry_m, row_angle)
+            valve_m = _inside_sector(sector_m, valve_m)
             valve_ll = project.to_lonlat(valve_m)
 
             # major pipe 63 mm: nearest principal tap -> zone secondary valve
@@ -1427,7 +1436,8 @@ def _rebuild_valves_pipes(plan, cfg):
             row_angle = _zone_row_angle(z, zone_m)
             inter_m = _boundary_intersection(sector.get("poly_m"), zone_m)
             valve_m = _valve_on_intersection(sector.get("poly_m"), zone_m,
-                                             entry_m, row_angle)
+                                              entry_m, row_angle)
+            valve_m = _inside_sector(sector.get("poly_m"), valve_m)
             valve_ll = proj.to_lonlat(valve_m)
             tap_m = _inside_land(plan, _nearest_on(principal_m, valve_m))
             major_m = LineString([tap_m, Point(valve_m)])
@@ -1535,6 +1545,7 @@ def _apply_valve_customization(plan, cfg):
                 zon = zones.get(v.get("zone"))
                 if sec is not None and zon is not None:
                     valve_m = proj.to_m(Point(lon, lat))
+                    valve_m = _inside_sector(sec.get("poly_m"), valve_m)
                     target_m = zon["poly_m"].centroid
                     princ_m, _ = _principal_chain(plan, cfg)
                     tap_m = _inside_land(plan, _nearest_on(princ_m, valve_m))
