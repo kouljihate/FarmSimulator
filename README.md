@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.42.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.43.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -10,7 +10,9 @@ config overview) is a `POST /` returning JSON, with tab bodies injected in
 place. The browser never leaves `/`.
 
 1. **Basin placement** — the best spot near the water point, favouring higher
-   elevation inside the land.
+   elevation inside the land. The Basin tab manages **multiple basins**:
+   add / edit / remove basins and toggle which one is **active** — only the
+   active basin drives sectorisation, zones, valves and piping.
 2. **Sectorisation** — 3 config suggestions that split the land into sectors
    `≤ 10,000 m²` (S1, S2, …). If the uploaded file *already contains* a sector
    layout (extra polygons covering ≥ 50 % of the land), those are used directly
@@ -74,6 +76,8 @@ place. The browser never leaves `/`.
 
 - **Remove Pipe**: 
   - Single-click removal with automatic network reconnection
+  - The **Selected pipe** panel shows a **Delete selected pipe** button as soon
+    as a pipe is picked (on the map or from the table) — one click removes it
   - Changes persist via override layer (`pipe_overrides` / `removed_pipes` / `custom_pipes`)
   - Principal pipe90 is protected — cannot be removed, only rerouted within boundaries
 
@@ -229,12 +233,21 @@ Each config card has a set of **sector checkboxes labelled with the actual
    (`POST /` `{op:load}`). DB layout per land:
    `{Land: [Basin], [Sectors, [Zones, [Valves], [Pipes]]]}` plus other
    elements and the simulation.
-6. **Move the basin**: in the Basin tab, drag the brown marker or edit X/Y
+6. **Manage basins**: in the Basin tab, drag the brown marker or edit X/Y
     (longitude/latitude) — both stay in sync live. Press **Apply** to save:
     `POST /` `{op:basin}` re-runs sector ordering, zones, valves and piping and
     updates the Basin map (via the `srcdoc` attribute) and the **Sectors** maps
     in place, without reloading the page. An open config overview is
     silently re-fetched so Zones/Valve/Pipes/Final stay in sync.
+    The right-hand panel manages **multiple basins**: the active basin form
+    (name + X/Y + Apply), a **Basins list** (each row shows name, coordinates
+    and an Active/Inactive badge with **Activate**, **Edit** and — for
+    inactive basins — **Delete** buttons), and an **Add basin** form
+    (name + X/Y) that registers a new inactive basin. Activating a basin
+    re-derives the whole plan from it; inactive basins appear as gray
+    markers on the basin map (the active one stays brown and draggable).
+    Every map in the app shows a live **Zoom level** badge in its
+    top-right corner.
 
 ### Accepted file formats
 

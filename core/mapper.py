@@ -74,6 +74,28 @@ def _render_base(center, zoom):
                       tiles=DN, prefer_canvas=True)
 
 
+def _zoom_js():
+    """Overlay showing the current zoom level; attached to every map."""
+    return "<script>" + (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].getZoom){mp=window[k];break;}}"
+        "if(!mp)return;"
+        "var c=mp.getContainer();"
+        "if(getComputedStyle(c).position==='static'){c.style.position='relative';}"
+        "var el=document.createElement('div');"
+        "el.setAttribute('data-zoom-level','');"
+        "el.style.cssText='position:absolute;top:10px;right:10px;z-index:1000;"
+        "background:rgba(15,23,42,.78);color:#e2e8f0;border:1px solid rgba(255,255,255,.25);"
+        "font:600 12px/1.4 ui-monospace,Consolas,monospace;padding:4px 9px;"
+        "border-radius:7px;pointer-events:none;letter-spacing:.03em;';"
+        "function upd(){el.textContent='Zoom: '+mp.getZoom();}"
+        "mp.on('zoomend',upd);upd();"
+        "c.appendChild(el);"
+        "});"
+    ) + "</script>"
+
+
 def build(layers, center, zoom=16):
     m = _render_base(center, zoom)
     for it in layers.items:
@@ -106,6 +128,7 @@ def build(layers, center, zoom=16):
                 ).add_to(m)
         elif it["kind"] == "marker":
             _add_marker(m, it)
+    m.get_root().html.add_child(folium.Element(_zoom_js()))
     return m
 
 
@@ -183,6 +206,19 @@ def map_basin(plan):
         _marker(plan, lay, "maxelev", me["lon"], me["lat"], "green", 9, z=me["z"])
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 16)
+    active_bid = plan["basin"].get("bid")
+    for b in (plan.get("basins") or []):
+        if b.get("active"):
+            continue
+        if active_bid and b.get("bid") == active_bid:
+            continue
+        bname = str(b.get("name") or "Basin")
+        folium.Marker(
+            [b["lat"], b["lon"]],
+            icon=folium.Icon(color="gray"),
+            popup=bname,
+            tooltip=bname,
+        ).add_to(m)
     tip = _ti("basin_rec")
     folium.Marker(
         [plan["basin"]["lat"], plan["basin"]["lon"]],

@@ -761,6 +761,12 @@
   function showPipeInfo(p) {
     var box = document.getElementById('pipe-info');
     if (box && p) box.innerHTML = pipeInfoHtml(p);
+    var pdb = document.getElementById('pipe-del-sel-btn');
+    if (pdb) {
+      var can = !!(p && p.pid) && p.pid !== 'P';
+      pdb.classList.toggle('hidden', !can);
+      pdb.setAttribute('data-pid', (p && p.pid) ? p.pid : '');
+    }
   }
 
   function highlightPipeRow(pid) {
@@ -791,6 +797,29 @@
       hideError();
       fillOverview(data, true, my);
       if (dCfg != null) openDetailModal(String(dCfg), dIdx, dName, true);
+    }).catch(function () { showError(terrHtml('tnet')); });
+  }
+
+  function basinOp(body) {
+    if (!S.token) { showError(terrHtml('tnet')); return; }
+    body.op = 'basin';
+    body.token = S.token;
+    var myBo = ++S.ovSeq;
+    api(body).then(function (data) {
+      if (myBo !== S.ovSeq) return;
+      if (!data.ok) { apiFail(data); return; }
+      hideError();
+      toastOk();
+      var br = document.getElementById('basin-result');
+      if (br && data.basin_html) br.innerHTML = data.basin_html;
+      var sp = document.getElementById('sectors-result');
+      if (sp && data.sectors_html) sp.innerHTML = data.sectors_html;
+      if (data.plan) S.plan = data.plan;
+      if (data.sectors_html) {
+        resetSectorState();
+        if (S.cfgid != null) loadOverview(S.cfgid, true);
+      }
+      refreshRuns();
     }).catch(function () { showError(terrHtml('tnet')); });
   }
 
@@ -1061,6 +1090,30 @@
     if (vd) {
       if (!S.token) return;
       valveAction(vd.getAttribute('data-cfg'), 'remove', { valve_id: vd.getAttribute('data-vid') });
+      return;
+    }
+    var bsAct = e.target && e.target.closest ? e.target.closest('.basin-act-btn') : null;
+    if (bsAct) {
+      basinOp({ action: 'activate', bid: bsAct.getAttribute('data-bid') });
+      return;
+    }
+    var bsDel = e.target && e.target.closest ? e.target.closest('.basin-del-btn') : null;
+    if (bsDel) {
+      basinOp({ action: 'remove', bid: bsDel.getAttribute('data-bid') });
+      return;
+    }
+    var bsEd = e.target && e.target.closest ? e.target.closest('.basin-edit-btn') : null;
+    if (bsEd) {
+      var fBid = document.getElementById('basin-form-bid');
+      var fName = document.getElementById('basin-name');
+      var fLon = document.getElementById('basin-lon');
+      var fLat = document.getElementById('basin-lat');
+      if (fBid) fBid.value = bsEd.getAttribute('data-bid') || '';
+      if (fName) fName.value = bsEd.getAttribute('data-name') || '';
+      if (fLon) fLon.value = parseFloat(bsEd.getAttribute('data-lon')).toFixed(6);
+      if (fLat) fLat.value = parseFloat(bsEd.getAttribute('data-lat')).toFixed(6);
+      var bfEl = document.getElementById('basin-form');
+      if (bfEl) bfEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     var ptr = e.target && e.target.closest ? e.target.closest('#pipe-trace-btn') : null;
@@ -1580,6 +1633,7 @@
   var dClose = document.getElementById('sector-detail-close');
   var zTrace = document.getElementById('zone-trace-btn');
   var zSplit = document.getElementById('zone-split-btn');
+  var zSplitEq = document.getElementById('zone-split-equ-btn');
   var zRename = document.getElementById('zone-rename-btn');
   var zSwap = document.getElementById('zone-swap-btn');
   var zMerge = document.getElementById('zone-merge-btn');
@@ -1674,6 +1728,11 @@
     zoneAction(dCfg, 'split', { sector_idx: dIdx, zone_name: sel[0],
       x1: document.getElementById('zone-x1').value, y1: document.getElementById('zone-y1').value,
       x2: document.getElementById('zone-x2').value, y2: document.getElementById('zone-y2').value });
+  });
+  if (zSplitEq) zSplitEq.addEventListener('click', function () {
+    var sel = checkedZones();
+    if (!sel.length) { showError(terrHtml('tzoneone')); return; }
+    zoneAction(dCfg, 'split equivaly', { sector_idx: dIdx, zone_name: sel[0] });
   });
   if (zRename) zRename.addEventListener('click', function () {
     var sel = checkedZones();
@@ -1961,32 +2020,40 @@
       return;
     }
     var form = e.target && e.target.id === 'basin-form' ? e.target : null;
-    if (!form) return;
-    e.preventDefault();
-    hideError();
-    if (!S.token) { showError(terrHtml('tnet')); return; }
-    var lonEl = document.getElementById('basin-lon');
-    var latEl = document.getElementById('basin-lat');
-    var lon = lonEl ? parseFloat(lonEl.value) : NaN;
-    var lat = latEl ? parseFloat(latEl.value) : NaN;
-    var myBa = ++S.ovSeq;
-    api({ op: 'basin', token: S.token, lon: lon, lat: lat }).then(function (data) {
-      if (myBa !== S.ovSeq) return;
-      if (!data.ok) { apiFail(data); return; }
+    if (form) {
+      e.preventDefault();
       hideError();
-      toastOk();
-      if (lonEl) lonEl.value = data.basin.lon.toFixed(6);
-      if (latEl) latEl.value = data.basin.lat.toFixed(6);
-      setBasinInfo(data.basin.lon, data.basin.lat, data.basin.dist_water_m);
-      var bm = document.getElementById('basin-map-frame');
-      if (bm) bm.setAttribute('srcdoc', data.basin_map);
-      var sp = document.getElementById('sectors-result');
-      if (sp) sp.innerHTML = data.sectors_html;
-      if (data.plan) S.plan = data.plan;
-      resetSectorState();
-      refreshRuns();
-      if (S.cfgid != null) loadOverview(S.cfgid, true);
-    }).catch(function () { showError(terrHtml('tnet')); });
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var lonEl = document.getElementById('basin-lon');
+      var latEl = document.getElementById('basin-lat');
+      var nameEl = document.getElementById('basin-name');
+      var bidEl = document.getElementById('basin-form-bid');
+      var lon = lonEl ? parseFloat(lonEl.value) : NaN;
+      var lat = latEl ? parseFloat(latEl.value) : NaN;
+      var bid = bidEl ? bidEl.value : '';
+      var body = { lon: lon, lat: lat, name: nameEl ? nameEl.value : '' };
+      if (bid) { body.action = 'edit'; body.bid = bid; }
+      else { body.action = 'move'; }
+      basinOp(body);
+      return;
+    }
+    var addForm = e.target && e.target.id === 'basin-add-form' ? e.target : null;
+    if (addForm) {
+      e.preventDefault();
+      hideError();
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var aName = document.getElementById('basin-add-name');
+      var aLon = document.getElementById('basin-add-lon');
+      var aLat = document.getElementById('basin-add-lat');
+      basinOp({
+        action: 'add',
+        name: aName ? aName.value : '',
+        lon: aLon ? parseFloat(aLon.value) : NaN,
+        lat: aLat ? parseFloat(aLat.value) : NaN
+      });
+      return;
+    }
+    return;
   });
 })();
 </script>

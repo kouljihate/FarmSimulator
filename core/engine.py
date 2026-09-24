@@ -538,6 +538,9 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     }
 
     basin = choose_basin(land, proj)
+    basin["bid"] = "B1"
+    basin["name"] = "Basin 1"
+    basin["active"] = True
     basin_m = proj.to_m(Point(basin["lon"], basin["lat"]))
 
     max_elev_m = None
@@ -590,6 +593,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "vertices_z": land_pkg.get("vertices_z", []),
         "water": {"lon": pick[0], "lat": pick[1]},
         "basin": basin,
+        "basins": [basin],
         "basin_m": basin_m,
         "max_elev_m": max_elev_m,
         "configs": configs,
@@ -600,6 +604,62 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         "_basin_m": basin_m,
         "_land_m": land_m,
     }
+
+
+def _next_bid(basins):
+    n = 1
+    used = {e.get("bid") for e in basins}
+    while "B{0}".format(n) in used:
+        n += 1
+    return "B{0}".format(n)
+
+
+def ensure_basins(plan):
+    """Make sure plan['basins'] exists and stays in sync with plan['basin'].
+
+    plan['basin'] is always the active basin; plan['basins'] lists every
+    basin (with bid/name/active flags). Legacy single-basin plans are
+    migrated on the fly. Returns the basins list.
+    """
+    b = plan.get("basin")
+    if not b:
+        return []
+    basins = plan.get("basins")
+    if not basins:
+        b.setdefault("bid", "B1")
+        b.setdefault("name", "Basin 1")
+        b["active"] = True
+        plan["basins"] = [b]
+        return plan["basins"]
+    bid = b.get("bid")
+    match = next((e for e in basins if bid and e.get("bid") == bid), None)
+    if match is None:
+        if bid is None and basins:
+            # legacy plan['basin'] without id - adopt the first list entry
+            match = basins[0]
+            b["bid"] = match.get("bid") or _next_bid(basins)
+            b["name"] = match.get("name") or "Basin 1"
+        else:
+            b.setdefault("bid", bid or _next_bid(basins))
+            b.setdefault("name", "Basin {0}".format(len(basins) + 1))
+            match = b
+            basins.append(b)
+    # the active basin is the source of truth for its list entry
+    b["active"] = True
+    b["bid"] = match.get("bid") or b.get("bid")
+    b.setdefault("name", match.get("name"))
+    match["bid"] = b["bid"]
+    if b.get("name"):
+        match["name"] = b["name"]
+    match["lon"] = b.get("lon", match.get("lon"))
+    match["lat"] = b.get("lat", match.get("lat"))
+    if b.get("dist_water_m") is not None:
+        match["dist_water_m"] = b["dist_water_m"]
+    match["active"] = True
+    for e in basins:
+        if e is not match:
+            e["active"] = False
+    return basins
 
 
 def set_basin(plan, lon, lat):
@@ -637,7 +697,107 @@ def set_basin(plan, lon, lat):
         c.setdefault("zones_confirmed", False)
         c.setdefault("rows_confirmed", False)
         c.setdefault("valves_confirmed", False)
+    ensure_basins(plan)
     return True, None
+
+
+def basin_add(plan, lon, lat, name=None):
+    """Add a new (inactive) basin inside the land boundary.
+
+    Returns (ok, error, basin) where basin is the new entry on success.
+    """
+    proj = plan["_proj"]
+    pt = proj.to_m(Point(lon, lat))
+    land_m = plan["_land_m"]
+    if land_m.is_empty or land_m.distance(pt) > 1.0:
+        return False, "Point is outside the land boundary.", None
+    basins = ensure_basins(plan)
+    water_ll = plan["water"]
+    water_m = proj.to_m(Point(water_ll["lon"], water_ll["lat"]))
+    clean = (name or "").strip()
+    b = {
+        "bid": _next_bid(basins),
+        "name": clean or "Basin {0}".format(len(basins) + 1),
+        "lon": float(lon),
+        "lat": float(lat),
+        "z": None,
+        "has_elev": False,
+        "dist_water_m": pt.distance(water_m),
+        "active": False,
+    }
+    basins.append(b)
+    return True, None, b
+
+
+def basin_edit(plan, bid, lon, lat, name=None):
+    """Edit a basin's coordinates and/or name.
+
+    Editing the active basin re-derives the plan (same as set_basin);
+    editing an inactive basin only updates its record.
+    Returns (ok, error, basin).
+    """
+    basins = ensure_basins(plan)
+    target = next((e for e in basins if e.get("bid") == bid), None)
+    if target is None:
+        return False, "Basin not found.", None
+    proj = plan["_proj"]
+    pt = proj.to_m(Point(lon, lat))
+    land_m = plan["_land_m"]
+    if land_m.is_empty or land_m.distance(pt) > 1.0:
+        return False, "Point is outside the land boundary.", None
+    clean = (name or "").strip()
+    if target.get("active"):
+        ok, msg = set_basin(plan, float(lon), float(lat))
+        if not ok:
+            return False, msg, None
+        if clean:
+            plan["basin"]["name"] = clean
+        ensure_basins(plan)
+        return True, None, plan["basin"]
+    water_ll = plan["water"]
+    water_m = proj.to_m(Point(water_ll["lon"], water_ll["lat"]))
+    target["lon"] = float(lon)
+    target["lat"] = float(lat)
+    target["dist_water_m"] = pt.distance(water_m)
+    if clean:
+        target["name"] = clean
+    return True, None, target
+
+
+def basin_remove(plan, bid):
+    """Remove an inactive basin. Returns (ok, error)."""
+    basins = ensure_basins(plan)
+    target = next((e for e in basins if e.get("bid") == bid), None)
+    if target is None:
+        return False, "Basin not found."
+    if target.get("active"):
+        return False, "Cannot remove the active basin. Activate another basin first."
+    plan["basins"] = [e for e in basins if e is not target]
+    return True, None
+
+
+def basin_activate(plan, bid):
+    """Make a basin active: it becomes plan['basin'] and everything that
+    depends on the basin (sectors, zones, valves, pipes) is re-derived.
+    Returns (ok, error, basin).
+    """
+    basins = ensure_basins(plan)
+    target = next((e for e in basins if e.get("bid") == bid), None)
+    if target is None:
+        return False, "Basin not found.", None
+    if target.get("active"):
+        return True, None, plan["basin"]
+    prev = dict(plan.get("basin") or {})
+    nb = dict(target)
+    if "max_elev" in prev and "max_elev" not in nb:
+        nb["max_elev"] = prev["max_elev"]
+    nb["active"] = True
+    plan["basin"] = nb
+    ok, msg = set_basin(plan, target["lon"], target["lat"])
+    if not ok:
+        return False, msg, None
+    ensure_basins(plan)
+    return True, None, plan["basin"]
 
 
 def extend(plan, cfgid):
@@ -1906,101 +2066,91 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
         cfg["valves_confirmed"] = False
         return True, None
     if op == "split equivaly":
-        """Split zone into 3 equivalent areas by area.
-        
-        Divides the target zone into 3 zones with approximately equal area,
-        using a sweep-line approach to balance the split.
-        """
+        """Split the target zone into 3 equal-area zones (automatic)."""
+        from shapely.geometry import box as _box
+        target = next((z for z in zones if z.get("name") == zone_name), None)
+        if target is None and zone_idx is not None:
+            target = next((z for z in zones if z.get("idx") == zone_idx), None)
+        if target is None:
+            target = max(zones, key=lambda z: z.get("area_m2", 0)) if zones else None
+        if target is None:
+            return False, "Zone not found."
+        zm = target.get("poly_m")
+        if zm is None or zm.is_empty:
+            return False, "Zone not found."
+
+        def _polys(g):
+            if g is None or g.is_empty:
+                return []
+            if g.geom_type == "Polygon":
+                return [g]
+            if g.geom_type in ("MultiPolygon", "GeometryCollection"):
+                out = []
+                for p in g.geoms:
+                    out.extend(_polys(p))
+                return out
+            return []
+
+        def _vert_cut(geom, want):
+            """Cut geom with a vertical line so the left piece ~ has area `want`.
+            Returns (left, right) geometries (may be empty on failure)."""
+            minx, miny, maxx, maxy = geom.bounds
+
+            def left_area(x):
+                return geom.intersection(
+                    _box(minx - 10.0, miny - 10.0, x, maxy + 10.0)).area
+
+            lo, hi = minx, maxx
+            for _ in range(40):
+                mid = (lo + hi) / 2.0
+                if left_area(mid) < want:
+                    lo = mid
+                else:
+                    hi = mid
+            x = (lo + hi) / 2.0
+            cut = _box(minx - 10.0, miny - 10.0, x, maxy + 10.0)
+            return geom.intersection(cut), geom.difference(cut)
+
         try:
-            # Find the target zone
-            target = next((z for z in zones if z.get("name") == zone_name), None)
-            if target is None and zone_idx is not None:
-                target = next((z for z in zones if z.get("idx") == zone_idx), None)
-            if target is None:
-                return False, "Zone not found."
-            
-            zm = target["poly_m"]
-            sector_idx = target.get("sector_idx", 0) if hasattr(target, 'get') else 0
-            
-            # Get all zones in this sector
-            all_zones = [z for z in sectors[sector_idx].get("zones", [])] if sector_idx < len(sectors) else sectors.get("zones", [])
-            
-            # Use polygon subdivision to create 3 equal-area zones
-            # Method: recursive bisection - split zone in half, then split one half in half again
-            from shapely.geometry import Point, LineString
-            from shapely.ops import transform
-            
-            # Get zone bounds
-            zone_bounds = zm.bounds
-            zone_center = Point((zone_bounds[0] + zone_bounds[2]) / 2, (zone_bounds[1] + zone_bounds[3]) / 2)
-            zone_area = zm.area
-            target_area = zone_area / 3.0
-            
-            # Create first split line vertically through center
-            line1 = LineString([(zone_bounds[0], zone_bounds[1]), (zone_bounds[0], zone_bounds[3])])
-            res1 = _shapely_split(zm, line1)
-            
-            if res1 and len(res1.geoms) >= 2:
-                parts1 = sorted(list(res1.geoms), key=lambda g: g.area, reverse=True)
-                if len(parts1) >= 2:
-                    # First part keeps original target, second part gets split again
-                    part_a = parts1[0]
-                    part_b = parts1[1]
-                    
-                    # Split part_b horizontally
-                    part_b_bounds = part_b.bounds
-                    line2 = LineString([(part_b_bounds[0], part_b_bounds[1]), (part_b_bounds[2], part_b_bounds[1])])
-                    res2 = _shapely_split(part_b, line2)
-                    
-                    if res2 and len(res2.geoms) >= 2:
-                        parts2 = sorted(list(res2.geoms), key=lambda g: g.area, reverse=True)
-                        if len(parts2) >= 2:
-                            # We now have 3 parts - assign to 3 zones
-                            final_parts = [part_a] + parts2[:2]
-                            
-                            # Recalculate zones in sector
-                            rest = [z for z in sectors[sector_idx].get("zones", []) if z is not target]
-                            
-                            new_zones_list = []
-                            for i, part in enumerate(final_parts[:3]):
-                                if part.area > 0:
-                                    new_zones_list.append({
-                                        "idx": len(rest) + i + 1,
-                                        "name": "S{0}Z{1:d}".format(sector_idx + 1, i + 1),
-                                        "poly_m": part,
-                                        "poly": proj.to_lonlat(part),
-                                        "area_m2": round(part.area, 2),
-                                        "centroid": proj.to_lonlat(part.centroid),
-                                        "tree": target.get("tree", "none"),
-                                        "tree_dist": target.get("tree_dist", TREE_DIST_DEFAULT),
-                                        "tree_pct": target.get("tree_pct", 100.0),
-                                    })
-                            
-                            # If we have fewer than 3 valid parts, pad with existing zones
-                            while len(new_zones_list) < 3 and rest:
-                                new_zones_list.append(rest.pop(0))
-                            
-                            sector["zones"] = rest + new_zones_list
-                            for i, z in enumerate(sector["zones"], start=1):
-                                z["idx"] = i
-                                z["name"] = "S{0}Z{1:d}".format(sector_idx + 1, i)
-                            
-                            _rebuild_valves_pipes(plan, cfg)
-                            cfg["zones_confirmed"] = False
-                            cfg["rows_confirmed"] = False
-                            cfg["valves_confirmed"] = False
-                            return True, None
-            
-            return False, "Could not divide zone into 3 equivalent areas."
-            
-        except Exception as e:
-            return False, f"Error in split equivaly: {str(e)}"
-    # Validate pipe connection rules after any zone/pipe operation
-    _validate_pipe_rules(plan, cfg)
-    return False, "Unknown operation."
-
-
-def analyse_other_element(plan, cfg, kind, lon, lat):
+            third = zm.area / 3.0
+            left, right = _vert_cut(zm, third)
+            left_ps = sorted(_polys(left), key=lambda g: g.area, reverse=True)
+            right_ps = _polys(right)
+            if not left_ps or not right_ps:
+                return False, "Could not divide zone into 3 equivalent areas."
+            part_a = left_ps[0]
+            rgeom = right_ps[0] if len(right_ps) == 1 else unary_union(right_ps)
+            mid_p, far_p = _vert_cut(rgeom, rgeom.area / 2.0)
+            mid_ps = sorted(_polys(mid_p), key=lambda g: g.area, reverse=True)
+            far_ps = sorted(_polys(far_p), key=lambda g: g.area, reverse=True)
+            if not mid_ps or not far_ps:
+                return False, "Could not divide zone into 3 equivalent areas."
+            final_parts = [part_a, mid_ps[0], far_ps[0]]
+            final_parts = [g if g.is_valid else make_valid(g) for g in final_parts]
+            final_parts = [g for g in final_parts
+                           if g.geom_type.startswith("Polygon") and g.area > 60.0]
+            if len(final_parts) < 3:
+                return False, "Could not divide zone into 3 equivalent areas."
+            rest = [z for z in zones if z is not target]
+            new_zones = []
+            for g in final_parts:
+                new_zones.append({"poly_m": g, "poly": proj.to_lonlat(g),
+                                  "area_m2": g.area,
+                                  "centroid": proj.to_lonlat(g.centroid),
+                                  "tree": target.get("tree", "none"),
+                                  "tree_dist": target.get("tree_dist", TREE_DIST_DEFAULT),
+                                  "tree_pct": target.get("tree_pct", 100.0)})
+            sector["zones"] = rest + new_zones
+            for i, z in enumerate(sector["zones"], start=1):
+                z["idx"] = i
+                z["name"] = "S{0}Z{1:d}".format(sector["idx"], i)
+            _rebuild_valves_pipes(plan, cfg)
+            cfg["zones_confirmed"] = False
+            cfg["rows_confirmed"] = False
+            cfg["valves_confirmed"] = False
+            return True, None
+        except Exception as e:  # noqa: BLE001 - surface as bilingual error
+            return False, "Error in split equivaly: {0}".format(str(e))
     # Validate pipe connection rules after any zone/pipe operation
     _validate_pipe_rules(plan, cfg)
     return False, "Unknown operation."

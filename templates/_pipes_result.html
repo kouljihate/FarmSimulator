@@ -39,6 +39,9 @@
   <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('PIPE_SELECTED') }}</h3></div>
   <div class="p-5">
     <div id="pipe-info" class="text-sm text-white/55">{{ t('PIPE_INFO_EMPTY') }}</div>
+    <button type="button" id="pipe-del-sel-btn" class="hidden tool-btn tool-btn-danger pipe-del-btn mt-3"
+            data-cfg="{{ cfg.id }}" data-pid=""
+            title="{{ tl('OTHER_REMOVE')[0] }} / {{ tl('OTHER_REMOVE')[1] }}">{{ bv('PIPE_DELETE_SEL') }}</button>
   </div>
 </div>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">

@@ -5,15 +5,18 @@ every interaction (upload, load, basin edits, sector ops, config overview)
 is a POST to ``/`` returning JSON. Tab bodies are server-rendered HTML
 fragments injected in place - the browser never leaves ``/``.
 """
+
 import os
 import re
 import uuid
+import logging
+import sys
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 
 from flask import Flask, jsonify, render_template, request
 
 from core import engine, i18n, mapper, parser, storage
-
 BASE = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE, "uploads")
 
@@ -58,6 +61,9 @@ def _basin_summary(plan):
         "z": b.get("z"),
         "has_elev": b.get("has_elev"),
         "dist_water_m": b.get("dist_water_m"),
+        "name": b.get("name"),
+        "bid": b.get("bid"),
+        "n_basins": len(plan.get("basins") or []),
         "max_elev": {"lon": me.get("lon"), "lat": me.get("lat"), "z": me.get("z")} if me else None,
     }
 
@@ -262,11 +268,67 @@ def _err(msg):
 
 def _get_plan(token):
     plan = STORE.get_plan(token)
+    if plan is not None:
+        try:
+            engine.ensure_basins(plan)
+        except Exception:  # noqa: BLE001 - never block a load on migration
+            pass
     return plan
 
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+
+# --- Logging setup ---
+BASE = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
+
+logger = logging.getLogger("farmsimulator")
+logger.setLevel(logging.DEBUG)
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+console_format = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+console_handler.setFormatter(console_format)
+
+# Rotating file handler (daily rotation, 5 backups)
+file_handler = TimedRotatingFileHandler(LOG_FILE, when="midnight", backupCount=5, encoding="utf-8")
+file_handler.setLevel(logging.DEBUG)
+file_format = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s [in %(pathname)s:%(lineno)d]")
+file_handler.setFormatter(file_format)
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+# Reduce noise from werkzeug/flask
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+
+logger.info("FarmSimulator application started")
+
+
+def log_action(token, cfgid, action, details=""):
+    """Log an action performed by a user."""
+    try:
+        token_short = token[:8] if token else "N/A"
+        cfgid_short = str(cfgid) if cfgid else "N/A"
+        msg = f"Action: {action} | Token: {token_short} | CFG: {cfgid_short} | Details: {details}"
+        logger.info(msg)
+    except Exception:
+        pass  # Avoid logging loops
+
+
+def log_error(token, error, context=""):
+    """Log an error occurred."""
+    try:
+        err_msg = str(error)[:100] if error else "Unknown"
+        token_short = token[:8] if token else "N/A"
+        msg = f"Error: {err_msg} | Token: {token_short} | Context: {context}"
+        logger.error(msg)
+    except Exception:
+        pass  # Avoid logging loops
 
 app.jinja_env.globals.update(
     t=i18n.t,
@@ -344,30 +406,66 @@ def index():
     if op == "basin":
         plan = _get_plan(data.get("token"))
         if plan is None:
+            log_error(data.get("token"), "Run not found.", "basin")
             return _err("Run not found.")
-        try:
-            lon = float(data.get("lon"))
-            lat = float(data.get("lat"))
-        except (TypeError, ValueError):
-            ok, msg = False, "Invalid coordinates."
-        else:
-            ok, msg = engine.set_basin(plan, lon, lat)
+        action = data.get("action") or "move"
+        log_action(data.get("token"), data.get("cfgid"), "basin:" + str(action))
+        ok, msg = False, "Invalid coordinates."
+
+        def _num(key):
+            try:
+                return float(data.get(key))
+            except (TypeError, ValueError):
+                return None
+
+        if action == "add":
+            lon, lat = _num("lon"), _num("lat")
+            if lon is None or lat is None:
+                ok, msg = False, "Invalid coordinates."
+            else:
+                ok, msg, _nb = engine.basin_add(plan, lon, lat, data.get("name"))
+        elif action == "edit":
+            lon, lat = _num("lon"), _num("lat")
+            if lon is None or lat is None:
+                ok, msg = False, "Invalid coordinates."
+            else:
+                ok, msg, _nb = engine.basin_edit(plan, data.get("bid"), lon, lat,
+                                                 data.get("name"))
+        elif action == "remove":
+            ok, msg = engine.basin_remove(plan, data.get("bid"))
+        elif action == "activate":
+            ok, msg, _nb = engine.basin_activate(plan, data.get("bid"))
+        else:  # move the active basin (legacy behaviour)
+            lon, lat = _num("lon"), _num("lat")
+            if lon is None or lat is None:
+                ok, msg = False, "Invalid coordinates."
+            else:
+                ok, msg = engine.set_basin(plan, lon, lat)
+                if ok:
+                    clean = (data.get("name") or "").strip()
+                    if clean:
+                        plan["basin"]["name"] = clean
+                    engine.ensure_basins(plan)
+        if not ok:
+            log_error(data.get("token"), str(msg), "basin:" + str(action))
+            return jsonify(ok=False, error_html=str(i18n.err(msg)))
         cfg_maps = {}
         for cfg in plan["configs"]:
             cfg_maps[cfg["id"]] = mapper.map_config_preview(plan, cfg)
         basin_map = mapper.map_basin(plan)
-        if ok:
-            _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
-        if not ok:
-            return jsonify(ok=False, error_html=str(i18n.err(msg)))
+        _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
         return jsonify(
             ok=True,
             basin=plan["basin"] and {
                 "lon": plan["basin"]["lon"],
                 "lat": plan["basin"]["lat"],
                 "dist_water_m": plan["basin"]["dist_water_m"],
+                "name": plan["basin"].get("name"),
+                "bid": plan["basin"].get("bid"),
             },
             basin_map=basin_map,
+            basin_html=render_template("_basin_result.html", token=data.get("token"),
+                                       plan=plan, basin_map=basin_map),
             sectors_html=render_template(
                 "_sectors_result.html", token=data.get("token"), plan=plan,
                 cfg_maps=cfg_maps),
@@ -433,7 +531,9 @@ def index():
         cfg = next((c for c in (plan or {}).get("configs", [])
                     if c["id"] == data.get("cfgid")), None)
         if plan is None or cfg is None:
+            log_error(data.get("token"), "Run not found.", "zone_action")
             return _err("Run not found.")
+        log_action(data.get("token"), data.get("cfgid"), "zone_action")
         engine.extend(plan, data.get("cfgid"))
         ok, msg = engine.apply_zone_op(
             plan, cfg, data.get("action", ""),
@@ -466,7 +566,9 @@ def index():
         cfg = next((c for c in (plan or {}).get("configs", [])
                     if c["id"] == data.get("cfgid")), None)
         if plan is None or cfg is None:
+            log_error(data.get("token"), "Run not found.", "valve_action")
             return _err("Run not found.")
+        log_action(data.get("token"), data.get("cfgid"), "valve_action")
         engine.extend(plan, data.get("cfgid"))
         ok, msg = engine.apply_valve_op(
             plan, cfg, data.get("action", ""),
@@ -496,7 +598,9 @@ def index():
         cfg = next((c for c in (plan or {}).get("configs", [])
                     if c["id"] == data.get("cfgid")), None)
         if plan is None or cfg is None:
+            log_error(data.get("token"), "Run not found.", "pipe_action")
             return _err("Run not found.")
+        log_action(data.get("token"), data.get("cfgid"), "pipe_action")
         engine.extend(plan, data.get("cfgid"))
         ok, msg = engine.apply_pipe_op(
             plan, cfg, data.get("action", ""),

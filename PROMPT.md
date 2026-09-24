@@ -723,3 +723,22 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     outside the land (fringe existing-sectors), failing every re-save
     validation; chain vertices and taps now snap inside the land
     (`_inside_land`); `MAPS_V=6` regenerates cached maps.
+80. v0.43.0: **multi-basin management + zoom badge + delete selected pipe** —
+    `plan['basins']` list (bid/name/active) with `ensure_basins` migration,
+    engine ops `basin_add/basin_edit/basin_remove/basin_activate` (activate
+    re-derives via `set_basin`; active basin cannot be removed); `{op:basin}`
+    gains `action` (move|add|edit|remove|activate) and returns `basin_html`;
+    Basin tab re-laid out (map+stats left; active form, basins list with
+    Activate/Edit/Delete badges, add form right); inactive basins render as
+    gray markers on the basin map; `mapper._zoom_js()` appends a live
+    "Zoom: N" badge to **every** map via `build()`; Selected-pipe panel shows
+    a **Delete selected pipe** button when a non-principal pipe is selected
+    (`pipe-del-sel-btn`, reuses `pipe-del-btn` handler); **Split Equivaly**
+    actually works now — old handler was dead (nested script, wrong `dCfg`/
+    `sel` refs) and the engine op was broken (`sectors` undefined, split
+    lines on bounds edges): rewrote as vertical area-bisection into 3
+    equal-area zones (mirrors `split`), wired via `zSplitEq` handler in the
+    main script; removed duplicate `analyse_other_element` stub; new i18n
+    keys BASIN_LIST/BASIN_ACTIVE_FORM/BASIN_ADD/BASIN_ADD_SUB/BASIN_EDIT/
+    BASIN_ACTIVATE/BASIN_ACTIVE/BASIN_INACTIVE/BASIN_NAME/PIPE_DELETE_SEL
+    (EN+AR) + ERRORS for basin messages; `logs/` gitignored.
