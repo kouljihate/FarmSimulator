@@ -96,7 +96,7 @@ def _zoom_js():
     ) + "</script>"
 
 
-def build(layers, center, zoom=16):
+def build(layers, center, zoom=17):
     m = _render_base(center, zoom)
     for it in layers.items:
         name = it.get("name", "")
@@ -205,7 +205,7 @@ def map_basin(plan):
     if me:
         _marker(plan, lay, "maxelev", me["lon"], me["lat"], "green", 9, z=me["z"])
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    m = build(lay, center, 16)
+    m = build(lay, center, 17)
     active_bid = plan["basin"].get("bid")
     for b in (plan.get("basins") or []):
         if b.get("active"):
@@ -354,7 +354,7 @@ def map_config_preview(plan, cfg):
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 10)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    m = build(lay, center, 16)
+    m = build(lay, center, 17)
     m.get_root().html.add_child(folium.Element(_sector_select_js(cfg)))
     m.get_root().html.add_child(folium.Element(_sector_manage_js(cfg)))
     return to_html(m)
@@ -404,7 +404,7 @@ def map_config_overview(plan, cfg):
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    return to_html(build(lay, center, 16))
+    return to_html(build(lay, center, 17))
 
 
 def map_config_valves(plan, cfg, only_sector=None, show_rows=False):
@@ -442,9 +442,9 @@ def map_config_valves(plan, cfg, only_sector=None, show_rows=False):
     elif only_sector and secs:
         xs = [s["centroid"].x for s in secs]
         ys = [s["centroid"].y for s in secs]
-        center, zoom = [sum(ys) / len(ys), sum(xs) / len(xs)], 16
+        center, zoom = [sum(ys) / len(ys), sum(xs) / len(xs)], 17
     else:
-        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 16
+        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 17
     m = build(lay, center, zoom)
     for z in zones:
         c = z.get("centroid")
@@ -629,7 +629,7 @@ def map_config_pipes(plan, cfg, only_sector=None, only_types=None):
         c0 = secs[0]["centroid"]
         center, zoom = [c0.y, c0.x], 17
     else:
-        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 16
+        center, zoom = [plan["basin"]["lat"], plan["basin"]["lon"]], 17
     m = build(lay, center, zoom)
     for z in zones:
         c = z.get("centroid")
@@ -671,7 +671,7 @@ def map_other_elements(plan, cfg):
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
-    m = build(lay, center, 16)
+    m = build(lay, center, 17)
     m.get_root().html.add_child(folium.Element(_other_pick_js()))
     return to_html(m)
 
@@ -835,7 +835,7 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
     lay.marker(nm.x, nm.y, _ti("sector", name=sector["name"], area=sector["area_m2"]),
                "#111111", radius=3)
     center = [sector["centroid"].y, sector["centroid"].x]
-    m = build(lay, center, 18)
+    m = build(lay, center, 17)
     for z in zones:
         c = z["centroid"]
         folium.map.Marker(
@@ -987,7 +987,7 @@ def map_recap(plan, cfg):
                        color="#777777", weight=1)
     if not (plan.get("all_boundaries")) and plan.get("land") is not None:
         lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
-    m = build(lay, center, 16)
+    m = build(lay, center, 17)
     prefs = {k: {"show": s["show"], "color": s["color"], "size": s["size"]}
              for k, s in state.items()}
     m.get_root().html.add_child(folium.Element(_recap_js(
@@ -1092,7 +1092,7 @@ def map_sector_rows(plan, cfg, sector):
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)
     center = [sector["centroid"].y, sector["centroid"].x]
-    m = build(lay, center, 18)
+    m = build(lay, center, 17)
     for z in zones:
         c = z["centroid"]
         folium.map.Marker(
