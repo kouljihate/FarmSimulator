@@ -68,7 +68,7 @@
           <option value="{{ maj.pid }}" data-kind="major" data-diam="{{ maj.diameter_mm }}" data-sector="{{ maj.sector }}" data-zone="{{ maj.zone }}" data-x1="{{ maj.line.coords[0][0] }}" data-y1="{{ maj.line.coords[0][1] }}" data-x2="{{ maj.line.coords[-1][0] }}" data-y2="{{ maj.line.coords[-1][1] }}">{{ maj.zone }} — {{ maj.diameter_mm }} mm</option>
           {% endfor %}
           {% for mn in cfg.pipes.minors %}
-          <option value="{{ mn.pid }}" data-kind="minor" data-diam="{{ mn.diameter_mm }}" data-sector="{{ mn.sector }}" data-zone="{{ mn.zone }}" data-x1="{{ mn.line.coords[0][0] }}" data-y1="{{ mn.line.coords[0][1] }}" data-x2="{{ mn.line.coords[-1][0] }}" data-y2="{{ mn.line.coords[-1][1] }}">{{ mn.zone }} — {{ mn.diameter_mm }} mm</option>
+          <option value="{{ mn.pid }}" data-kind="minor" data-diam="{{ mn.diameter_mm }}" data-sector="{{ mn.sector }}" data-zone="{{ mn.zone }}" data-x1="{{ mn.line.coords[0][0] }}" data-y1="{{ mn.line.coords[0][1] }}" data-x2="{{ mn.line.coords[-1][0] }}" data-y2="{{ mn.line.coords[-1][1] }}">{{ mn.name|default(mn.zone, true) }} — {{ mn.diameter_mm }} mm</option>
           {% endfor %}
           {% for cu in cfg.pipes.customs %}
           <option value="{{ cu.pid }}" data-kind="custom" data-diam="{{ cu.diameter_mm }}" data-sector="{{ cu.sector }}" data-zone="{{ cu.zone }}" data-x1="{{ cu.line.coords[0][0] }}" data-y1="{{ cu.line.coords[0][1] }}" data-x2="{{ cu.line.coords[-1][0] }}" data-y2="{{ cu.line.coords[-1][1] }}">{{ cu.zone }} — {{ cu.diameter_mm }} mm *</option>
@@ -165,7 +165,7 @@
         {% endif %}{% endfor %}
         {% for mn in cfg.pipes.minors %}{% if (not selected_pipe_sector or mn.sector == selected_pipe_sector) and (not selected_pipe_types or 'minor' in selected_pipe_types) %}
         <tr data-pid="{{ mn.pid }}" class="pipe-row">
-          <td class="px-4 py-2 font-semibold text-white">{{ t('T_MINOR') }}</td>
+          <td class="px-4 py-2 font-semibold text-white">{{ mn.name|default(t('T_MINOR'), true) }}</td>
           <td class="px-4 py-2">{{ mn.diameter_mm }} mm</td>
           <td class="px-4 py-2">{{ mn.sector }}</td>
           <td class="px-4 py-2">{{ mn.zone }}</td>

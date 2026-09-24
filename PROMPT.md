@@ -276,7 +276,7 @@ holds `templates/_sectors_result.html` (sectorisation heading + config map
   and after `engine.extend(plan, cid)`: `zones[], valves[], pipes`
   (`pipes = {principal:{pid:P,diameter_mm:90, line, len_m},
               majors:[{pid:M:zone,zone,sector,diameter_mm:63,line,len_m}],
-              minors:[{pid:m:zone,zone,sector,diameter_mm:32,line,len_m}],
+              minors:[{pid:m:zone,name:P32-zone,zone,sector,diameter_mm:32,line,len_m}],
               customs:[{pid:C:hex,â€¦}]}` + `pipe_overrides{pid:{line,len_m,
               diameter_mm}}`, `removed_pipes[pid]`, `custom_pipes[]`)
 
@@ -762,3 +762,27 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     are placed in **selection order** rather than DOM order (deselect resets
     `order` to `''`). Empty grid collapses to zero height (all children
     `display:none`).
+82. v0.45.0: **valve at sectornzone intersection + P32 along zone boundary**
+    — secondary valves are placed on the shared sector/zone boundary
+    (`_valve_on_intersection`: `zone_m.boundary n sector_m.boundary`, with a
+    0.05 m buffer fallback; prefers candidates that also sit on a
+    boundary run perpendicular to the rows); new engine helpers
+    `_zone_row_angle`, `_boundary_runs_perp`, `_line_through_point`,
+    `_boundary_intersection`, `_geom_lines`/`_geom_points`,
+    `_minor_line_on_boundary`. Pipe32 minors are named **`P32-<zone>`**
+    (pid stays `m:zone`) and run **along the zone boundary, perpendicular
+    to the row direction**, starting at the secondary valve (fallback:
+    legacy tap2?centroid when no ? run is near). Wired into
+    `extend_config`, `_rebuild_valves_pipes`, `_apply_valve_customization`
+    (moved-valve branch keeps major recompute; minor uses boundary helper),
+    `_ensure_pipe_pids` (name setdefault for old plans),
+    `_move_zone_refs` / `_migrate_zone_names` (P32 name follows zone
+    renames), and **re-laid after row changes**: `compute_rows` and
+    `apply_row_direction` call `_rebuild_valves_pipes` when `ready`;
+    `extend()` ready path now rebuilds so old runs re-derive. Displays:
+    `_pipes_result.html` table cell + select option show `mn.name`
+    (`default` ? zone / Minor); `mapper._pipe_manage_js` adds `name` to
+    minor pipe dicts and tooltip/`infoHtml` prefer `p.name`;
+    `index.html` `pipeInfoHtml` prefers `p.name`. i18n `STEP_VALVES` /
+    `STEP_PIPES` EN+AR updated. README valves/pipes/data-model bullets +
+    PROMPT data model line. VERSION 0.45.0.

@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.44.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.45.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -24,7 +24,9 @@ place. The browser never leaves `/`.
    with the **Confirm Zones** button at the end of the Zones tab — confirming
    reveals the valves.
 4. **Valves** — one principal **90 mm** valve at each sector entry plus one
-    secondary **32 mm** valve per zone. The Valve tab shows a large 620 px map
+    secondary **32 mm** valve per zone **on the sector∩zone boundary
+    intersection** (preferred where a boundary run is perpendicular to the
+    rows). The Valve tab shows a large 620 px map
     with sectors + all zones (with name labels) + draggable valve markers:
     clicking a marker selects it and shows its full info (name, kind, diameter,
     sector, zone, X/Y) in the Selected-valve panel; dragging a marker
@@ -45,7 +47,7 @@ place. The browser never leaves `/`.
 
 1. **Basin → Principal Pipe90**: Single connection only with appropriate connectors (90° elbows, tees). Principal pipe90 connects basin to sector entries — must route within land boundary or sector boundaries. Only one pipe90 connection allowed.
 
-2. **Distribution Chain**: Principal Pipe90 → Pipe63 (majors) → serves all sectors/zones → Pipe32 (minors) → per zone supply. Each pipe63 taps off principal at closest point to zone valve; each pipe32 taps off its parent pipe63 at closest point to zone valve.
+2. **Distribution Chain**: Principal Pipe90 → Pipe63 (majors) → serves all sectors/zones → Pipe32 (minors) → per zone supply. Each pipe63 taps off principal at closest point to zone valve; each pipe32 (**named `P32-SxZy`**) runs along its **zone boundary, perpendicular to the row direction**, starting at the secondary valve (sector∩zone boundary intersection).
 
 3. **Valve Integration**: All pipes must connect to their assigned valves (principal 90mm per sector, secondary 32mm per zone). Pipe endpoints must align with valve positions on the map.
 
@@ -353,4 +355,4 @@ uploads/                   runtime: uploaded raw files (+ <token>.db pickle fall
 | `config` | `id, name, angle, n_sectors, sectors, ready, zones_confirmed, rows_confirmed, valve_overrides{(kind,sector,zone):[lon,lat]}, removed_valves[], custom_valves[]` + post-extend `zones, valves, pipes` |
 | `sector` | `idx, name, poly_m, poly, centroid, area_m2, entry, entry_m, zone_angle` |
 | `valve` | principal: `{id:P:<sector>, kind:principal, sector, diameter_mm:90, lon, lat, point, name}`; secondary: `{id:S:<zone>, kind:secondary, sector, zone, diameter_mm:32, lon, lat, point, name}` (+ `moved` when repositioned, `custom:true` for added valves) |
-| `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, sector, diameter_mm:63, len_m}), minors[]({zone, sector, diameter_mm:32, len_m})` |
+| `pipes` | `principal({diameter_mm:90,…}), majors[]({zone, sector, diameter_mm:63, len_m}), minors[]({pid:m:zone, name:P32-zone, zone, sector, diameter_mm:32, len_m})` |

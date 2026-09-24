@@ -247,8 +247,8 @@ EN = {
     "WHAT_TITLE": "What Part 1 produces",    "STEP_BASIN": "Basin - best spot near the water point at a favourable elevation.",
     "STEP_SECTORS": "Sectorisation - 3 config maps, every sector \u2264 10,000 m\u00b2, named S1, S2, \u2026",
     "STEP_ZONES": "Zonage - each sector splits into 3 equal zones Z1, Z2, Z3.",
-    "STEP_VALVES": "Valves - one 90 mm principal valve per sector + one 32 mm secondary valve per zone.",
-    "STEP_PIPES": "Piping - 90 mm principal from the max elevation through the basin; 63 mm majors to each zone valve; 32 mm minors from each valve to the zone supply point.",
+    "STEP_VALVES": "Valves - one 90 mm principal valve per sector at its entry + one 32 mm secondary valve per zone at the sector/zone boundary intersection.",
+    "STEP_PIPES": "Piping - 90 mm principal from the max elevation through the basin; 63 mm majors to each zone valve; 32 mm minors (P32-SxZy) along the zone boundary, perpendicular to the rows.",
 
     # result
     "BASIN_TITLE": "Basin placement",
@@ -536,8 +536,8 @@ AR = {
     "STEP_BASIN": "الحوض - أفضل موقع قرب مصدر الماء مع ارتفاع مناسب.",
     "STEP_SECTORS": "القطاعيات - 3 خرائط تخطيطات، كل قطاع \u2264 10,000 م\u00b2، وتسميته S1، S2، \u2026",
     "STEP_ZONES": "التقسيم - يُقسَّم كل قطاع إلى 3 مناطق متساوية Z1، Z2، Z3.",
-    "STEP_VALVES": "الصمامات - صمام رئيسي 90 مم لكل قطاع + صمام ثانوي 32 مم لكل منطقة.",
-    "STEP_PIPES": "الأنابيب - رئيسي 90 مم من أعلى ارتفاع عبر الحوض؛ فرعيات رئيسية 63 مم إلى كل صمام منطقة؛ فرعيات 32 مم من كل صمام إلى نقطة تزويد المنطقة.",
+    "STEP_VALVES": "الصمامات - صمام رئيسي 90 مم لكل قطاع عند مدخله + صمام ثانوي 32 مم لكل منطقة عند تقاطع حدود القطاع والمنطقة.",
+    "STEP_PIPES": "الأنابيب - رئيسي 90 مم من أعلى ارتفاع عبر الحوض؛ فرعيات رئيسية 63 مم إلى كل صمام منطقة؛ فرعيات 32 مم (P32-SxZy) على حدود المنطقة، عمودية على الصفوف.",
 
     "BASIN_TITLE": "موقع الحوض",
     "BASIN_REC": "الحوض الموصى به عند",

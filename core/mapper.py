@@ -508,6 +508,7 @@ def _pipe_manage_js(cfg, only_sector=None, only_types=None):
         if not keep("minor"):
             continue
         pipes.append({"pid": m.get("pid") or ("m:" + str(m.get("zone"))),
+                      "name": m.get("name") or "",
                       "kind": "minor", "diameter_mm": m.get("diameter_mm", 32),
                       "sector": m.get("sector"),
                       "zone": m.get("zone"), "len_m": m.get("len_m", 0.0),
@@ -536,7 +537,7 @@ def _pipe_manage_js(cfg, only_sector=None, only_types=None):
         "var CFG=" + str(cfg["id"]) + ";"
         "var PIPES=" + data + ";"
         "function infoHtml(p){return '<div style=\"font-family:Comfortaa,sans-serif;font-size:12px;color:#0b1220;line-height:1.5;min-width:150px;\">'"
-        "+'<b>'+p.kind+' - '+p.diameter_mm+' mm</b><br>'"
+        "+'<b>'+(p.name?String(p.name).replace(/[<>&]/g,''):p.kind+' - '+p.diameter_mm+' mm')+'</b><br>'"
         "+(p.zone?'<span>Zone: '+String(p.zone).replace(/[<>&]/g,'')+'</span><br>':'')"
         "+'<span>'+Math.round(p.len_m).toLocaleString()+' m</span></div>';}"
         "function post(o){try{window.top.postMessage(o,'*');}catch(x){}}"
@@ -550,7 +551,7 @@ def _pipe_manage_js(cfg, only_sector=None, only_types=None):
         "if(path.length<2)return;"
         "var pl=L.polyline(path,{color:p.color,weight:p.weight,opacity:.95,dashArray:p.dash});"
         "pl.addTo(mp);ls.push(pl);"
-        "pl.bindTooltip(p.kind+' '+p.diameter_mm+' mm'+(p.zone?' - '+p.zone:''),{sticky:true});"
+        "pl.bindTooltip((p.name?String(p.name).replace(/[<>&]/g,''):p.kind+' '+p.diameter_mm+' mm'+(p.zone?' - '+p.zone:'')),{sticky:true});"
         "pl.bindPopup(infoHtml(p));"
         "pl.on('click',function(){pipeClicked=true;"
         "setTimeout(function(){pipeClicked=false;},0);"

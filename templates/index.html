@@ -760,7 +760,10 @@
   });
 
   function pipeInfoHtml(p) {
-    return '<div class="font-bold text-white">' + esc(p.kind || '') + ' · ' + esc(p.diameter_mm || '') + ' mm</div>'
+    var title = p.name ? esc(p.name)
+      : esc(p.kind || '') + ' · ' + esc(p.diameter_mm || '') + ' mm';
+    return '<div class="font-bold text-white">' + title + '</div>'
+      + (!p.name && p.diameter_mm ? '<div class="text-white/60">' + esc(p.diameter_mm) + ' mm</div>' : '')
       + (p.zone ? '<div class="mt-1 text-white/70">Zone: ' + esc(p.zone) + '</div>' : '')
       + (p.sector ? '<div class="text-white/70">Sector: ' + esc(p.sector) + '</div>' : '')
       + '<div class="mt-1 font-mono text-cyan-200">' + Math.round(p.len_m || 0).toLocaleString() + ' m</div>';

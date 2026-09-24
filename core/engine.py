@@ -304,13 +304,384 @@ def _nearest_on(line_m, pt_m):
     return nearest_points(line_m, Point(pt_m))[0]
 
 
+def _zone_row_angle(z, zone_m):
+    """Row direction of a zone in degrees (0..180): fitted/manual, else long axis."""
+    if z is not None:
+        rows = z.get("rows") or {}
+        if rows.get("angle") is not None:
+            try:
+                return float(rows["angle"]) % 180.0
+            except (TypeError, ValueError):
+                pass
+        manual = z.get("rows_manual")
+        if manual is not None:
+            try:
+                return float(manual) % 180.0
+            except (TypeError, ValueError):
+                pass
+    if zone_m is None or getattr(zone_m, "is_empty", True):
+        return 0.0
+    return main_axis_angle(zone_m) % 180.0
+
+
+def _boundary_runs_perp(zone_m, target_deg, tol=45.0):
+    """Contiguous exterior-ring runs of ``zone_m`` whose undirected bearing is
+    within ``tol`` degrees of ``target_deg`` (mod 180). Returns LineStrings."""
+    if zone_m is None or getattr(zone_m, "is_empty", True):
+        return []
+    geom = zone_m
+    if geom.geom_type == "MultiPolygon":
+        geom = max(geom.geoms, key=lambda g: g.area)
+    if geom.geom_type != "Polygon":
+        return []
+    pts = list(geom.exterior.coords)
+    if not pts:
+        return []
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])
+    n = len(pts) - 1
+    if n < 1:
+        return []
+    target = float(target_deg) % 180.0
+
+    def seg_ok(a, b):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        if dx == 0.0 and dy == 0.0:
+            return False
+        bearing = _math.degrees(_math.atan2(dy, dx)) % 180.0
+        diff = abs((bearing - target + 90.0) % 180.0 - 90.0)
+        return diff <= tol
+
+    flags = [seg_ok(pts[i], pts[i + 1]) for i in range(n)]
+    if not any(flags):
+        return []
+    if all(flags):
+        return [LineString(pts)]
+    start = flags.index(False)
+    order = [(start + 1 + k) % n for k in range(n)]
+    segs = [(flags[i], pts[i], pts[i + 1]) for i in order]
+    runs, cur = [], None
+    for ok, a, b in segs:
+        if ok:
+            if cur is None:
+                cur = [a, b]
+            else:
+                cur.append(b)
+        else:
+            if cur is not None and len(cur) >= 2:
+                runs.append(LineString(cur))
+            cur = None
+    if cur is not None and len(cur) >= 2:
+        runs.append(LineString(cur))
+    return runs
+
+
+def _line_through_point(line, pt):
+    """``line`` with ``pt`` inserted on its nearest segment (vertex on the path)."""
+    v = pt if isinstance(pt, Point) else Point(pt)
+    coords = list(line.coords)
+    if len(coords) < 2:
+        return line
+    best_i, best_d, best_p = 0, None, None
+    for i in range(len(coords) - 1):
+        seg = LineString([coords[i], coords[i + 1]])
+        d = seg.distance(v)
+        p = nearest_points(seg, v)[0]
+        if best_d is None or d < best_d:
+            best_i, best_d, best_p = i, d, p
+    insert = v if best_d is not None and best_d <= 1.0 else best_p
+    if insert is None:
+        return line
+    ip = (insert.x, insert.y)
+    if ip == coords[0] or ip == coords[-1]:
+        return line
+    new = coords[: best_i + 1] + [ip] + coords[best_i + 1:]
+    cleaned = [new[0]]
+    for c in new[1:]:
+        if c != cleaned[-1]:
+            cleaned.append(c)
+    return LineString(cleaned) if len(cleaned) >= 2 else line
+
+
+def _boundary_intersection(sector_m, zone_m):
+    """Sector∩zone shared boundary.
+
+    Exact ``boundary ∩ boundary`` often collapses collinear edges to corner
+    points under floating-point noise, so a small buffer is used to recover
+    the real shared arcs (0.05 m, then 0.5 m if still no usable line).
+    """
+    if sector_m is None or zone_m is None:
+        return None
+    parts = []
+    try:
+        exact = zone_m.boundary.intersection(sector_m.boundary)
+        if exact is not None and not exact.is_empty:
+            parts.append(exact)
+    except Exception:
+        pass
+    for buf in (0.05, 0.5):
+        try:
+            b = zone_m.boundary.intersection(sector_m.boundary.buffer(buf))
+            if b is not None and not b.is_empty:
+                parts.append(b)
+        except Exception:
+            pass
+        if any(ln.length >= 2.0 for c in parts for ln in _geom_lines(c)):
+            break
+    if not parts:
+        return None
+    if len(parts) == 1:
+        return parts[0]
+    return unary_union(parts)
+
+
+def _geom_lines(g):
+    if g is None or getattr(g, "is_empty", True):
+        return []
+    if g.geom_type == "LineString":
+        return [g]
+    if g.geom_type in ("MultiLineString", "GeometryCollection"):
+        out = []
+        for sub in g.geoms:
+            out.extend(_geom_lines(sub))
+        return out
+    return []
+
+
+def _geom_points(g):
+    if g is None or getattr(g, "is_empty", True):
+        return []
+    if g.geom_type == "Point":
+        return [g]
+    if g.geom_type in ("MultiPoint", "GeometryCollection"):
+        out = []
+        for sub in g.geoms:
+            out.extend(_geom_points(sub))
+        return out
+    if g.geom_type == "Polygon":
+        return [g.representative_point()]
+    return []
+
+
+def _seg_bearing_deg(a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    if dx == 0.0 and dy == 0.0:
+        return None
+    return _math.degrees(_math.atan2(dy, dx)) % 180.0
+
+
+def _bearing_diff_deg(bearing, target):
+    return abs((float(bearing) - float(target) + 90.0) % 180.0 - 90.0)
+
+
+def _line_perp_score(line, target):
+    """Length-weighted mean undirected bearing diff of ``line`` vs ``target``."""
+    if line is None or getattr(line, "is_empty", True):
+        return 90.0
+    coords = list(line.coords)
+    total = weighted = 0.0
+    for i in range(len(coords) - 1):
+        a, b = coords[i], coords[i + 1]
+        brg = _seg_bearing_deg(a, b)
+        if brg is None:
+            continue
+        seg_len = _math.hypot(b[0] - a[0], b[1] - a[1])
+        total += seg_len
+        weighted += _bearing_diff_deg(brg, target) * seg_len
+    if total <= 0:
+        return 90.0
+    return weighted / total
+
+
+def _local_perp_diff(zone_m, pt, target, radius=8.0):
+    """Best mean bearing diff of zone-boundary segments near ``pt``."""
+    if zone_m is None or target is None:
+        return 90.0
+    try:
+        near = zone_m.boundary.intersection(Point(pt).buffer(radius))
+    except Exception:
+        return 90.0
+    lines = _geom_lines(near)
+    if not lines:
+        return 90.0
+    return min(_line_perp_score(ln, target) for ln in lines)
+
+
+def _valve_on_intersection(sector_m, zone_m, entry_m, row_angle=None):
+    """Secondary valve on sector∩zone boundary; prefer points that also sit on a
+    zone-boundary run perpendicular to the rows (the Pipe32 corridor), else the
+    intersection location whose local boundary is most perpendicular."""
+    v = Point(entry_m)
+    inter = _boundary_intersection(sector_m, zone_m)
+    if inter is None:
+        return nearest_points(zone_m.boundary, v)[0]
+    lines = _geom_lines(inter)
+    points = _geom_points(inter)
+    preferred = []
+    target = None
+    if row_angle is not None:
+        target = (float(row_angle) + 90.0) % 180.0
+        runs = _boundary_runs_perp(zone_m, target, tol=45.0) if target is not None else []
+        if runs:
+            run_u = unary_union([r.buffer(1.0) for r in runs])
+            for ln in lines:
+                piece = ln.intersection(run_u)
+                if piece.is_empty:
+                    continue
+                preferred.extend(_geom_points(piece))
+                for pl in _geom_lines(piece):
+                    preferred.append(Point(pl.coords[0]))
+                    preferred.append(Point(pl.coords[-1]))
+                    for f in (0.25, 0.5, 0.75):
+                        preferred.append(pl.interpolate(f, normalized=True))
+            for p in points:
+                if run_u.distance(p) <= 1.0:
+                    preferred.append(p)
+    if preferred:
+        if target is not None:
+            return min(preferred, key=lambda p: (
+                round(_local_perp_diff(zone_m, p, target), 1),
+                p.distance(v)))
+        return min(preferred, key=lambda p: p.distance(v))
+    pool = list(points)
+    for ln in lines:
+        pool.append(ln.interpolate(0.5, normalized=True))
+        pool.append(Point(ln.coords[0]))
+        pool.append(Point(ln.coords[-1]))
+        if ln.length > 4.0:
+            for f in (0.1, 0.25, 0.75, 0.9):
+                pool.append(ln.interpolate(f, normalized=True))
+    if not pool:
+        return nearest_points(zone_m.boundary, v)[0]
+    if target is not None:
+        return min(pool, key=lambda p: (
+            _local_perp_diff(zone_m, p, target), p.distance(v)))
+    return min(pool, key=lambda p: p.distance(v))
+
+
+def _boundary_walk_from(valve_m, zone_m, target, max_len=150.0):
+    """Contiguous exterior-ring path through the valve. Tries escalating
+    bearing tolerances and keeps the path with the best mean ⊥ score."""
+    if zone_m is None or getattr(zone_m, "is_empty", True) or target is None:
+        return None
+    geom = zone_m
+    if geom.geom_type == "MultiPolygon":
+        geom = max(geom.geoms, key=lambda g: g.area)
+    if geom.geom_type != "Polygon":
+        return None
+    pts = list(geom.exterior.coords)
+    if not pts:
+        return None
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])
+    v = valve_m if isinstance(valve_m, Point) else Point(valve_m)
+    vi_near = min(range(len(pts) - 1), key=lambda i: Point(pts[i]).distance(v))
+    # try the nearest vertex plus any ring vertex close to the valve
+    starts = [i for i in range(len(pts) - 1)
+              if Point(pts[i]).distance(v) <= 20.0]
+    if vi_near not in starts:
+        starts.append(vi_near)
+    best_line, best_score = None, None
+    for vi in starts:
+        for tol in (45.0, 55.0, 65.0, 75.0, 90.0):
+            fwd = [pts[vi]]
+            i, length = vi, 0.0
+            while i < len(pts) - 1 and length < max_len:
+                brg = _seg_bearing_deg(pts[i], pts[i + 1])
+                if brg is None or _bearing_diff_deg(brg, target) > tol:
+                    break
+                length += Point(pts[i]).distance(Point(pts[i + 1]))
+                fwd.append(pts[i + 1])
+                i += 1
+            bwd = []
+            i, length2 = vi, 0.0
+            while i > 0 and length2 < max_len:
+                brg = _seg_bearing_deg(pts[i - 1], pts[i])
+                if brg is None or _bearing_diff_deg(brg, target) > tol:
+                    break
+                length2 += Point(pts[i - 1]).distance(Point(pts[i]))
+                bwd.append(pts[i - 1])
+                i -= 1
+            path = list(reversed(bwd)) + fwd
+            if len(path) < 2 or (length + length2) < 3.0:
+                continue
+            line = LineString(path)
+            if line.distance(v) <= 1.0:
+                line = _line_through_point(line, v)
+            elif line.distance(v) <= 5.0:
+                p = nearest_points(line, v)[0]
+                line = _line_through_point(line, p)
+                if geom.boundary.distance(v) <= 1.0:
+                    line = LineString([(v.x, v.y)] + list(line.coords))
+            score = _line_perp_score(line, target)
+            if best_score is None or score < best_score - 1e-9:
+                best_line, best_score = line, score
+            if best_score <= 40.0:
+                return best_line
+    return best_line
+
+
+def _minor_line_on_boundary(zone_m, valve_m, row_angle, inter=None):
+    """Pipe32 path along the zone boundary, perpendicular to the rows, through
+    (or joined to) the secondary valve. Returns None when no suitable path."""
+    v = valve_m if isinstance(valve_m, Point) else Point(valve_m)
+    target = (float(row_angle) + 90.0) % 180.0 if row_angle is not None else None
+    runs = _boundary_runs_perp(zone_m, target, tol=45.0) if target is not None else []
+    # 1) ⊥ run that already contains / touches the valve
+    touching = [r for r in runs if r.distance(v) <= 1.0]
+    if touching:
+        best = max(touching, key=lambda r: r.length)
+        return _line_through_point(best, v)
+    # 2) walk the zone boundary from the valve (stays on the boundary ring)
+    if target is not None:
+        walked = _boundary_walk_from(v, zone_m, target)
+        if walked is not None and not walked.is_empty:
+            if walked.distance(v) <= 1.0:
+                return _line_through_point(walked, v)
+            if walked.distance(v) <= 5.0:
+                p = nearest_points(walked, v)[0]
+                line = _line_through_point(walked, p)
+                if zone_m.boundary.distance(v) <= 1.0:
+                    return LineString([(v.x, v.y)] + list(line.coords))
+                return line
+            return walked
+    # 3) nearby ⊥ run (short join only when the walk found nothing)
+    near = [r for r in runs if r.distance(v) <= 5.0]
+    if near:
+        best = min(near, key=lambda r: r.distance(v))
+        p = nearest_points(best, v)[0]
+        line = _line_through_point(best, p)
+        if best.distance(v) <= 1.0:
+            return _line_through_point(best, v)
+        if zone_m.boundary.distance(v) <= 1.0:
+            return LineString([(v.x, v.y)] + list(line.coords))
+        return line
+    # 4) best shared sector∩zone arc near the valve (on both boundaries)
+    if inter is not None and target is not None:
+        lines = [ln for ln in _geom_lines(inter) if ln.length >= 2.0]
+        if lines:
+            best = min(lines, key=lambda ln: (_line_perp_score(ln, target),
+                                              ln.distance(v)))
+            if best.distance(v) <= 5.0:
+                if best.distance(v) <= 1.0:
+                    return _line_through_point(best, v)
+                p = nearest_points(best, v)[0]
+                line = _line_through_point(best, p)
+                if zone_m.boundary.distance(v) <= 1.0:
+                    return LineString([(v.x, v.y)] + list(line.coords))
+                return line
+            return best
+    return None
+
+
 def extend_config(plan, project, cfg, basin_m, max_elev_m):
     """Add zones, valves and pipes to a chosen sectorisation config.
 
     Valves: one principal 90 mm valve per sector (at the sector entry) plus
-    one secondary 32 mm valve per zone. Pipes: 90 mm principal
-    (basin -> sector entries), 63 mm majors (sector valve -> zone valves),
-    32 mm minors (zone valve -> zone supply point).
+    one secondary 32 mm valve per zone at the sector∩zone boundary
+    intersection. Pipes: 90 mm principal (basin -> sector entries),
+    63 mm majors (sector valve -> zone valves), 32 mm minors named
+    ``P32-<zone>`` along the zone boundary, perpendicular to the rows.
     """
     if cfg.get("ready"):
         return cfg
@@ -351,9 +722,12 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             if zone_m.area <= 1e-6:
                 continue
             zidx += 1
+            zone_name = "S{0}Z{1:d}".format(sector["idx"], zidx)
             zone_ll = project.to_lonlat(zone_m)
-            # secondary valve on the zone boundary closest to the sector entry
-            valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
+            row_angle = _zone_row_angle(None, zone_m)
+            # secondary valve on sector∩zone boundary (prefer ⊥-to-rows run)
+            inter_m = _boundary_intersection(sector_m, zone_m)
+            valve_m = _valve_on_intersection(sector_m, zone_m, entry_m, row_angle)
             valve_ll = project.to_lonlat(valve_m)
 
             # major pipe 63 mm: nearest principal tap -> zone secondary valve
@@ -361,19 +735,22 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             major_m = LineString([tap_m, Point(valve_m)])
             major_ll = project.to_lonlat(major_m)
 
-            # minor pipe 32 mm: nearest major point -> zone water supply
-            target_m = zone_m.centroid
-            tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
-            minor_m = LineString([tap2_m, target_m])
+            # minor pipe 32 mm: along zone boundary ⊥ to rows, through the valve
+            minor_m = _minor_line_on_boundary(zone_m, valve_m, row_angle,
+                                              inter=inter_m)
+            if minor_m is None or minor_m.is_empty:
+                target_m = zone_m.centroid
+                tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
+                minor_m = LineString([tap2_m, target_m])
             minor_ll = project.to_lonlat(minor_m)
 
             zone = {
                 "idx": zidx,
-                "name": "S{0}Z{1:d}".format(sector["idx"], zidx),
+                "name": zone_name,
                 "poly_m": zone_m,
                 "poly": zone_ll,
                 "area_m2": zone_m.area,
-                "centroid": project.to_lonlat(target_m),
+                "centroid": project.to_lonlat(zone_m.centroid),
                 "tree": "none",
                 "tree_dist": TREE_DIST_DEFAULT,
                 "tree_pct": 100.0,
@@ -403,6 +780,7 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
             })
             minors.append({
                 "pid": "m:{0}".format(zone["name"]),
+                "name": "P32-{0}".format(zone["name"]),
                 "zone": zone["name"],
                 "sector": sector["name"],
                 "diameter_mm": 32,
@@ -808,7 +1186,7 @@ def extend(plan, cfgid):
     cfg = cfg[0]
     if cfg.get("ready"):
         _migrate_zone_names(cfg)
-        _number_valves(cfg)
+        _rebuild_valves_pipes(plan, cfg)
         _ensure_pipe_pids(cfg)
         return cfg
     return extend_config(plan, proj, cfg, plan["_basin_m"], plan.get("max_elev_m"))
@@ -1046,13 +1424,19 @@ def _rebuild_valves_pipes(plan, cfg):
         })
         for z in sector.get("zones", []):
             zone_m = z["poly_m"]
-            valve_m = nearest_points(zone_m.boundary, Point(entry_m))[0]
+            row_angle = _zone_row_angle(z, zone_m)
+            inter_m = _boundary_intersection(sector.get("poly_m"), zone_m)
+            valve_m = _valve_on_intersection(sector.get("poly_m"), zone_m,
+                                             entry_m, row_angle)
             valve_ll = proj.to_lonlat(valve_m)
             tap_m = _inside_land(plan, _nearest_on(principal_m, valve_m))
             major_m = LineString([tap_m, Point(valve_m)])
             target_m = zone_m.centroid
-            tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
-            minor_m = LineString([tap2_m, target_m])
+            minor_m = _minor_line_on_boundary(zone_m, valve_m, row_angle,
+                                              inter=inter_m)
+            if minor_m is None or minor_m.is_empty:
+                tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
+                minor_m = LineString([tap2_m, target_m])
             z["centroid"] = proj.to_lonlat(target_m)
             valves.append({
                 "id": _valve_id("secondary", sector["name"], z["name"]),
@@ -1064,6 +1448,7 @@ def _rebuild_valves_pipes(plan, cfg):
                            "zone": z["name"], "sector": sector["name"], "diameter_mm": 63,
                            "line": proj.to_lonlat(major_m), "len_m": major_m.length})
             minors.append({"pid": "m:{0}".format(z["name"]),
+                           "name": "P32-{0}".format(z["name"]),
                            "zone": z["name"], "sector": sector["name"], "diameter_mm": 32,
                            "line": proj.to_lonlat(minor_m), "len_m": minor_m.length})
             zones_all.append(z)
@@ -1154,14 +1539,22 @@ def _apply_valve_customization(plan, cfg):
                     princ_m, _ = _principal_chain(plan, cfg)
                     tap_m = _inside_land(plan, _nearest_on(princ_m, valve_m))
                     major_m = LineString([tap_m, valve_m])
-                    tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
-                    minor_m = LineString([tap2_m, target_m])
+                    row_angle = _zone_row_angle(zon, zon.get("poly_m"))
+                    inter_m = _boundary_intersection(sec.get("poly_m"),
+                                                     zon.get("poly_m"))
+                    minor_m = _minor_line_on_boundary(zon["poly_m"], valve_m,
+                                                      row_angle, inter=inter_m)
+                    if minor_m is None or minor_m.is_empty:
+                        tap2_m = _inside_land(plan, _nearest_on(major_m, target_m))
+                        minor_m = LineString([tap2_m, target_m])
                     if v.get("zone") in majors:
                         majors[v["zone"]]["line"] = proj.to_lonlat(major_m)
                         majors[v["zone"]]["len_m"] = major_m.length
                     if v.get("zone") in minors:
                         minors[v["zone"]]["line"] = proj.to_lonlat(minor_m)
                         minors[v["zone"]]["len_m"] = minor_m.length
+                        minors[v["zone"]].setdefault(
+                            "name", "P32-{0}".format(v.get("zone")))
         kept.append(v)
     for c in cfg.get("custom_valves") or []:
         kept.append({
@@ -1273,6 +1666,7 @@ def _ensure_pipe_pids(cfg):
         m.setdefault("pid", _pipe_pid("major", m.get("zone")))
     for m in pipes.get("minors", []) or []:
         m.setdefault("pid", _pipe_pid("minor", m.get("zone")))
+        m.setdefault("name", "P32-{0}".format(m.get("zone")))
     pipes.setdefault("customs", [])
     cfg.setdefault("pipe_overrides", {})
     cfg.setdefault("removed_pipes", [])
@@ -1765,6 +2159,8 @@ def compute_rows(plan, cfg, spacing=None):
         for z in sector.get("zones", []):
             _compute_zone_rows(plan, pts_m, z, spacing)
     cfg["row_spacing"] = spacing
+    if cfg.get("ready"):
+        _rebuild_valves_pipes(plan, cfg)
     return cfg
 
 
@@ -1800,6 +2196,8 @@ def apply_row_direction(plan, cfg, sector_idx=None, zone_name=None, angle=None):
     spacing = cfg.get("row_spacing", ROW_SPACING_DEFAULT)
     _compute_zone_rows(plan, pts_m, target, spacing)
     cfg["rows_confirmed"] = False
+    if cfg.get("ready"):
+        _rebuild_valves_pipes(plan, cfg)
     return True, None
 
 
@@ -1888,6 +2286,8 @@ def _migrate_zone_names(cfg):
                     if m_.get("zone") == old:
                         m_["zone"] = new
                         m_["pid"] = pre + new
+                        if m_.get("name") == "P32-{0}".format(old):
+                            m_["name"] = "P32-{0}".format(new)
             ov = cfg.get("pipe_overrides") or {}
             cfg["pipe_overrides"] = {
                 next((pre + new for pre in ("M:", "m:") if k == pre + old), k): v
@@ -1910,6 +2310,8 @@ def _move_zone_refs(cfg, old, new):
     for m in (cfg.get("pipes", {}).get("majors", []) + cfg.get("pipes", {}).get("minors", [])):
         if m.get("zone") == old:
             m["zone"] = new
+            if m.get("name") == "P32-{0}".format(old):
+                m["name"] = "P32-{0}".format(new)
     _rekey_valves(cfg, old_zone=old, new_zone=new)
     _rekey_pipe_zone(cfg, old, new)
 
