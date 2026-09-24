@@ -819,3 +819,5 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `sector_idx`). i18n: `CONFIRM_RECAP`, `CONFIRM_RECAP_HINT`,
     `RECAP_CONFIRMED`, `FINAL_LOCKED`, `FINAL_LOCKED_HINT` (EN+AR).
     VERSION 0.47.0.
+
+85. v0.47.0: **Structured action logging on every op** — added \_step_name()\ and \_plan_snapshot()\ helpers plus \_log_result(token, op, ok, msg, plan)\ that emits one \Op: <op> | Token: <tok> | ok=<bool> step=<Step> land=... n_water=... n_boundaries=... n_sectors=... zones_confirmed=... valves_confirmed=... rows_confirmed=... recap_confirmed=... n_others=... n_trees=...\ line to \logs/app.log\ and stdout after EVERY action (upload, list_runs, delete_run, load, basin, sector_action, zone_action, valve_action, pipe_action, pipe_ai, other_add, other_remove, recap_save, rows_save, row_direction, tree_save, sim_save, overview, including error paths). \log_action\/\log_error\ kept for pre-execution traces; \iles/\ gitignored. VERSION 0.47.0.
