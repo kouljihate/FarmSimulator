@@ -529,6 +529,14 @@
       uc.style.display = payload.upload_html ? '' : 'none';
     }
     resetOverview();
+    // Recap is available immediately after upload/load (KML contents);
+    // overview later replaces it with the full zones/valves/pipes recap.
+    if (payload.recap_html) {
+      var rr0 = document.getElementById('recap-result');
+      var re0 = document.getElementById('recap-empty');
+      if (rr0) rr0.innerHTML = payload.recap_html;
+      if (re0) re0.style.display = 'none';
+    }
     refreshRuns();
   }
 

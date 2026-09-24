@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.45.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.46.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
@@ -215,9 +215,11 @@ Each config card has a set of **sector checkboxes labelled with the actual
      (principal 90 mm + secondary 32 mm lists), the **Pipes** tab shows the
      piping map (90 / 63 / 32 mm), **Other Elements** shows the big editable
      network map, the **Trees** tab assigns a tree type per zone (mixed
-     allowed), **Simulation** shows the ROI planner, the **Recap** tab shows a
-     big map of every component with per-layer show/color/size controls, and
-     **Final Result**
+      allowed), **Simulation** shows the ROI planner, the **Recap** tab shows a
+      big map of every component with per-layer show/color/size controls (it
+      is filled as soon as a KML is uploaded or loaded — land, water, basin,
+      sectors and other elements appear before overview runs), and
+      **Final Result**
      shows the full map + legend + report with PDF export.
      Every Zones card has an **Open** button that launches a modal with a large
      map of that sector and its zones plus its zone table — with **zone

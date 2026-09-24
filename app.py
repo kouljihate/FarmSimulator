@@ -250,6 +250,20 @@ def _full_payload(token, plan, save=True):
     basin_map = mapper.map_basin(plan)
     if save:
         _persist(token, plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
+    # Recap tab is filled immediately on upload/load so the KML contents
+    # (land, water, basin, sectors, other elements) are visible without
+    # waiting for an overview. Zones/valves/pipes appear once overview runs.
+    recap_html = ""
+    cfg0 = (plan.get("configs") or [None])[0]
+    if cfg0 is not None:
+        try:
+            recap_html = render_template(
+                "_recap_result.html", token=token, plan=plan, cfg=cfg0,
+                recap_map=mapper.map_recap(plan, cfg0),
+                recap_layers=mapper.recap_state(cfg0),
+            )
+        except Exception:  # noqa: BLE001 - never block upload on recap render
+            recap_html = ""
     return {
         "ok": True,
         "token": token,
@@ -259,6 +273,7 @@ def _full_payload(token, plan, save=True):
         "sectors_html": render_template("_sectors_result.html", token=token, plan=plan,
                                         cfg_maps=cfg_maps),
         "upload_html": render_template("_upload_card.html", plan=plan),
+        "recap_html": recap_html,
     }
 
 

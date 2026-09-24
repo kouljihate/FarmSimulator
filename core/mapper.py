@@ -957,14 +957,41 @@ def map_recap(plan, cfg):
     for el in plan.get("other_elements") or []:
         data["others"].append({"lat": el["lat"], "lon": el["lon"],
                                "tip": _bn("{0} ({1})".format(el.get("kind"), el.get("size") or ""))})
+    # sector name labels (populated when sectors exist)
+    for s in cfg.get("sectors", []):
+        c = s.get("centroid")
+        if c is None:
+            continue
+        if hasattr(c, "y"):
+            lat, lon = c.y, c.x
+        else:
+            lat, lon = c[1], c[0]
+        data["sector_labels"].append({
+            "lat": lat, "lon": lon,
+            "html": _zone_label(s.get("name") or ""),
+        })
+    water_pts = plan.get("water_points") or []
+    if not water_pts and plan.get("water"):
+        water_pts = [plan["water"]]
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     lay = Layers()
-    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
+    # every boundary from the KML (land filled, extras dashed)
+    for b in plan.get("all_boundaries") or []:
+        poly = b.get("poly")
+        if poly is None:
+            continue
+        if b.get("is_land"):
+            lay.dashed(poly, _bn(b.get("name") or "Land"), color="#333333", weight=2)
+        else:
+            lay.dashed(poly, _bn(b.get("name") or "Boundary"),
+                       color="#777777", weight=1)
+    if not (plan.get("all_boundaries")) and plan.get("land") is not None:
+        lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
     m = build(lay, center, 16)
     prefs = {k: {"show": s["show"], "color": s["color"], "size": s["size"]}
              for k, s in state.items()}
     m.get_root().html.add_child(folium.Element(_recap_js(
-        data, prefs, plan["basin"], plan["water"])))
+        data, prefs, plan["basin"], water_pts)))
     return to_html(m)
 
 
@@ -1015,7 +1042,9 @@ def _recap_js(data, prefs, basin, water):
         "DATA.valves_s.forEach(function(o){dot(o,'valves_s','orange',6);});"
         "DATA.others.forEach(function(o){dot(o,'others','purple',8);});"
         "dot({lat:BASIN.lat,lon:BASIN.lon,tip:'basin'},'basin','brown',11);"
-        "dot({lat:WATER.lat,lon:WATER.lon,tip:'water'},'water','blue',9);"
+        "(Array.isArray(WATER)?WATER:[WATER]).forEach(function(w){"
+        "if(!w||!isFinite(w.lat)||!isFinite(w.lon))return;"
+        "dot({lat:w.lat,lon:w.lon,tip:'water'},'water','blue',9);});"
         "function line(o,key,dfltC,dfltW,dash){"
         "o.paths.forEach(function(path){if(path.length<2)return;"
         "L.polyline(path,{color:col(key,dfltC),weight:siz(key,dfltW),"

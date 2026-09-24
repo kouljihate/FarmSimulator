@@ -88,12 +88,12 @@ token must return `ok:false`.
 - **Single-URL SPA (v0.11.0, extended v0.17.0): the browser only uses `/`.**
   `GET /` renders the `index.html` shell (tab bar, upload form, empty panels,
   runs list). Everything else is `POST /`: multipart `file` = upload;
-   otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
+  otherwise JSON `{op, …}` with `op` in `load | list_runs | delete_run |
    basin | sector_coords | sector_action | zone_action | valve_action |
    pipe_action | rows_save | tree_save | recap_save |
    overview | other_add | other_remove | sim_save`. Responses carry server-rendered
-  fragments (`basin_html`, `sectors_html`, `zones/rows/valves/pipes/other/trees/
-  recap/sim/final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
+  fragments (`basin_html`, `sectors_html`, `upload_html`, `recap_html`,
+  `zones/rows/valves/pipes/other/trees/recap/sim/final_html`) plus JSON-safe summaries (`plan_summary()`, deduped `runs[]`
   with `updated_str`). Client state `S = {token, plan, cfgid}` in
   `index.html`; tab bodies are injected in place, never navigated.
   `fillOverview(data, silent)` fills all six result tabs at once
@@ -763,7 +763,7 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `order` to `''`). Empty grid collapses to zero height (all children
     `display:none`).
 82. v0.45.0: **valve at sectornzone intersection + P32 along zone boundary**
-    � secondary valves are placed on the shared sector/zone boundary
+    � secondary valves are placed on the shared sector/zone boundary
     (`_valve_on_intersection`: `zone_m.boundary n sector_m.boundary`, with a
     0.05 m buffer fallback; prefers candidates that also sit on a
     boundary run perpendicular to the rows); new engine helpers
@@ -786,3 +786,16 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `index.html` `pipeInfoHtml` prefers `p.name`. i18n `STEP_VALVES` /
     `STEP_PIPES` EN+AR updated. README valves/pipes/data-model bullets +
     PROMPT data model line. VERSION 0.45.0.
+
+83. v0.46.0: **Recap map immediately after KML upload/load** � `_full_payload`
+    now renders `recap_html` (`_recap_result.html` + `mapper.map_recap` for
+    the first config) on every upload and `{op:load}`; `setPlan` in
+    `index.html` fills `#recap-result` (and hides `#recap-empty`) right after
+    `resetOverview()`, so the Recap tab already shows land, water, basin,
+    sectors and other elements from the file without waiting for overview.
+    Overview later replaces it with the full zones/valves/pipes recap.
+    `map_recap` draws **every** `all_boundaries` polygon (land solid-dashed,
+    extras lighter dashed) and **all** `water_points` (not just the first);
+    `_recap_js` accepts a water array (single object still works). Added
+    missing `sector_labels` key to the recap layer label map and populated
+    sector name labels on the recap map. VERSION 0.46.0.
