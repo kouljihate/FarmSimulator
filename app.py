@@ -397,6 +397,54 @@ def log_error(token, error, context=""):
     except Exception:
         pass  # Avoid logging loops
 
+
+STEP_BY_OP = {
+    "basin": "Basin", "sector_action": "Sectors", "zone_action": "Zones",
+    "rows_save": "Rows", "row_direction": "Rows", "valve_action": "Valves",
+    "pipe_action": "Pipes", "pipe_ai": "Pipes", "other_add": "OtherElements",
+    "other_remove": "OtherElements", "tree_save": "Trees",
+    "recap_save": "Recap", "sim_save": "Simulation",
+}
+
+
+def _step_name(op):
+    return STEP_BY_OP.get(op, op)
+
+
+def _plan_snapshot(plan):
+    """Compact plan state for a log line."""
+    if plan is None:
+        return "plan=None"
+    c = (plan.get("configs") or [None])[0] or {}
+    return ("land={0} n_water={1} n_boundaries={2} n_sectors={3} "
+            "zones_confirmed={4} valves_confirmed={5} rows_confirmed={6} "
+            "recap_confirmed={7} n_others={8} n_trees={9}"
+            ).format(
+        plan.get("name") or "?",
+        len(plan.get("water_points") or []),
+        len(plan.get("all_boundaries") or []),
+        len(c.get("sectors") or []),
+        bool(c.get("zones_confirmed")),
+        bool(c.get("valves_confirmed")),
+        bool(c.get("rows_confirmed")),
+        bool(c.get("recap_confirmed")),
+        len(plan.get("other_elements") or []),
+        len(c.get("zones") or []) and sum(len(z.get("trees") or []) for z in c.get("zones", []) or []),
+    )
+
+
+def _log_result(token, op, ok, msg="", plan=None):
+    """Structured post-execution log for EVERY action."""
+    try:
+        token_short = token[:8] if token else "N/A"
+        step = _step_name(op)
+        m = "ok={0} step={1} {2}".format(ok, step, _plan_snapshot(plan))
+        if msg:
+            m += " | msg={0}".format(str(msg)[:120])
+        logger.info("Op: {0} | Token: {1} | {2}".format(op, token_short, m))
+    except Exception:
+        pass
+
 app.jinja_env.globals.update(
     t=i18n.t,
     tl=i18n.tl,
@@ -445,29 +493,35 @@ def index():
         if os.path.exists(dest):
             os.remove(dest)
         token = _token_for_land(plan.get("name")) or uuid.uuid4().hex[:12]
+        _log_result(token, "upload", True, "", plan)
         return jsonify(_full_payload(token, plan))
 
     data = request.get_json(silent=True) or {}
     op = data.get("op")
 
     if op == "list_runs":
+        _log_result(data.get("token") or "N/A", "list_runs", True)
         return jsonify(ok=True, runs=_dedup_runs(STORE.list_runs()))
 
     if op == "delete_run":
         token = data.get("token")
         plan = _get_plan(token)
         if plan is None:
+            _log_result(token, "delete_run", False, "Run not found.")
             return _err("Run not found.")
         try:
             STORE.delete(token)
         except AttributeError:
             pass
+        _log_result(token, "delete_run", True)
         return jsonify(ok=True, runs=_dedup_runs(STORE.list_runs()))
 
     if op == "load":
         plan = _get_plan(data.get("token"))
         if plan is None:
+            _log_result(data.get("token"), "load", False, "Run not found.")
             return _err("Run not found.")
+        _log_result(data.get("token"), "load", True, "", plan)
         return jsonify(_full_payload(data.get("token"), plan, save=False))
 
     if op == "basin":
@@ -515,6 +569,7 @@ def index():
                     engine.ensure_basins(plan)
         if not ok:
             log_error(data.get("token"), str(msg), "basin:" + str(action))
+            _log_result(data.get("token"), "basin", False, str(msg), plan)
             return jsonify(ok=False, error_html=str(i18n.err(msg)))
         cfg_maps = {}
         for cfg in plan["configs"]:
@@ -523,6 +578,7 @@ def index():
         _persist(data.get("token"), plan, {"basin_map": basin_map, "cfg_maps": cfg_maps})
         recap_html = _on_step(data.get("token"), plan, "basin")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "basin", True, "", plan)
         return jsonify(
             ok=True,
             basin=plan["basin"] and {
@@ -641,6 +697,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "zone_action", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "zone_action", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -660,40 +717,7 @@ def index():
             sector=data.get("sector"), zone=data.get("zone"),
         )
         if not ok:
-            return jsonify(ok=False, error=str(i18n.err(msg)))
-        doc = STORE.load(data.get("token"))
-        ov_maps = dict((doc or {}).get("overview_maps") or {})
-        sector_maps = dict((doc or {}).get("sector_maps") or {})
-        other_maps = dict((doc or {}).get("other_maps") or {})
-        for key, store in ((data.get("cfgid"), ov_maps), (str(data.get("cfgid")), ov_maps),
-                           (data.get("cfgid"), sector_maps), (str(data.get("cfgid")), sector_maps),
-                           (data.get("cfgid"), other_maps), (str(data.get("cfgid")), other_maps)):
-            store.pop(key, None)
-        STORE.save_maps(data.get("token"), {"overview_maps": ov_maps, "sector_maps": sector_maps,
-                                            "other_maps": other_maps})
-        ctx = _overview_ctx(data.get("token"), plan, cfg)
-        frags = _overview_fragments(ctx)
-        frags["recap_html"] = _on_step(data.get("token"), plan, "valve_action", cfg=cfg) or frags.get("recap_html", "")
-        _persist(data.get("token"), plan)
-        frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
-        return jsonify(frags)
-
-    if op == "pipe_action":
-        plan = _get_plan(data.get("token"))
-        cfg = next((c for c in (plan or {}).get("configs", [])
-                    if c["id"] == data.get("cfgid")), None)
-        if plan is None or cfg is None:
-            log_error(data.get("token"), "Run not found.", "pipe_action")
-            return _err("Run not found.")
-        log_action(data.get("token"), data.get("cfgid"), "pipe_action")
-        engine.extend(plan, data.get("cfgid"))
-        ok, msg = engine.apply_pipe_op(
-            plan, cfg, data.get("action", ""),
-            pipe_id=data.get("pipe_id"), diameter=data.get("diameter"),
-            sector=data.get("sector"), zone=data.get("zone"),
-            path=data.get("path"),
-        )
-        if not ok:
+            _log_result(data.get("token"), "valve_action", False, str(msg), plan)
             return jsonify(ok=False, error=str(i18n.err(msg)))
         doc = STORE.load(data.get("token"))
         ov_maps = dict((doc or {}).get("overview_maps") or {})
@@ -709,6 +733,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "pipe_action", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "pipe_action", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -721,6 +746,7 @@ def index():
         engine.extend(plan, data.get("cfgid"))
         ok, report = engine.optimize_pipes(plan, cfg)
         if not ok:
+            _log_result(data.get("token"), "pipe_ai", False, str(i18n.err(report)), plan)
             return jsonify(ok=False, error=str(i18n.err(report)))
         doc = STORE.load(data.get("token"))
         ov_maps = dict((doc or {}).get("overview_maps") or {})
@@ -736,6 +762,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "pipe_ai", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "pipe_ai", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      report=report)
         return jsonify(frags)
@@ -771,6 +798,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "other_add", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "other_add", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      element=el)
         return jsonify(frags)
@@ -792,6 +820,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "other_remove", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "other_remove", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -831,6 +860,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "recap_save", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "recap_save", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      recap_confirmed=bool(cfg.get("recap_confirmed")))
         return jsonify(frags)
@@ -848,11 +878,13 @@ def index():
         else:
             ok, msg = engine.apply_rows_op(plan, cfg, data.get("spacing"))
         if not ok:
+            _log_result(data.get("token"), "rows_save", False, str(msg), plan)
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "rows_save", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "rows_save", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -867,11 +899,13 @@ def index():
             plan, cfg, sector_idx=data.get("sector_idx"),
             zone_name=data.get("zone_name"), angle=data.get("angle"))
         if not ok:
+            _log_result(data.get("token"), "row_direction", False, str(msg), plan)
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "row_direction", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "row_direction", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -884,11 +918,13 @@ def index():
         engine.extend(plan, data.get("cfgid"))
         ok, msg = engine.apply_tree_op(plan, cfg, data.get("trees"))
         if not ok:
+            _log_result(data.get("token"), "tree_save", False, str(msg), plan)
             return jsonify(ok=False, error=str(i18n.err(msg)))
         ctx = _overview_ctx(data.get("token"), plan, cfg)
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "tree_save", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "tree_save", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
@@ -916,6 +952,7 @@ def index():
         frags = _overview_fragments(ctx)
         frags["recap_html"] = _on_step(data.get("token"), plan, "sim_save", cfg=cfg) or frags.get("recap_html", "")
         _persist(data.get("token"), plan)
+        _log_result(data.get("token"), "sim_save", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan),
                      sim=ctx["sim"])
         return jsonify(frags)
@@ -931,6 +968,7 @@ def index():
                               data.get("psector") or None,
                               data.get("vrows"), data.get("ptypes") or None)
         frags = _overview_fragments(ctx)
+        _log_result(data.get("token"), "overview", True, "", plan)
         frags.update(ok=True, cfgid=data.get("cfgid"), plan=plan_summary(plan))
         return jsonify(frags)
 
