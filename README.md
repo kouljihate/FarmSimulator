@@ -1,6 +1,8 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.47.0 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.47.1 · repo: https://github.com/kouljihate/FarmSimulator
+
+Updated for the latest valve configuration rules and UI refinements: 3 main valves (MV1–MV3) plus per-zone valve handling, plus bilingual table header styling throughout the app.
 
 A bilingual (English / Arabic) desktop-web tool that turns a Google Maps
 export (land boundary + water point) into a full **irrigation plan**.
