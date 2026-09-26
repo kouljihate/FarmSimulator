@@ -871,3 +871,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     Confirm in the small modal). Button IDs (`sector-modal-cancel`,
     `sector-detail-close`, `rows-detail-close`) unchanged so all JS
     open/close wiring keeps working. VERSION 0.48.2.
+97. v0.48.3: **Rows direction table polish** — `_rows_result.html` direction
+    table is now fully centred (headers + cells, inputs `mx-auto block
+    text-center`), a **Slope** column (`ROW_SLOPE`, `slope_pct` or — without
+    elevation) sits between Direction and New Direction, and the bulk Apply
+    button moved from right-aligned to the middle of the card
+    (`justify-center`). Apply already sent every table row via
+    `{op:row_direction, updates:[...]}` and refreshes the whole page with
+    `fillOverview` (verified: S1 zones → 45° on Dhar). VERSION 0.48.3.

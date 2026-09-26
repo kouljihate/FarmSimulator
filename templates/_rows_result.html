@@ -24,12 +24,13 @@
   <div class="p-5">
     <div class="overflow-x-auto">
       <table class="w-full text-sm text-white/75">
-        <thead class="border-b border-white/10 bg-white/5 text-left text-white/55">
+        <thead class="border-b border-white/10 bg-white/5 text-center text-white/55">
           <tr>
-            <th class="px-4 py-2 font-medium">{{ bv('SECTOR') }}</th>
-            <th class="px-4 py-2 font-medium">{{ bv('ZONE') }}</th>
-            <th class="px-4 py-2 font-medium">{{ bv('ROW_DIRECTION') }}</th>
-            <th class="px-4 py-2 font-medium">{{ bv('ROW_NEW_ANGLE') }}</th>
+            <th class="px-4 py-2 text-center font-medium">{{ bv('SECTOR') }}</th>
+            <th class="px-4 py-2 text-center font-medium">{{ bv('ZONE') }}</th>
+            <th class="px-4 py-2 text-center font-medium">{{ bv('ROW_DIRECTION') }}</th>
+            <th class="px-4 py-2 text-center font-medium">{{ bv('ROW_SLOPE') }}</th>
+            <th class="px-4 py-2 text-center font-medium">{{ bv('ROW_NEW_ANGLE') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/10">
@@ -37,13 +38,14 @@
             {% for z in s.zones %}
               {% set current_angle = ((z.get('rows') or {}).get('angle', 0) or 0) %}
               <tr>
-                <td class="px-4 py-2 font-semibold text-white">{{ s.name }}</td>
-                <td class="px-4 py-2">{{ z.name }}</td>
-                <td class="px-4 py-2">{{ "%.0f"|format(current_angle) }}°</td>
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 text-center font-semibold text-white">{{ s.name }}</td>
+                <td class="px-4 py-2 text-center">{{ z.name }}</td>
+                <td class="px-4 py-2 text-center">{{ "%.0f"|format(current_angle) }}°</td>
+                <td class="px-4 py-2 text-center">{% if (z.get('rows') or {}).get('has_elev') %}{{ "%.1f"|format((z.get('rows') or {}).get('slope_pct', 0)) }} %{% else %}—{% endif %}</td>
+                <td class="px-4 py-2 text-center">
                   <input type="number" min="0" max="180" step="0.5" value="{{ "%.1f"|format(current_angle) }}"
                          data-sector-idx="{{ s.idx }}" data-zone-name="{{ z.name }}"
-                         class="rows-table-angle-input w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+                         class="rows-table-angle-input mx-auto block w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-center text-sm text-white/80">
                 </td>
               </tr>
             {% endfor %}
@@ -51,7 +53,7 @@
         </tbody>
       </table>
     </div>
-    <div class="mt-4 flex justify-end">
+    <div class="mt-4 flex justify-center">
       <button type="button" id="rows-apply-table-btn" class="tool-btn" data-cfg="{{ cfg.id }}">{{ bv('ROW_DIRECTION') }}</button>
     </div>
   </div>
