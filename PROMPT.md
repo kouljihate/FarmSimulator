@@ -900,3 +900,13 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     sectors). NOTE: a 9-checkbox run means the server is running pre-0.48.5
     code or a stale saved plan — `git pull`, restart `app.py`, delete the
     old run, re-upload. VERSION 0.48.6.
+101. v0.48.7: **Rows table zone ordering + working Direction button** —
+    the direction table now lists sectors `|natsort` with zones
+    `sort(attribute='name')` (S1Z1…S8Z3 on Dhar, matching the per-sector
+    tables). The Direction (bulk Apply) button did nothing because its
+    listener was bound directly at page load, before the AJAX-injected table
+    exists; it is now handled by the delegated document click listener
+    (sends `{op:row_direction, updates}` for every table row, toasts, and
+    refreshes the page via `fillOverview`), the dead direct binding was
+    removed, and `applyRowsBulkDirections` returns a resolved promise
+    instead of `null` when there is nothing to send. VERSION 0.48.7.

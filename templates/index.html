@@ -1413,6 +1413,22 @@ function resetTool(cfg, op) {
       })();
       return;
     }
+    var rtb = e.target && e.target.closest ? e.target.closest('#rows-apply-table-btn') : null;
+    if (rtb) {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var rtbCfg = rtb.getAttribute('data-cfg');
+      if (!rtbCfg) return;
+      var myRows = ++S.ovSeq;
+      applyRowsBulkDirections(rtbCfg, '.rows-table-angle-input').then(function (data) {
+        if (myRows !== S.ovSeq) return;
+        if (!data) { hideError(); toastOk(); return; }
+        if (!data.ok) { apiFail(data); return; }
+        hideError();
+        toastOk();
+        fillOverview(data, true, S.ovSeq);
+      }).catch(function () { showError(terrHtml('tnet')); });
+      return;
+    }
     var gb = e.target && e.target.closest ? e.target.closest('[data-go-tab]') : null;
     if (gb) {
       goTab(gb.getAttribute('data-go-tab'));
@@ -1901,7 +1917,7 @@ if (op === 'merge') {
     });
     if (!updates.length) {
       hideError();
-      return null;
+      return Promise.resolve(null);
     }
     return mutate({
       op: 'row_direction', token: S.token, cfgid: parseInt(cfgId, 10), updates: updates
@@ -1911,21 +1927,6 @@ if (op === 'merge') {
   var rClose = document.getElementById('rows-detail-close');
   if (rClose) rClose.addEventListener('click', hideRowsModal);
   if (rModal) rModal.addEventListener('click', function (e) { if (e.target === rModal) hideRowsModal(); });
-  var rowsBulkBtn = document.getElementById('rows-apply-table-btn');
-  if (rowsBulkBtn) {
-    rowsBulkBtn.addEventListener('click', function () {
-      if (!S.token) { showError(terrHtml('tnet')); return; }
-      var cfgId = rowsBulkBtn.getAttribute('data-cfg');
-      if (!cfgId) return;
-      var myRows = ++S.ovSeq;
-      applyRowsBulkDirections(cfgId, '.rows-table-angle-input').then(function (data) {
-        if (myRows !== S.ovSeq) return;
-        if (!data || !data.ok) { apiFail(data); return; }
-        hideError();
-        fillOverview(data, true, S.ovSeq);
-      }).catch(function () { showError(terrHtml('tnet')); });
-    });
-  }
   if (zTrace) zTrace.addEventListener('click', function () { zonePickCount = 0; setZonePick(!zoneTraceArmed); });
   if (zSplit) zSplit.addEventListener('click', function () {
     var sel = checkedZones();
