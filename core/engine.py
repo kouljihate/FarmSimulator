@@ -859,6 +859,9 @@ def _existing_config(extra, land_m, proj, basin_m):
     """
     kept = []
     for p in extra:
+        text = "{0} {1}".format(p.get("name") or "", p.get("description") or "")
+        if _re.search(r"\b(basin|bassin|reservoir|catchment|pond)\b", text, _re.I):
+            continue
         gm = proj.to_m(p["polygon"])
         if gm.is_empty:
             continue

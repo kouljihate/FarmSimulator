@@ -892,3 +892,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     passed through `plan_summary`) and `_upload_card.html` rejects basin
     entries from the extras list. Old saved plans without the flag still
     render. VERSION 0.48.5.
+100. v0.48.6: **basin can never become a sector** — belt-and-braces fix for
+    "9 checkboxes, basin shown as S1": `_existing_config` now skips any
+    polygon whose name/description matches the basin words, so even if a
+    basin footprint ever reaches the sector candidates it is rejected there
+    (verified by smuggling the Dhar footprint into `extra` → still 8
+    sectors). NOTE: a 9-checkbox run means the server is running pre-0.48.5
+    code or a stale saved plan — `git pull`, restart `app.py`, delete the
+    old run, re-upload. VERSION 0.48.6.
