@@ -212,6 +212,7 @@
   #sector-modal .sector-modal-card,
   #sector-detail-modal .sector-modal-card,
   #rows-detail-modal .sector-modal-card {
+    position: relative;
     background:
       radial-gradient(120% 120% at 0% 0%, rgba(34,211,238,.14), transparent 50%),
       radial-gradient(120% 120% at 100% 100%, rgba(139,92,246,.18), transparent 50%),
@@ -315,6 +316,33 @@
   #sector-modal .sector-modal-msg .bv { display: flex; flex-direction: column; gap: 4px; }
   #sector-modal .sector-modal-msg .bv .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .85rem; }
   #sector-modal .sector-modal-msg .bv .en { font-size: .8rem; color: rgba(255,255,255,.65); }
+
+  #sector-modal .sector-modal-title,
+  #sector-detail-modal .sector-modal-title,
+  #rows-detail-modal .sector-modal-title { padding-right: 3rem; }
+  .modal-close-btn {
+    position: absolute;
+    top: .9rem;
+    right: .9rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid rgba(34,211,238,.65);
+    background: linear-gradient(135deg, rgba(34,211,238,.35), rgba(139,92,246,.45));
+    color: #fff;
+    box-shadow: 0 0 16px rgba(34,211,238,.45), 0 0 32px rgba(139,92,246,.25);
+    cursor: pointer;
+    transition: all .18s ease;
+  }
+  .modal-close-btn svg { width: 1.1rem; height: 1.1rem; }
+  .modal-close-btn:hover {
+    border-color: #22d3ee;
+    box-shadow: 0 0 24px rgba(34,211,238,.75), 0 0 48px rgba(139,92,246,.4);
+    transform: scale(1.08);
+  }
 
   #other-kind option, #sim-crop option, #pipes-sector-filter option,
   #pipe-target option, #pipe-diam option, #pipe-sector option, #pipe-zone option,
