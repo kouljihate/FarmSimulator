@@ -821,3 +821,12 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     VERSION 0.47.0.
 
 85. v0.47.0: **Structured action logging on every op** — added \_step_name()\ and \_plan_snapshot()\ helpers plus \_log_result(token, op, ok, msg, plan)\ that emits one \Op: <op> | Token: <tok> | ok=<bool> step=<Step> land=... n_water=... n_boundaries=... n_sectors=... zones_confirmed=... valves_confirmed=... rows_confirmed=... recap_confirmed=... n_others=... n_trees=...\ line to \logs/app.log\ and stdout after EVERY action (upload, list_runs, delete_run, load, basin, sector_action, zone_action, valve_action, pipe_action, pipe_ai, other_add, other_remove, recap_save, rows_save, row_direction, tree_save, sim_save, overview, including error paths). \log_action\/\log_error\ kept for pre-execution traces; \iles/\ gitignored. VERSION 0.47.0.
+
+
+86. v0.47.0: **Modal form polish** — sector-modal card changed `max-w-sm` to `max-w-lg` (large form); Cancel and Confirm buttons moved from two stacked rows to a single inline row using single `bv('CANCEL')`/`bv('CONFIRM')` calls instead of duplicate `CANCEL_AR`/`CONFIRM_AR` (which both rendered Arabic twice); sector-detail and rows-detail close buttons centered.
+
+87. v0.47.0: **All map zoom levels set to 17** — changed `build()` default `zoom=16` to `zoom=17`; all explicit `zoom=16` (map_basin, map_config_preview, map_config_overview, map_config_valves, map_config_pipes, map_recap) and `zoom=18` (map_sector, map_sector_rows) unified to 17.
+
+88. v0.47.0: **Loading label changed to Working** — i18n `LOADING` key updated from "Loading…" to "Working…" (EN) and "جارٌ التحميل…" to "جارٌ العمل…" (AR); affects the page-loader overlay text shown during all operations across every tab.
+
+89. v0.47.0: **Valve position boundary constraint** — added `_inside_sector(sector_m, pt_m)` helper (mirrors `_inside_land` but constrains to sector polygon); applied after `_valve_on_intersection()` at both valve-creation paths and on valve drag in `_apply_valve_customization()`; guarantees all V90 principal and V32 secondary valves stay within their section boundary, none outside. VERSION 0.47.0.
