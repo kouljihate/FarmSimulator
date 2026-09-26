@@ -125,12 +125,21 @@ def _clean_slivers(parent, children):
             merged = nearest.union(t)
             if merged.geom_type == 'MultiPolygon':
                 big[i] = max(merged.geoms, key=lambda g: g.area)
+            elif merged.geom_type == 'GeometryCollection':
+                polys = [g for g in merged.geoms if g.geom_type == 'Polygon']
+                big[i] = max(polys, key=lambda g: g.area) if polys else nearest
             else:
                 big[i] = merged
         pieces = big
     out = []
+    seen = set()
     for p in pieces:
-        out.extend(_parts(_repair(p)))
+        for part in _parts(_repair(p)):
+            if part.area > 1e-6:
+                key = (round(part.centroid.x, 6), round(part.centroid.y, 6))
+                if key not in seen:
+                    seen.add(key)
+                    out.append(part)
     return out
 
 
@@ -188,14 +197,16 @@ def partition(land_m, target_area, axis_angle, fraction=0.5, pick="largest"):
             if part.area > 1e-6:
                 out.append((part, main_axis_angle(part) + 90.0))
 
-    # remove cells whose centroid falls inside another cell (overlaps)
+    # remove cells that significantly overlap another cell (keep the larger one)
+    sorted_out = sorted(out, key=lambda x: x[0].area, reverse=True)
     cleaned = []
-    for poly, angle in out:
-        contained = False
-        for other_poly, _ in out:
-            if poly is not other_poly and other_poly.contains(poly.centroid):
-                contained = True
+    for poly, angle in sorted_out:
+        keep = True
+        for other_poly, _ in cleaned:
+            inter = poly.intersection(other_poly).area
+            if inter > 1e-6 and inter > 0.1 * poly.area:
+                keep = False
                 break
-        if not contained:
+        if keep:
             cleaned.append((poly, angle))
     return cleaned
