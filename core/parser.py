@@ -23,6 +23,7 @@ def _local(tag):
 
 
 _WATER_WORDS = {"water", "point", "source", "puit", "valve", "w"}
+_BASIN_WORDS = {"basin", "bassin", "reservoir", "catchment", "pond"}
 _LAND_WORDS = {
     "boundary", "boundaries", "land", "parcel", "plot", "field",
     "polygon", "polygone", "ring", "sector", "sectors", "secteur",
@@ -41,6 +42,10 @@ def _is_water_type(text):
 
 def _is_land_type(text):
     return bool(_words(text) & _LAND_WORDS)
+
+
+def _is_basin_type(text):
+    return bool(_words(text) & _BASIN_WORDS)
 
 
 def _coords_from_text(text):
@@ -80,11 +85,13 @@ def parse_kml(path):
     root = tree.getroot()
     polygons = []
     water = []
+    basins = []
 
     def handle_placemark(pm, name_hint):
         name = (pm.findtext("{*}name") or name_hint or "Boundary").strip()
         desc_el = pm.find("{*}description")
         desc = "".join(desc_el.itertext()) if desc_el is not None else ""
+        full_text = "{0} {1}".format(name, desc)
         for child in pm.iter():
             tag = _local(child.tag)
             if tag == "Polygon":
@@ -92,7 +99,18 @@ def parse_kml(path):
                 if ring:
                     poly = _polygon_from_ring(ring)
                     if poly is not None:
-                        if _is_water_type(desc):
+                        is_basin_poly = _is_basin_type(full_text)
+                        if is_basin_poly:
+                            polygons.append({"name": name, "description": desc.strip(),
+                                             "polygon": poly, "vertices_z": ring})
+                            basins.append({
+                                "name": name or "Basin",
+                                "polygon": poly,
+                                "vertices_z": ring,
+                                "lon": poly.centroid.x,
+                                "lat": poly.centroid.y,
+                            })
+                        elif _is_water_type(desc):
                             pt = poly.representative_point()
                             water.append((pt.x, pt.y))
                         else:
@@ -104,8 +122,13 @@ def parse_kml(path):
                 coords_el = child.find("{*}coordinates")
                 if coords_el is not None:
                     pts = _coords_from_text(coords_el.text or "")
-                    if pts:
-                        water.append((pts[0][0], pts[0][1]))
+                    if not pts:
+                        continue
+                    lon, lat = pts[0][0], pts[0][1]
+                    if _is_basin_type(full_text):
+                        basins.append({"name": name or "Basin", "lon": lon, "lat": lat})
+                    else:
+                        water.append((lon, lat))
             elif tag == "MultiGeometry":
                 pass  # its children are visited by the iter() above
 
@@ -118,10 +141,16 @@ def parse_kml(path):
     for el in root.iter():
         if _local(el.tag) == "Document" and el.findtext("{*}name"):
             doc_name = el.findtext("{*}name")
+    basin_points = [
+        {"name": b.get("name") or "Basin", "lon": float(b["lon"]), "lat": float(b["lat"])}
+        for b in basins
+    ]
     return {
         "name": doc_name or os.path.basename(path),
         "polygons": polygons,
         "water_points": water,
+        "basins": basins,
+        "basin_points": basin_points,
         "source": "kml",
     }
 

@@ -1,4 +1,5 @@
 """Turn planning results into standalone folium/leaflet maps (HTML strings)."""
+import re
 import folium
 import html as _html
 
@@ -192,20 +193,85 @@ def _drag_js():
     ) + "</script>"
 
 
+def _is_basin_like(boundary):
+    text = "{0} {1}".format(boundary.get("name") or "", boundary.get("description") or "")
+    lower = text.lower()
+    return bool(re.search(r"\b(basin|bassin|reservoir|water source|waterpoint)\b", lower))
+
+
+def _add_basin_layer(lay, plan, color="#7f1d1d", fill="#7f1d1d", fill_opacity=0.3, weight=2):
+    """Render the real basin polygon when present; otherwise fall back to a dot."""
+    for b in plan.get("all_boundaries") or []:
+        if b.get("is_land"):
+            continue
+        if not _is_basin_like(b):
+            continue
+        lay.boundary(
+            b["poly"],
+            _bn(b.get("name") or "Basin"),
+            color=color,
+            fill=fill,
+            fill_opacity=fill_opacity,
+            weight=weight,
+        )
+        return
+    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], color, 11)
+
+
 def map_basin(plan):
     lay = Layers()
+    seen = set()
+    basin_entries = []
+
+    # render parcel outline first
     for b in plan["all_boundaries"]:
         if b["is_land"]:
+            key = tuple((round(x, 7), round(y, 7)) for x, y in b["poly"].exterior.coords)
+            if key in seen:
+                continue
+            seen.add(key)
             lay.boundary(b["poly"], _bn(b["name"]), color="#333333",
                          fill="#1f77b4", fill_opacity=0.12, weight=2)
-        else:
-            lay.dashed(b["poly"], _bn(b["name"]), color="#777777", weight=1)
+
+    # render unique basin polygons with stronger visibility
+    for b in plan["all_boundaries"]:
+        if b["is_land"]:
+            continue
+        key = tuple((round(x, 7), round(y, 7)) for x, y in b["poly"].exterior.coords)
+        if key in seen:
+            continue
+        if _is_basin_like(b):
+            seen.add(key)
+            basin_entries.append(b)
+            lay.boundary(b["poly"], _bn(b["name"] or "Basin"), color="#0b5d8f",
+                         fill="#f59e0b", fill_opacity=0.45, weight=3)
+            continue
+        seen.add(key)
+        lay.dashed(b["poly"], _bn(b["name"]), color="#777777", weight=1)
+
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 11)
     me = plan["basin"].get("max_elev")
     if me:
         _marker(plan, lay, "maxelev", me["lon"], me["lat"], "green", 9, z=me["z"])
+
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 17)
+    if basin_entries:
+        try:
+            basin_poly = max(basin_entries, key=lambda b: b["poly"].area)
+            coords = [[float(y), float(x)] for x, y in basin_poly["poly"].exterior.coords]
+            m.fit_bounds(coords)
+        except Exception:
+            pass
+
+    for bp in (plan.get("basin_points") or []):
+        name = bp.get("name") or "Basin"
+        folium.Marker(
+            [float(bp["lat"]), float(bp["lon"])],
+            icon=folium.Icon(color="darkred"),
+            popup=name,
+            tooltip=name,
+        ).add_to(m)
     active_bid = plan["basin"].get("bid")
     for b in (plan.get("basins") or []):
         if b.get("active"):
@@ -648,7 +714,7 @@ def map_config_pipes(plan, cfg, only_sector=None, only_types=None):
         else:
             lay.marker(v["lon"], v["lat"], _ti("valve32", zone=v["zone"]), "orange", radius=6)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
-    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    _add_basin_layer(lay, plan, color="#7f1d1d", fill="#7f1d1d", fill_opacity=0.28, weight=2)
     if only_sector and secs:
         c0 = secs[0]["centroid"]
         center, zoom = [c0.y, c0.x], 17
@@ -693,7 +759,7 @@ def map_other_elements(plan, cfg):
         lay.marker(el["lon"], el["lat"], _bn("{0} ({1})".format(el.get("kind"), el.get("size") or "")),
                    "purple", radius=8)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 9)
-    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    _add_basin_layer(lay, plan, color="#7f1d1d", fill="#7f1d1d", fill_opacity=0.28, weight=2)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 17)
     m.get_root().html.add_child(folium.Element(_other_pick_js()))
@@ -852,7 +918,7 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
                     lay.marker(v["lon"], v["lat"], _ti("valve90", zone=v.get("sector") or v["zone"]), "red", radius=9)
                 else:
                     lay.marker(v["lon"], v["lat"], _ti("valve32", zone=v["zone"]), "orange", radius=7)
-    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    _add_basin_layer(lay, plan, color="#7f1d1d", fill="#7f1d1d", fill_opacity=0.28, weight=2)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)
     center = [sector["centroid"].y, sector["centroid"].x]
@@ -1109,7 +1175,7 @@ def map_sector_rows(plan, cfg, sector):
         for line in (z.get("rows") or {}).get("lines", []) or []:
             lay.line(line, _ti("zone", name=z["name"], area=z["area_m2"]),
                      "#16a34a", 2)
-    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
+    _add_basin_layer(lay, plan, color="#7f1d1d", fill="#7f1d1d", fill_opacity=0.28, weight=2)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)
     center = [sector["centroid"].y, sector["centroid"].x]

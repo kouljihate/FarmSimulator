@@ -1,6 +1,6 @@
 # Farm Simulator — Part 1
 
-> **Version**: 0.47.1 · repo: https://github.com/kouljihate/FarmSimulator
+> **Version**: 0.48.0 · repo: https://github.com/kouljihate/FarmSimulator
 
 Updated for the latest valve configuration rules and UI refinements: 3 main valves (MV1–MV3) plus per-zone valve handling, plus bilingual table header styling throughout the app.
 
@@ -272,6 +272,14 @@ Each config card has a set of **sector checkboxes labelled with the actual
     point, or the largest) + optional altitude `z` per vertex (used to pick a
     high basin spot);
   - a `Point` `Placemark` = the water source;
+  - a `Polygon` whose name/`description` matches `basin`, `bassin`,
+    `reservoir`, `catchment` or `pond` = the **basin footprint** (e.g. a
+    4-sided polygon): its centroid becomes the active basin location, its
+    4 corners are kept as `basin.footprint` (drawn on the basin/pipes/other
+    maps and re-exported into every step KML as `<name> footprint`), and it
+    is excluded from sectorisation. Basin matching takes precedence over
+    the water keywords below, so a basin description mentioning "water"
+    is no longer mistaken for a water point;
   - the `description` field acts as the element **type** (same keywords as the
     CSV `type` column: `water`, `point`, `source`, `puit`, `valve` → water;
     boundary words like `boundary`, `parcel`, `parcelle`, `terrain` → land):
@@ -297,7 +305,7 @@ terrain) and its generator `make_test_kml.py`.
 ```
 app.py                     single-URL SPA backend: GET / shell, POST / JSON ops
                            (upload/load/list_runs/delete_run/basin/sector_coords/sector_action/
-                            zone_action/valve_action/overview/other_add/other_remove/sim_save)
+                            zone_action/valve_action/pipe_action/pipe_ai/overview/other_add/other_remove/sim_save)
 core/
   geo.py                   UTM projector, affine helpers, sweep_split, main axis
   parser.py                KML / CSV / WKT parsing

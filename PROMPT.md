@@ -835,3 +835,31 @@ bilingual (add EN+AR keys to `core/i18n.py`).
 92. v0.47.0: **Sectors row 3-column layout** — `_sectors_result.html` changed the sector count/checkbox row from a single `flex` row to `grid grid-cols-[15%_70%_15%]`: col 1 (15%, dir="ltr") shows "N sectors" (EN via `tl('SECTORS')[0]`) | col 2 (70%) shows sector checkboxes | col 3 (15%, dir="rtl") shows "قطاعات N" (AR via `tl('SECTORS')[1]`).
 
 93. v0.47.0: **Sector Split** — added `SECTOR_SPLIT` i18n key (EN "Split" / AR "تقسيم"); `apply_sector_op` now supports `op="split"` with `idx, x1, y1, x2, y2` params: uses `shapely.ops.split` to cut the selected sector polygon along a line defined by two points, produces two new sectors (`target["name"]` kept, new `S<N>` assigned), rebuilds the sector chain and valves/pipes pipeline, resets zone/row/valve confirm flags; `app.py` passes `x1/y1/x2/y2` from the request to `apply_sector_op`; `_sector_manage_js` adds `startDrawLine/finishDrawLine` methods (red polyline, 2 clicks) posting `sector-draw-line` to `window.top`; `index.html` click handler enters line-draw mode on split button click, handles `sector-draw-line` to call `applySectorOp`; `splitMode` and `resetTool('split')` keep the armed/Done state consistent. VERSION 0.47.0.
+94. v0.48.0: **crash-level Python fixes** — `core/engine.py`: removed call to
+    undefined `_validate_pipe_rules()` (was `NameError` on any unknown zone
+    op) and fixed sector `split` auto-naming (`str += int` `TypeError` → `nxt`
+    int pattern like `add`); `app.py`: removed the 2nd duplicate `STEP_BY_OP`
+    definition, fixed `valve_action` writing the `Pipes` KML step + `pipe_action`
+    log lines (now `valve_action`), and added the missing `{op:pipe_action}`
+    handler (`apply_pipe_op` add/change/remove was unreachable from the
+    Pipes-tab UI despite `STEP_BY_OP` + `pipeAction()` already referencing it);
+    `core/storage.py`: `_encode` skips `None` values and `FileStore.save`
+    tolerates `maps=None` (legacy `.pkl` migration crashed); `core/i18n.py`:
+    removed duplicate `SAVING` + `SECTOR_SELECT` keys; `core/kmlout.py`:
+    `MultiLineString` no longer joined with `" | "` (invalid KML) — now emits
+    a proper `<MultiGeometry>` of `<LineString>` parts. Verified end-to-end
+    on `samples/test_parcel.kml` + `dhar.kml` (upload → overview → zone/rows/
+    pipe_ai/recap/sim/pipe_action → list_runs/load, all `ok:true`).
+95. v0.48.0: **Basin footprint polygon (4×x/y)** — `core/parser.py`:
+    basin-word polygons now take precedence over water keywords (a Basin
+    polygon whose description mentions "water" was swallowed as a 2nd water
+    point; `dhar.kml` parsed as water×2 + basins×0); the footprint stays in
+    `polygons` AND is recorded in `basins`/`basin_points`. `core/engine.py`
+    `analyse()`: active basin comes from the footprint centroid with the real
+    projected water distance (`59.5 m` on Dhar, was faked `0.0`),
+    `plan['water']` stays the true water point, `basin['footprint']` keeps
+    the 4 corners, and the footprint is excluded from `_existing_config`
+    (no phantom 9th sector — Dhar stays 8 sectors). `core/kmlout.py` exports
+    `<name> footprint` polygons in the Basins folder so step KMLs round-trip
+    the footprint; `core/mapper.py` draws the footprint polygon on
+    basin/pipes/other maps instead of a bare marker. VERSION 0.48.0.

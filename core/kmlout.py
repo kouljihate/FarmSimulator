@@ -55,7 +55,12 @@ def _line_coords(line):
     if hasattr(line, "geom_type"):
         if line.geom_type == "MultiLineString":
             parts = [_line_coords(g) for g in line.geoms]
-            return " | ".join(p for p in parts if p)
+            parts = [p for p in parts if p]
+            if not parts:
+                return ""
+            if len(parts) == 1:
+                return parts[0]
+            return "__MULTI__" + "__PART__".join(parts)
         if line.geom_type != "LineString":
             return ""
         coords = list(line.coords)
@@ -85,12 +90,22 @@ def _line_pm(name, coords, style=""):
     if not coords:
         return ""
     su = "\n      <styleUrl>#{0}</styleUrl>".format(style) if style else ""
+    if coords.startswith("__MULTI__"):
+        parts = coords[len("__MULTI__"):].split("__PART__")
+        geos = "".join(
+            "<LineString><coordinates>{0}</coordinates></LineString>".format(p)
+            for p in parts if p)
+        if not geos:
+            return ""
+        geom = "<MultiGeometry>{0}</MultiGeometry>".format(geos)
+    else:
+        geom = "<LineString><coordinates>{0}</coordinates></LineString>".format(coords)
     return (
         "    <Placemark>\n"
         "      <name>{0}</name>{1}\n"
-        "      <LineString><coordinates>{2}</coordinates></LineString>\n"
+        "      {2}\n"
         "    </Placemark>\n"
-    ).format(_esc(name), su, coords)
+    ).format(_esc(name), su, geom)
 
 
 def _point_pm(name, lon, lat, style=""):
@@ -168,13 +183,20 @@ def plan_to_kml(plan, step="", cfg=None):
 
     # basins
     body_bs = ""
-    for b in plan.get("basins") or []:
+    _seen_bs = set()
+    for b in (plan.get("basins") or []) + ([plan.get("basin")] if plan.get("basin") else []):
+        if not b or id(b) in _seen_bs:
+            continue
+        _seen_bs.add(id(b))
         body_bs += _point_pm(b.get("name") or "Basin", b.get("lon"),
                              b.get("lat"), "basin")
-    if not body_bs and plan.get("basin"):
-        b = plan["basin"]
-        body_bs += _point_pm(b.get("name") or "Basin", b.get("lon"),
-                             b.get("lat"), "basin")
+        fp = b.get("footprint") or []
+        if len(fp) == 4:
+            ring = fp + [fp[0]]
+            coords = " ".join("{0:.7f},{1:.7f},0".format(float(x), float(y))
+                              for x, y in ring)
+            body_bs += _polygon_pm((b.get("name") or "Basin") + " footprint",
+                                   coords, "basin")
 
     # config layers (sectors / zones / valves / pipes / rows)
     body_c = ""

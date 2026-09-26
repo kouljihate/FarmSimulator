@@ -40,6 +40,8 @@ def _encode(maps):
     """Stringify the int keys of per-config map dicts for BSON/JSON storage."""
     out = {}
     for k, v in (maps or {}).items():
+        if v is None:
+            continue
         out[k] = {str(sk): sv for sk, sv in v.items()} if k in _ID_MAP_KEYS else v
     return out
 
@@ -143,7 +145,7 @@ class FileStore:
 
     def save(self, token, plan, maps=None):
         row = {"name": plan.get("name", "Untitled plot"), "plan": plan, "updated_at": time.time()}
-        row.update(_encode({k: maps.get(k) if maps else None for k in FULL_KEYS}))
+        row.update(_encode({k: (maps or {}).get(k) for k in FULL_KEYS} if maps else {}))
         if maps and maps.get("maps_v") is not None:
             row["maps_v"] = maps.get("maps_v")
         with open(self._fp(token), "wb") as fh:

@@ -12,17 +12,30 @@
 </div>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
   <div class="border-b border-white/10 px-5 py-3"><h3 class="text-base font-semibold text-white">{{ t('VALVE_SECTOR_FILTER') }}</h3></div>
-  <div class="flex flex-wrap items-end gap-3 p-5">
-    <div class="min-w-52 flex-1" data-cfg="{{ cfg.id }}">
-      <label class="mb-1 block text-xs text-white/60">{{ t('SECTOR') }}</label>
+  <div class="p-5">
+    <div class="grid gap-3 md:grid-cols-[170px_minmax(0,1fr)_auto_auto] md:items-center" data-cfg="{{ cfg.id }}">
+      <div class="flex items-center justify-start md:justify-center">
+        {{ bv('SECTOR') }}
+      </div>
       <div class="flex flex-wrap gap-2">
         {% for s in cfg.sectors %}
         <label class="sector-check"><input type="checkbox" class="sector-chk valve-sector-chk" value="{{ s.name }}" {% if not selected_sectors or s.name in selected_sectors %}checked{% endif %}><span class="max-w-20 truncate">{{ s.name }}</span></label>
         {% endfor %}
       </div>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" id="valve-select-all-btn" data-cfg="{{ cfg.id }}" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-white/10">{{ bv('VALVE_SELECT_ALL') }}</button>
+        <button type="button" id="valve-unselect-all-btn" data-cfg="{{ cfg.id }}" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-white/10">{{ bv('VALVE_UNSELECT_ALL') }}</button>
+      </div>
+      <div class="flex items-center justify-end md:justify-center">
+        <label class="sector-check rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+          <input type="checkbox" class="sector-chk" id="valve-rows-toggle" {% if valve_rows %}checked{% endif %}>
+          <span class="text-[11px]">{{ bv('VALVE_SHOW_ROWS') }}</span>
+        </label>
+      </div>
     </div>
-    <label class="sector-check"><input type="checkbox" class="sector-chk" id="valve-rows-toggle" {% if valve_rows %}checked{% endif %}><span>{{ t('VALVE_SHOW_ROWS') }}</span></label>
-    <button type="button" id="valve-zone-save-btn" data-cfg="{{ cfg.id }}" disabled class="glow-btn rounded-xl px-6 py-2 text-sm font-bold opacity-40">{{ bv('VALVE_SAVE') }}</button>
+    <div class="mt-3 flex justify-end">
+      <button type="button" id="valve-zone-save-btn" data-cfg="{{ cfg.id }}" disabled class="glow-btn rounded-xl px-6 py-2 text-sm font-bold opacity-40">{{ bv('VALVE_SAVE') }}</button>
+    </div>
   </div>
 </div>
 <div class="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5">

@@ -926,9 +926,18 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     if not parsed or not parsed.get("polygons"):
         raise ValueError("No boundary polygon found in the upload.")
     polygons = list(parsed["polygons"])
+    basin_poly = None
+    for p in polygons:
+        text = "{0} {1}".format(p.get("name") or "", p.get("description") or "")
+        if _re.search(r"\b(basin|bassin|reservoir|catchment|pond)\b", text, _re.I):
+            basin_poly = p
+            break
     land_pkg = _prefer_polygon(polygons, parsed.get("water_points") and parsed["water_points"][0])
 
     pick = parsed["water_points"][0] if parsed.get("water_points") else None
+    if pick is None and basin_poly is not None:
+        centroid = basin_poly["polygon"].centroid
+        pick = (centroid.x, centroid.y)
     if pick is None:
         # fall back to the presumed natural outflow: centroid of the land
         pick = land_pkg["polygon"].representative_point()
@@ -948,6 +957,23 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
     }
 
     basin = choose_basin(land, proj)
+    if basin_poly is not None:
+        centroid = basin_poly["polygon"].centroid
+        basin["lon"] = centroid.x
+        basin["lat"] = centroid.y
+        try:
+            _bp = proj.to_m(Point(centroid.x, centroid.y))
+            basin["dist_water_m"] = round(_bp.distance(water_m), 1)
+        except Exception:
+            basin["dist_water_m"] = 0.0
+        try:
+            _ring = list(basin_poly["polygon"].exterior.coords)
+            if len(_ring) >= 4 and _ring[0] == _ring[-1]:
+                _ring = _ring[:-1]
+            basin["footprint"] = [[round(float(x), 7), round(float(y), 7)]
+                                  for x, y in _ring[:4]] if len(_ring) == 4 else None
+        except Exception:
+            basin["footprint"] = None
     basin["bid"] = "B1"
     basin["name"] = "Basin 1"
     basin["active"] = True
@@ -959,7 +985,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         max_elev_m = proj.to_m(Point(me["lon"], me["lat"]))
 
     existing_cfg = None
-    extra = [p for p in polygons if p is not land_pkg]
+    extra = [p for p in polygons if p is not land_pkg and p is not basin_poly]
     if extra:
         existing_cfg = _existing_config(extra, land_m, proj, basin_m)
 
@@ -981,6 +1007,10 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         {"lon": float(w[0]), "lat": float(w[1])}
         for w in (parsed.get("water_points") or [])
     ]
+    basin_pts = [
+        {"name": b.get("name") or "Basin", "lon": float(b["lon"]), "lat": float(b["lat"])}
+        for b in (parsed.get("basin_points") or [])
+    ]
 
     # small optimisation: compute zones/pipes eagerly for one config? we keep lazy
     for c in configs:
@@ -997,6 +1027,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         } for p in polygons],
         "boundaries": bounds,
         "water_points": water_pts,
+        "basin_points": basin_pts,
         "n_water_points": len(water_pts),
         "land": land_pkg["polygon"],
         "land_area_m2": area_m2,
@@ -1413,9 +1444,11 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None,
         parts.sort(key=lambda g: g.area, reverse=True)
         keep = parts[:2]
         polys = [(s["poly_m"], s.get("name")) for s in cfg["sectors"] if s["idx"] != idx]
-        new_name = "S{0}".format(max([_sector_num(s.get("name", "")) for s in cfg["sectors"]] + [0]) + 1)
-        while "S{0}".format(new_name) in {s.get("name", "") for s in cfg["sectors"]}:
-            new_name += 1
+        names = {s.get("name", "") for s in cfg["sectors"]}
+        nxt = max([_sector_num(s.get("name", "")) for s in cfg["sectors"]] + [0]) + 1
+        while "S{0}".format(nxt) in names:
+            nxt += 1
+        new_name = "S{0}".format(nxt)
         polys.append((keep[0], target["name"]))
         polys.append((keep[1], new_name))
         recompute_sectors(plan, cfg, polys)
@@ -1489,21 +1522,41 @@ def _rebuild_valves_pipes(plan, cfg):
     proj = plan["_proj"]
     principal_m, principal_ll = _principal_chain(plan, cfg, cfg.get("principal_order"))
     valves, majors, minors, zones_all = [], [], [], []
+
+    main_valves = {}
     for sector in cfg["sectors"]:
-        entry_m = sector["entry_m"]
+        mv_name = _main_valve_group(sector.get("idx"))
+        main_valves.setdefault(mv_name, []).append(sector)
+
+    for mv_name in ("MV1", "MV2", "MV3"):
+        sectors = main_valves.get(mv_name, [])
+        if not sectors:
+            continue
+        pts = [sector["entry_m"] for sector in sectors if sector.get("entry_m") is not None]
+        if not pts:
+            continue
+        entry_m = Point(sum(p.x for p in pts) / len(pts), sum(p.y for p in pts) / len(pts))
         entry_ll = proj.to_lonlat(entry_m)
         valves.append({
-            "id": _valve_id("principal", sector["name"], sector["name"]),
-            "kind": "principal", "sector": sector["name"], "zone": sector["name"],
-            "diameter_mm": 90, "lon": entry_ll.x, "lat": entry_ll.y,
-            "point": entry_ll, "name": "Valve principal {0}".format(sector["name"]),
+            "id": _valve_id("principal", mv_name, mv_name),
+            "kind": "principal",
+            "sector": mv_name,
+            "zone": mv_name,
+            "diameter_mm": 90,
+            "lon": entry_ll.x,
+            "lat": entry_ll.y,
+            "point": entry_ll,
+            "name": mv_name,
+            "served_sectors": [sector["name"] for sector in sectors],
         })
+
+    for sector in cfg["sectors"]:
         for z in sector.get("zones", []):
             zone_m = z["poly_m"]
             row_angle = _zone_row_angle(z, zone_m)
             inter_m = _boundary_intersection(sector.get("poly_m"), zone_m)
             valve_m = _valve_on_intersection(sector.get("poly_m"), zone_m,
-                                              entry_m, row_angle)
+                                              sector["entry_m"], row_angle)
             valve_m = _inside_sector(sector.get("poly_m"), valve_m)
             valve_ll = proj.to_lonlat(valve_m)
             tap_m = _inside_land(plan, _nearest_on(principal_m, valve_m))
@@ -2254,8 +2307,43 @@ def apply_rows_op(plan, cfg, spacing=None):
     return True, None
 
 
-def apply_row_direction(plan, cfg, sector_idx=None, zone_name=None, angle=None):
-    """Set a manual row direction for one zone and re-trace it."""
+def apply_row_direction(plan, cfg, sector_idx=None, zone_name=None, angle=None, updates=None):
+    """Set manual row directions for one zone or a batch of zones, then re-trace them."""
+    if updates is not None:
+        if not isinstance(updates, list):
+            return False, "Invalid direction update payload."
+        if not updates:
+            return True, None
+        proj = plan["_proj"]
+        raw = [(lon, lat, z) for lon, lat, z in (plan.get("vertices_z") or [])
+               if z not in (None, 0)]
+        pts_m = [(proj.to_m(Point(lon, lat)), z) for lon, lat, z in raw]
+        spacing = cfg.get("row_spacing", ROW_SPACING_DEFAULT)
+        for item in updates:
+            if not isinstance(item, dict):
+                return False, "Invalid direction update payload."
+            item_sector_idx = item.get("sector_idx", sector_idx)
+            item_zone_name = item.get("zone_name", zone_name)
+            item_angle = item.get("angle", angle)
+            if item_sector_idx is None or item_zone_name is None:
+                return False, "Zone not found."
+            sector = next((s for s in cfg.get("sectors", []) if s.get("idx") == item_sector_idx), None)
+            if sector is None:
+                return False, "Sector not found."
+            target = next((z for z in sector.get("zones", []) if z.get("name") == item_zone_name), None)
+            if target is None:
+                return False, "Zone not found."
+            try:
+                ang = float(item_angle)
+            except (TypeError, ValueError):
+                return False, "Invalid angle."
+            target["rows_manual"] = round(ang % 180.0, 1)
+            _compute_zone_rows(plan, pts_m, target, spacing)
+        cfg["rows_confirmed"] = False
+        if cfg.get("ready"):
+            _rebuild_valves_pipes(plan, cfg)
+        return True, None
+
     sector = next((s for s in cfg.get("sectors", []) if s.get("idx") == sector_idx), None)
     if sector is None:
         return False, "Sector not found."
@@ -2631,8 +2719,6 @@ def apply_zone_op(plan, cfg, op, sector_idx=None, zone_idx=None, zone_name=None,
             return True, None
         except Exception as e:  # noqa: BLE001 - surface as bilingual error
             return False, "Error in split equivaly: {0}".format(str(e))
-    # Validate pipe connection rules after any zone/pipe operation
-    _validate_pipe_rules(plan, cfg)
     return False, "Unknown operation."
 
 

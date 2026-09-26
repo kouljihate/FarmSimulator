@@ -28,7 +28,7 @@
   </div>
 </div>
 
-<div class="glass rounded-3xl">
+<div id="farm-app" class="glass rounded-3xl">
   <div class="p-6 md:p-8">
 
     <div class="tab-panel" id="tab-load">
@@ -1001,6 +1001,19 @@ function resetTool(cfg, op) {
     }
   }
 
+  function setValveSectorSelection(cfgid, checked) {
+    var vfb = document.getElementById('valves-result');
+    var boxes = vfb ? vfb.querySelectorAll('.valve-sector-chk') : [];
+    for (var i = 0; i < boxes.length; i++) {
+      boxes[i].checked = !!checked;
+    }
+    var picked = [];
+    for (var j = 0; j < boxes.length; j++) {
+      if (boxes[j].checked) picked.push(boxes[j].value);
+    }
+    applyValveZoneFilter(cfgid, picked);
+  }
+
   function refreshRuns() {
     api({ op: 'list_runs' }).then(function (data) {
       if (!data.ok || !data.runs) return;
@@ -1373,8 +1386,7 @@ function resetTool(cfg, op) {
       (async function () {
         var sec = rowsSector();
         if (!sec || !Array.isArray(sec.zones)) return;
-        var changes = 0;
-        var last = null;
+        var updates = [];
         for (var i = 0; i < sec.zones.length; i++) {
           var z = sec.zones[i];
           var row = rZones ? rZones.querySelector('.row-angle-input[data-zone="' + esc(z.name) + '"]') : null;
@@ -1382,30 +1394,43 @@ function resetTool(cfg, op) {
           var desired = parseFloat(row.value);
           var current = z.angle != null ? parseFloat(z.angle) : NaN;
           if (!isFinite(desired) || !isFinite(current) || Math.abs(desired - current) < 0.0001) continue;
-          changes++;
-          var myRa = ++S.ovSeq;
-          last = await mutate({
-            op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
-            sector_idx: rIdx, zone_name: z.name, angle: desired
-          });
-          if (myRa !== S.ovSeq) return;
-          if (!last || !last.ok) { apiFail(last); return; }
-          hideError();
+          updates.push({ sector_idx: rIdx, zone_name: z.name, angle: desired });
         }
-        if (changes === 0) {
+        if (updates.length === 0) {
           hideError();
           return;
         }
-        if (last && last.ok) {
-          fillOverview(last, true, S.ovSeq);
-          openRowsModal(rCfg, rIdx, null);
-        }
+        var myRa = ++S.ovSeq;
+        var last = await mutate({
+          op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
+          updates: updates
+        });
+        if (myRa !== S.ovSeq) return;
+        if (!last || !last.ok) { apiFail(last); return; }
+        hideError();
+        fillOverview(last, true, S.ovSeq);
+        openRowsModal(rCfg, rIdx, null);
       })();
       return;
     }
     var gb = e.target && e.target.closest ? e.target.closest('[data-go-tab]') : null;
     if (gb) {
       goTab(gb.getAttribute('data-go-tab'));
+      return;
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    var selectBtn = e.target && e.target.closest ? e.target.closest('#valve-select-all-btn') : null;
+    if (selectBtn) {
+      hideError();
+      setValveSectorSelection(selectBtn.getAttribute('data-cfg') || S.cfgid, true);
+      return;
+    }
+    var clearBtn = e.target && e.target.closest ? e.target.closest('#valve-unselect-all-btn') : null;
+    if (clearBtn) {
+      hideError();
+      setValveSectorSelection(clearBtn.getAttribute('data-cfg') || S.cfgid, false);
       return;
     }
   });
@@ -1834,28 +1859,73 @@ if (op === 'merge') {
         var p = String(raw).split(' | ');
         return { en: p[0], ar: p[1] || p[0] };
       };
-      var hZ = rtxt('trowzone'), hD = rtxt('trowdir'), hN = rtxt('trownew'), hA = rtxt('trowapply');
+      var hZ = rtxt('trowzone'), hD = rtxt('trowdir'), hS = { en: 'Slope', ar: 'المنحدر' }, hN = rtxt('trownew'), hA = rtxt('trowapply');
       var rbl = function (t) {
         return '<span class="bv"><span class="ar">' + t.ar + '</span><span class="en">' + t.en + '</span></span>';
       };
-      var html = '<table class="w-full text-sm text-white/75"><thead class="border-b border-white/10 bg-white/5 text-left text-white/55">'
-        + '<tr><th class="px-4 py-2 font-medium">' + rbl(hZ) + '</th>'
-        + '<th class="px-4 py-2 font-medium">' + rbl(hD) + '</th>'
-        + '<th class="px-4 py-2 font-medium">' + rbl(hN) + '</th></tr></thead>'
+      var html = '<table class="w-full text-sm text-white/75"><thead class="border-b border-white/10 bg-white/5 text-center text-white/55">'
+        + '<tr><th class="px-4 py-2 font-medium text-center">' + rbl(hZ) + '</th>'
+        + '<th class="px-4 py-2 font-medium text-center">' + rbl(hD) + '</th>'
+        + '<th class="px-4 py-2 font-medium text-center">' + rbl(hS) + '</th>'
+        + '<th class="px-4 py-2 font-medium text-center">' + rbl(hN) + '</th></tr></thead>'
         + '<tbody class="divide-y divide-white/10">';
-      (sec.zones || []).forEach(function (z) {
-        html += '<tr><td class="px-4 py-2 font-semibold text-white">' + esc(z.name) + '</td>'
-          + '<td class="px-4 py-2">' + (z.angle != null ? Number(z.angle).toFixed(0) + '°' : '—') + '</td>'
-          + '<td class="px-4 py-2"><input type="number" min="0" max="180" step="0.5" data-zone="' + esc(z.name) + '" class="row-angle-input w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80"></td></tr>';
+      var zones = (sec.zones || []).slice().sort(function (a, b) {
+        var an = String(a && a.name ? a.name : '');
+        var bn = String(b && b.name ? b.name : '');
+        return an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      zones.forEach(function (z) {
+        var slopeVal = (z.rows && z.rows.slope_pct != null) ? z.rows.slope_pct : ((z.slope_pct != null) ? z.slope_pct : null);
+        var slope = slopeVal != null ? Number(slopeVal).toFixed(1) + '%' : '—';
+        html += '<tr><td class="px-4 py-2 text-center font-semibold text-white">' + esc(z.name) + '</td>'
+          + '<td class="px-4 py-2 text-center">' + (z.angle != null ? Number(z.angle).toFixed(0) + '°' : '—') + '</td>'
+          + '<td class="px-4 py-2 text-center">' + slope + '</td>'
+          + '<td class="px-4 py-2 text-center"><input type="number" min="0" max="180" step="0.5" data-zone="' + esc(z.name) + '" class="row-angle-input mx-auto block w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-center text-sm text-white/80"></td></tr>';
       });
       rZones.innerHTML = html + '</tbody></table>'
         + '<div class="mt-3 flex justify-end"><button type="button" id="rows-apply-all-btn" class="tool-btn">' + rbl(hA) + '</button></div>';
     }
     if (rModal) rModal.style.display = 'flex';
   }
+  function applyRowsBulkDirections(cfgId, rowsSelector) {
+    var inputs = document.querySelectorAll(rowsSelector || '.rows-table-angle-input');
+    var updates = [];
+    inputs.forEach(function (input) {
+      if (!input || !input.dataset) return;
+      var desired = parseFloat(input.value);
+      var angle = Number.isFinite(desired) ? desired : NaN;
+      var sectorIdx = input.getAttribute('data-sector-idx');
+      var zoneName = input.getAttribute('data-zone-name');
+      if (!Number.isFinite(angle) || sectorIdx === null || !zoneName) return;
+      updates.push({ sector_idx: parseInt(sectorIdx, 10), zone_name: zoneName, angle: angle });
+    });
+    if (!updates.length) {
+      hideError();
+      return null;
+    }
+    return mutate({
+      op: 'row_direction', token: S.token, cfgid: parseInt(cfgId, 10), updates: updates
+    });
+  }
+
   var rClose = document.getElementById('rows-detail-close');
   if (rClose) rClose.addEventListener('click', hideRowsModal);
   if (rModal) rModal.addEventListener('click', function (e) { if (e.target === rModal) hideRowsModal(); });
+  var rowsBulkBtn = document.getElementById('rows-apply-table-btn');
+  if (rowsBulkBtn) {
+    rowsBulkBtn.addEventListener('click', function () {
+      if (!S.token) { showError(terrHtml('tnet')); return; }
+      var cfgId = rowsBulkBtn.getAttribute('data-cfg');
+      if (!cfgId) return;
+      var myRows = ++S.ovSeq;
+      applyRowsBulkDirections(cfgId, '.rows-table-angle-input').then(function (data) {
+        if (myRows !== S.ovSeq) return;
+        if (!data || !data.ok) { apiFail(data); return; }
+        hideError();
+        fillOverview(data, true, S.ovSeq);
+      }).catch(function () { showError(terrHtml('tnet')); });
+    });
+  }
   if (zTrace) zTrace.addEventListener('click', function () { zonePickCount = 0; setZonePick(!zoneTraceArmed); });
   if (zSplit) zSplit.addEventListener('click', function () {
     var sel = checkedZones();
