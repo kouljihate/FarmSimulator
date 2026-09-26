@@ -861,17 +861,10 @@ def _existing_config(extra, land_m, proj, basin_m):
         for k, i in enumerate(g["members"], start=1):
             rank += 1
             piece_m = kept[i][0]
-            if g["display"]:
-                base = (g["display"][:32].rstrip() or g["display"])
-                name, n = "{0} {1:d}".format(base, k), k
-                while name.lower() in used:
-                    n += 1
-                    name = "{0} {1:d}".format(base, n)
-            else:
+            name = "S{0:d}".format(rank)
+            while name.lower() in used:
+                rank += 1
                 name = "S{0:d}".format(rank)
-                while name.lower() in used:
-                    rank += 1
-                    name = "S{0:d}".format(rank)
             used.add(name.lower())
             poly_ll = proj.to_lonlat(piece_m)
             entry = nearest_points(piece_m.boundary, Point(cur))[0]

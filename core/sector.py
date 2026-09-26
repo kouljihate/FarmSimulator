@@ -122,7 +122,11 @@ def _clean_slivers(parent, children):
             tc = t.centroid
             nearest = min(big, key=lambda b: b.centroid.distance(tc))
             i = big.index(nearest)
-            big[i] = unary_union([nearest, t])
+            merged = nearest.union(t)
+            if merged.geom_type == 'MultiPolygon':
+                big[i] = max(merged.geoms, key=lambda g: g.area)
+            else:
+                big[i] = merged
         pieces = big
     out = []
     for p in pieces:
@@ -183,4 +187,15 @@ def partition(land_m, target_area, axis_angle, fraction=0.5, pick="largest"):
         for part in _parts(_repair(c)):
             if part.area > 1e-6:
                 out.append((part, main_axis_angle(part) + 90.0))
-    return out
+
+    # remove cells whose centroid falls inside another cell (overlaps)
+    cleaned = []
+    for poly, angle in out:
+        contained = False
+        for other_poly, _ in out:
+            if poly is not other_poly and other_poly.contains(poly.centroid):
+                contained = True
+                break
+        if not contained:
+            cleaned.append((poly, angle))
+    return cleaned
