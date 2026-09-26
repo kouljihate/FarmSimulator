@@ -9,9 +9,9 @@
   <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5">
     <div class="flex flex-1 flex-col p-5">
       <h3 class="text-lg font-semibold text-white">{{ btcfg(cfg.name) }}</h3>
-      <div class="mb-3 flex items-center gap-3 text-sm text-white/60">
-        <span class="inl shrink-0">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
-        <div class="flex flex-1 flex-wrap items-center justify-center gap-1.5">
+      <div class="mb-3 grid grid-cols-3 items-center gap-2 text-sm text-white/60">
+        <span class="col-start-1">{{ cfg.n_sectors }} {{ t('SECTORS') }}</span>
+        <div class="col-start-2 flex flex-wrap items-center justify-center gap-1.5">
           {% for s in cfg.sectors|natsort %}
           <label class="sector-check" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" title="{{ s.name }}">
             <input type="checkbox" class="sector-chk" data-cfg="{{ cfg.id }}" data-idx="{{ s.idx }}" value="{{ s.name }}">
@@ -19,6 +19,7 @@
           </label>
           {% endfor %}
         </div>
+        <span class="col-start-3 text-right">{{ t('SECTORS') }} {{ cfg.n_sectors }}</span>
       </div>
       <div class="sector-acc-grid mb-2 grid grid-cols-1 gap-2 md:grid-cols-2">
       {% for s in cfg.sectors|natsort %}
