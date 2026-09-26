@@ -142,7 +142,8 @@ def plan_summary(plan):
         "simulation": dict(plan.get("simulation") or {}),
         "boundaries": [
             {"name": b.get("name"), "description": b.get("description") or "",
-             "is_land": bool(b.get("is_land")), "area_m2": b.get("area_m2")}
+             "is_land": bool(b.get("is_land")), "is_basin": bool(b.get("is_basin")),
+             "area_m2": b.get("area_m2")}
             for b in (plan.get("boundaries") or [])
         ],
         "water_points": [dict(w) for w in (plan.get("water_points") or [])],

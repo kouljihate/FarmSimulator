@@ -1002,7 +1002,7 @@ def analyse(parsed, max_sector_area=MAX_SECTOR_AREA):
         except Exception:  # noqa: BLE001 - display-only area
             a = 0.0
         bounds.append({"name": p["name"], "description": p.get("description") or "",
-                       "is_land": is_land, "area_m2": a})
+                       "is_land": is_land, "is_basin": p is basin_poly, "area_m2": a})
     water_pts = [
         {"lon": float(w[0]), "lat": float(w[1])}
         for w in (parsed.get("water_points") or [])

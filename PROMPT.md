@@ -886,3 +886,9 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     exactly its 8 sectors. The Sectors-tab legend is reduced to the single
     sector entry. Previews rebuild on every upload/load, so no `MAPS_V`
     bump was needed. VERSION 0.48.4.
+99. v0.48.5: **Basin footprint excluded from sector counts** — the footprint
+    polygon was counted in File-contents `EXTRA_POLYGONS` (`dhar.kml` showed
+    × 9 instead of × 8): `analyse()` now flags it (`boundaries[].is_basin`,
+    passed through `plan_summary`) and `_upload_card.html` rejects basin
+    entries from the extras list. Old saved plans without the flag still
+    render. VERSION 0.48.5.

@@ -28,7 +28,7 @@
       <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
         {% set _bounds = plan.boundaries or [] %}
         {% set _land = _bounds|selectattr('is_land')|list|first %}
-        {% set _extra = _bounds|rejectattr('is_land')|list %}
+        {% set _extra = _bounds|rejectattr('is_land')|rejectattr('is_basin')|list %}
         {% set _water = plan.water_points or [] %}
         <div class="rounded-xl bg-white/5 p-3">
           <div class="text-sm text-white/60">{{ t('LG_BOUNDARY') }} × {{ 1 if _land else 0 }}</div>
