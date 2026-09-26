@@ -229,8 +229,8 @@
     <input id="sector-modal-name" type="text">
     <p id="sector-modal-msg" class="sector-modal-msg mb-5 text-sm leading-relaxed"></p>
     <div class="flex justify-center gap-2">
-        <button type="button" id="sector-modal-cancel" class="sector-modal-btn tool-btn-secondary">{{ bv('CANCEL') }}</button>
-        <button type="button" id="sector-modal-ok" class="sector-modal-btn danger">{{ bv('CONFIRM') }}</button>
+        <button type="button" id="sector-modal-cancel" class="sector-modal-btn tool-btn-secondary rounded-2xl">{{ bv('CLOSE') }}</button>
+        <button type="button" id="sector-modal-ok" class="sector-modal-btn danger rounded-2xl">{{ bv('CONFIRM') }}</button>
       </div>
   </div>
 </div>
@@ -268,7 +268,7 @@
       </div>
     </div>
 <div class="flex flex-wrap items-center justify-center gap-3">
-      <button type="button" id="sector-detail-close" class="sector-modal-btn tool-btn-secondary">{{ bv('CLOSE_AR') }}<span class="hidden">Close</span></button>
+      <button type="button" id="sector-detail-close" class="sector-modal-btn tool-btn-secondary rounded-2xl">{{ bv('CLOSE') }}</button>
     </div>
   </div>
 </div>
@@ -413,6 +413,44 @@
     return out;
   }
 
+  function updateSectorButtons(cfg) {
+    var s = document.getElementById('sectors-result');
+    if (!s) return;
+    var count = checkedIdx(cfg).length;
+    var states = {
+      add: count === 0,
+      edit: count === 1,
+      rename: count === 1,
+      merge: count === 2,
+      split: count === 2,
+      swap: count === 2,
+      remove: count >= 1
+    };
+    var ops = ['add', 'edit', 'rename', 'merge', 'split', 'swap', 'remove'];
+    for (var i = 0; i < ops.length; i++) {
+      var op = ops[i];
+      var btns = s.querySelectorAll('.tool-btn[data-cfg="' + cfg + '"][data-op="' + op + '"]');
+      for (var j = 0; j < btns.length; j++) {
+        var b = btns[j];
+        b.disabled = !states[op];
+      }
+    }
+  }
+
+  function updateAllSectorButtons() {
+    var s = document.getElementById('sectors-result');
+    if (!s) return;
+    var cfgs = [];
+    var boxes = s.querySelectorAll('.sector-chk');
+    for (var i = 0; i < boxes.length; i++) {
+      var cfg = boxes[i].getAttribute('data-cfg');
+      if (cfg && cfgs.indexOf(cfg) === -1) cfgs.push(cfg);
+    }
+    for (var j = 0; j < cfgs.length; j++) {
+      updateSectorButtons(cfgs[j]);
+    }
+  }
+
   var sectorAccOrder = 0;
   function toggleSectorAcc(acc, show) {
     if (!acc) return;
@@ -519,6 +557,7 @@ function resetTool(cfg, op) {
       toastOk();
       var sp = document.getElementById('sectors-result');
       if (sp) sp.innerHTML = data.sectors_html;
+      updateAllSectorButtons();
       if (data.plan) S.plan = data.plan;
       syncFinalFromPlan(S.plan);
       if (data.recap_html) {
@@ -548,6 +587,7 @@ function resetTool(cfg, op) {
     var se = document.getElementById('sectors-empty');
     var sr = document.getElementById('sectors-result');
     if (sr) sr.innerHTML = payload.sectors_html || '';
+    updateAllSectorButtons();
     if (sc) sc.style.display = '';
     if (se) se.style.display = 'none';
     var uc = document.getElementById('upload-file-card');
@@ -1327,21 +1367,40 @@ function resetTool(cfg, op) {
       openRowsModal(rb.getAttribute('data-cfg'), parseInt(rb.getAttribute('data-idx'), 10), rb.getAttribute('data-name'));
       return;
     }
-    var ra = e.target && e.target.closest ? e.target.closest('.rows-apply-btn') : null;
+    var ra = e.target && e.target.closest ? e.target.closest('#rows-apply-all-btn') : null;
     if (ra) {
       if (!S.token) { showError(terrHtml('tnet')); return; }
-      var row = ra.closest ? ra.closest('tr') : null;
-      var inp = row ? row.querySelector('.row-angle-input') : null;
-      var myRa = ++S.ovSeq;
-      mutate({ op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
-               sector_idx: rIdx, zone_name: ra.getAttribute('data-zone'),
-               angle: inp ? inp.value : NaN }).then(function (data) {
-        if (myRa !== S.ovSeq) return;
-        if (!data.ok) { apiFail(data); return; }
-        hideError();
-        fillOverview(data, true, myRa);
-        openRowsModal(rCfg, rIdx, null);
-      }).catch(function () { showError(terrHtml('tnet')); });
+      (async function () {
+        var sec = rowsSector();
+        if (!sec || !Array.isArray(sec.zones)) return;
+        var changes = 0;
+        var last = null;
+        for (var i = 0; i < sec.zones.length; i++) {
+          var z = sec.zones[i];
+          var row = rZones ? rZones.querySelector('.row-angle-input[data-zone="' + esc(z.name) + '"]') : null;
+          if (!row) continue;
+          var desired = parseFloat(row.value);
+          var current = z.angle != null ? parseFloat(z.angle) : NaN;
+          if (!isFinite(desired) || !isFinite(current) || Math.abs(desired - current) < 0.0001) continue;
+          changes++;
+          var myRa = ++S.ovSeq;
+          last = await mutate({
+            op: 'row_direction', token: S.token, cfgid: parseInt(rCfg, 10),
+            sector_idx: rIdx, zone_name: z.name, angle: desired
+          });
+          if (myRa !== S.ovSeq) return;
+          if (!last || !last.ok) { apiFail(last); return; }
+          hideError();
+        }
+        if (changes === 0) {
+          hideError();
+          return;
+        }
+        if (last && last.ok) {
+          fillOverview(last, true, S.ovSeq);
+          openRowsModal(rCfg, rIdx, null);
+        }
+      })();
       return;
     }
     var gb = e.target && e.target.closest ? e.target.closest('[data-go-tab]') : null;
@@ -1439,6 +1498,7 @@ function resetTool(cfg, op) {
     } else if (sel[cfg] == idx) {
       sel[cfg] = null;
     }
+    updateSectorButtons(cfg);
     toggleSectorAcc(document.querySelector('.sector-accordion[data-cfg="' + cfg + '"][data-idx="' + idx + '"]'), box.checked);
     hideError();
     var frame = iframeFor(cfg);
@@ -1452,7 +1512,7 @@ function resetTool(cfg, op) {
 
   document.addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('.tool-btn') : null;
-    if (!b) return;
+    if (!b || b.disabled) return;
     var cfg = b.getAttribute('data-cfg');
     var op = b.getAttribute('data-op');
     var st = statusNode(cfg);
@@ -1778,19 +1838,18 @@ if (op === 'merge') {
       var rbl = function (t) {
         return '<span class="bv"><span class="ar">' + t.ar + '</span><span class="en">' + t.en + '</span></span>';
       };
-      var inl = function (t) { return t.en + ' <span class="ar">' + t.ar + '</span>'; };
       var html = '<table class="w-full text-sm text-white/75"><thead class="border-b border-white/10 bg-white/5 text-left text-white/55">'
-        + '<tr><th class="px-4 py-2 font-medium">' + inl(hZ) + '</th>'
-        + '<th class="px-4 py-2 font-medium">' + inl(hD) + '</th>'
-        + '<th class="px-4 py-2 font-medium">' + inl(hN) + '</th><th></th></tr></thead>'
+        + '<tr><th class="px-4 py-2 font-medium">' + rbl(hZ) + '</th>'
+        + '<th class="px-4 py-2 font-medium">' + rbl(hD) + '</th>'
+        + '<th class="px-4 py-2 font-medium">' + rbl(hN) + '</th></tr></thead>'
         + '<tbody class="divide-y divide-white/10">';
       (sec.zones || []).forEach(function (z) {
         html += '<tr><td class="px-4 py-2 font-semibold text-white">' + esc(z.name) + '</td>'
           + '<td class="px-4 py-2">' + (z.angle != null ? Number(z.angle).toFixed(0) + '°' : '—') + '</td>'
-          + '<td class="px-4 py-2"><input type="number" min="0" max="180" step="0.5" data-zone="' + esc(z.name) + '" class="row-angle-input w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80"></td>'
-          + '<td class="px-4 py-2 text-right"><button type="button" class="tool-btn rows-apply-btn" data-zone="' + esc(z.name) + '">' + rbl(hA) + '</button></td></tr>';
+          + '<td class="px-4 py-2"><input type="number" min="0" max="180" step="0.5" data-zone="' + esc(z.name) + '" class="row-angle-input w-24 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80"></td></tr>';
       });
-      rZones.innerHTML = html + '</tbody></table>';
+      rZones.innerHTML = html + '</tbody></table>'
+        + '<div class="mt-3 flex justify-end"><button type="button" id="rows-apply-all-btn" class="tool-btn">' + rbl(hA) + '</button></div>';
     }
     if (rModal) rModal.style.display = 'flex';
   }

@@ -298,67 +298,67 @@ def _sector_manage_js(cfg):
     mode (posts `{type:'sector-cancel', cfg}`). Messages go to `window.top`
     (the map lives one extra folium iframe deep).
     """
-cfgid = cfg["id"]
-     js = (
-         "window.addEventListener('load',function(){"
-         "var mp=null;for(var k in window){"
-         "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
-         "if(!mp)return;var CFG=" + str(cfgid) + ";"
-         "var drawMode=false,editMode=false,editIdx=null,verts=[],layers=[];"
-         "var lineMode=false,lineVerts=[];"
-         "function rmAll(){for(var i=0;i<layers.length;i++){try{if(layers[i])mp.removeLayer(layers[i]);}catch(x){}}"
-         "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x);"
-         "if(layers['line'])try{mp.removeLayer(layers['line']);}catch(x);layers=[];}"
-         "function post(type,extra){var o={type:type,cfg:CFG};for(var k in extra)o[k]=extra[k];"
-         "try{window.top.postMessage(o,'*');}catch(x){}}"
-         "function ring(){var rr=[];for(var i=0;i<verts.length;i++)rr.push([verts[i].lng,verts[i].lat]);"
-         "if(verts.length>1)rr.push(rr[0]);return rr;}"
-         "function drawPoly(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
-         "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x){}"
-         "layers['poly']=loc.length>2?L.polygon(loc,{color:'#ffd700',weight:2,fillColor:'#ffd700',fillOpacity:.25}):null;"
-         "if(layers['poly'])layers['poly'].addTo(mp);}"
-         "function onDrawClick(e){"
-         "var m=L.circleMarker(e.latlng,{radius:5,color:'#ffd700',weight:2,fill:true,fillColor:'#fff',fillOpacity:1});"
-         "m.addTo(mp);layers.push(m);verts.push(e.latlng);drawPoly();}"
-         "function onLineClick(e){"
-         "var m=L.circleMarker(e.latlng,{radius:5,color:'#ff5252',weight:2,fill:true,fillColor:'#fff',fillOpacity:1});"
-         "m.addTo(mp);layers.push(m);lineVerts.push(e.latlng);"
-         "var loc=[[lineVerts[0].lat,lineVerts[0].lng]];"
-         "if(lineVerts.length>1)loc.push([lineVerts[1].lat,lineVerts[1].lng]);"
-         "if(layers['line'])try{mp.removeLayer(layers['line']);}catch(x){}"
-         "if(loc.length>=2){layers['line']=L.polyline(loc,{color:'#ff5252',weight:3}).addTo(mp);}"
-"if(lineVerts.length>=2){lineMode=false;var lv=lineVerts;lineVerts=[];var pts=lv;"
-          "post('sector-draw-line',{x1:pts[0].lng,y1:pts[0].lat,x2:pts[1].lng,y2:pts[1].lat});"
-          "rmAll();}}"
-         "window.startDraw=function(){if(drawMode)return;drawMode=true;verts=[];rmAll();"
-         "mp.on('click',onDrawClick);post('sector-draw-start',{});};"
-         "window.finishDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;"
-         "var r=ring();rmAll();verts=[];if(r.length>=4)post('sector-draw',{ring:r});};"
-         "window.cancelDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;rmAll();verts=[];"
-         "post('sector-cancel',{});};"
-         "window.startDrawLine=function(){if(lineMode)return;lineMode=true;lineVerts=[];rmAll();"
-         "mp.on('click',onLineClick);post('sector-draw-start',{});};"
-         "window.finishDrawLine=function(){if(!lineMode)return;lineMode=false;mp.off('click',onLineClick);"
-         "lineVerts=[];rmAll();};"
-"window.startEdit=function(idx,ring){if(drawMode)window.cancelDraw();if(lineMode)window.finishDrawLine();if(editMode)return;editMode=true;editIdx=idx;"
-         "rmAll();verts=[];var loc=[];"
-         "for(var i=0;i<ring.length;i++){"
-         "if(!ring[i]||ring[i].length<2)continue;"
-         "var ll=L.latLng(ring[i][1],ring[i][0]);"
-         "if(verts.length&&ll.equals(verts[verts.length-1]))continue;"
-         "loc.push([ll.lat,ll.lng]);verts.push(ll);"
-         "var m=L.marker(ll,{draggable:true});m.addTo(mp);layers.push(m);"
-         "m.on('drag',function(){vertMoved();});}"
-         "layers['poly']=L.polygon(loc,{color:'#ffd700',weight:3,fillColor:'#22d3ee',fillOpacity:.18}).addTo(mp);"
-         "post('sector-edit-start',{idx:idx});};"
-         "function vertMoved(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
-         "if(layers['poly'])layers['poly'].setLatLngs(loc);}"
-         "window.finishEdit=function(){if(!editMode)return;editMode=false;var r=ring();var was=editIdx;"
-         "rmAll();verts=[];editIdx=null;if(r.length>=4)post('sector-edit',{idx:was,ring:r});};"
-         "window.cancelEdit=function(){if(!editMode)return;editMode=false;rmAll();verts=[];editIdx=null;"
-         "post('sector-cancel',{});};"
-         "window.addEventListener('keydown',function(e){"
-         "if(e.key==='Escape'){if(drawMode)window.cancelDraw();else if(lineMode)window.finishDrawLine();else if(editMode)window.cancelEdit();}});"
+    cfgid = cfg["id"]
+    js = (
+        "window.addEventListener('load',function(){"
+        "var mp=null;for(var k in window){"
+        "if(/^map_/.test(k)&&window[k]&&window[k].eachLayer){mp=window[k];break;}}"
+        "if(!mp)return;var CFG=" + str(cfgid) + ";"
+        "var drawMode=false,editMode=false,editIdx=null,verts=[],layers=[];"
+        "var lineMode=false,lineVerts=[];"
+        "function rmAll(){for(var i=0;i<layers.length;i++){try{if(layers[i])mp.removeLayer(layers[i]);}catch(x){}}"
+        "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x){};"
+        "if(layers['line'])try{mp.removeLayer(layers['line']);}catch(x){};layers=[];}"
+        "function post(type,extra){var o={type:type,cfg:CFG};for(var k in extra)o[k]=extra[k];"
+        "try{window.top.postMessage(o,'*');}catch(x){}}"
+        "function ring(){var rr=[];for(var i=0;i<verts.length;i++)rr.push([verts[i].lng,verts[i].lat]);"
+        "if(verts.length>1)rr.push(rr[0]);return rr;}"
+        "function drawPoly(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
+        "if(layers['poly'])try{mp.removeLayer(layers['poly']);}catch(x){};"
+        "layers['poly']=loc.length>2?L.polygon(loc,{color:'#ffd700',weight:2,fillColor:'#ffd700',fillOpacity:.25}):null;"
+        "if(layers['poly'])layers['poly'].addTo(mp);}"
+        "function onDrawClick(e){"
+        "var m=L.circleMarker(e.latlng,{radius:5,color:'#ffd700',weight:2,fill:true,fillColor:'#fff',fillOpacity:1});"
+        "m.addTo(mp);layers.push(m);verts.push(e.latlng);drawPoly();}"
+        "function onLineClick(e){"
+        "var m=L.circleMarker(e.latlng,{radius:5,color:'#ff5252',weight:2,fill:true,fillColor:'#fff',fillOpacity:1});"
+        "m.addTo(mp);layers.push(m);lineVerts.push(e.latlng);"
+        "var loc=[[lineVerts[0].lat,lineVerts[0].lng]];"
+        "if(lineVerts.length>1)loc.push([lineVerts[1].lat,lineVerts[1].lng]);"
+        "if(layers['line'])try{mp.removeLayer(layers['line']);}catch(x){};"
+        "if(loc.length>=2){layers['line']=L.polyline(loc,{color:'#ff5252',weight:3}).addTo(mp);}"
+        "if(lineVerts.length>=2){lineMode=false;var lv=lineVerts;lineVerts=[];var pts=lv;"
+        "post('sector-draw-line',{x1:pts[0].lng,y1:pts[0].lat,x2:pts[1].lng,y2:pts[1].lat});"
+        "rmAll();}}"
+        "window.startDraw=function(){if(drawMode)return;drawMode=true;verts=[];rmAll();"
+        "mp.on('click',onDrawClick);post('sector-draw-start',{});};"
+        "window.finishDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;"
+        "var r=ring();rmAll();verts=[];if(r.length>=4)post('sector-draw',{ring:r});};"
+        "window.cancelDraw=function(){if(!drawMode)return;mp.off('click',onDrawClick);drawMode=false;rmAll();verts=[];"
+        "post('sector-cancel',{});};"
+        "window.startDrawLine=function(){if(lineMode)return;lineMode=true;lineVerts=[];rmAll();"
+        "mp.on('click',onLineClick);post('sector-draw-start',{});};"
+        "window.finishDrawLine=function(){if(!lineMode)return;lineMode=false;mp.off('click',onLineClick);"
+        "lineVerts=[];rmAll();};"
+        "window.startEdit=function(idx,ring){if(drawMode)window.cancelDraw();if(lineMode)window.finishDrawLine();if(editMode)return;editMode=true;editIdx=idx;"
+        "rmAll();verts=[];var loc=[];"
+        "for(var i=0;i<ring.length;i++){"
+        "if(!ring[i]||ring[i].length<2)continue;"
+        "var ll=L.latLng(ring[i][1],ring[i][0]);"
+        "if(verts.length&&ll.equals(verts[verts.length-1]))continue;"
+        "loc.push([ll.lat,ll.lng]);verts.push(ll);"
+        "var m=L.marker(ll,{draggable:true});m.addTo(mp);layers.push(m);"
+        "m.on('drag',function(){vertMoved();});}"
+        "layers['poly']=L.polygon(loc,{color:'#ffd700',weight:3,fillColor:'#22d3ee',fillOpacity:.18}).addTo(mp);"
+        "post('sector-edit-start',{idx:idx});};"
+        "function vertMoved(){var loc=[];for(var i=0;i<verts.length;i++)loc.push([verts[i].lat,verts[i].lng]);"
+        "if(layers['poly'])layers['poly'].setLatLngs(loc);}"
+        "window.finishEdit=function(){if(!editMode)return;editMode=false;var r=ring();var was=editIdx;"
+        "rmAll();verts=[];editIdx=null;if(r.length>=4)post('sector-edit',{idx:was,ring:r});};"
+        "window.cancelEdit=function(){if(!editMode)return;editMode=false;rmAll();verts=[];editIdx=null;"
+        "post('sector-cancel',{});};"
+        "window.addEventListener('keydown',function(e){"
+        "if(e.key==='Escape'){if(drawMode)window.cancelDraw();else if(lineMode)window.finishDrawLine();else if(editMode)window.cancelEdit();}});"
         "});"
     )
     return "<script>" + js + "</script>"
@@ -371,6 +371,14 @@ def map_config_preview(plan, cfg):
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 10)
     center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 17)
+    for s in cfg.get("sectors", []) or []:
+        c = s.get("centroid")
+        if c is None:
+            continue
+        folium.map.Marker(
+            [c.y, c.x],
+            icon=folium.DivIcon(html=_zone_label(s.get("name") or "")),
+        ).add_to(m)
     m.get_root().html.add_child(folium.Element(_sector_select_js(cfg)))
     m.get_root().html.add_child(folium.Element(_sector_manage_js(cfg)))
     return to_html(m)
@@ -847,9 +855,6 @@ def map_sector(plan, cfg, sector, valves=True, pipes=True):
     _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 11)
     _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
     lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 1)
-    nm = sector["centroid"]
-    lay.marker(nm.x, nm.y, _ti("sector", name=sector["name"], area=sector["area_m2"]),
-               "#111111", radius=3)
     center = [sector["centroid"].y, sector["centroid"].x]
     m = build(lay, center, 17)
     for z in zones:

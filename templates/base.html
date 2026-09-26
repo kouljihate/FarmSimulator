@@ -102,6 +102,9 @@
   .tab-btn.is-locked:hover { opacity: .35; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+  .bv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1.1; }
+  .bv .ar { font-family: 'VIP RAWY Regular', 'Rawy', 'Tahoma', sans-serif; direction: rtl; font-size: .82rem; text-align: center; }
+  .bv .en { font-size: .6rem; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.78); text-align: center; }
   .tab-btn .bv { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
   .tab-btn .bv .ar { font-family: 'VIP RAWY Regular', 'Rawy', 'Tahoma', sans-serif; direction: rtl; font-size: .85rem; }
   .tab-btn .bv .en { font-size: .68rem; color: rgba(255,255,255,.75); }
@@ -188,6 +191,15 @@
   .tool-btn .bv .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .82rem; text-align: center; }
   .tool-btn .bv .en { font-size: .6rem; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.72); }
   .tool-btn:hover { border-color: #22d3ee; background: rgba(34,211,238,.28); box-shadow: 0 0 12px rgba(34,211,238,.35); }
+  .tool-btn:disabled,
+  .tool-btn-danger:disabled,
+  .glow-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    transform: none;
+  }
   .tool-btn.armed { background: linear-gradient(135deg, #22d3ee, #8b5cf6); border-color: transparent; box-shadow: 0 0 16px rgba(139,92,246,.6); }
   .tool-btn-danger { border-color: rgba(248,113,113,.5); background: rgba(248,113,113,.12); }
   .tool-btn-danger:hover { border-color: #f87171; background: rgba(248,113,113,.3); box-shadow: 0 0 12px rgba(248,113,113,.4); }
@@ -237,25 +249,66 @@
   #sector-modal input:focus { border-color: #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,.45); background: rgba(34,211,238,.06); }
   #sector-modal .sector-modal-msg { color: rgba(255,255,255,.72); }
   #sector-modal .sector-modal-btn {
-    padding: .5rem 1.1rem;
-    border-radius: .9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+    padding: .62rem 1.15rem;
+    border-radius: 1rem;
     font-weight: 700;
     font-size: .75rem;
     color: #fff;
     border: 1px solid rgba(34,211,238,.45);
     background: linear-gradient(135deg, rgba(34,211,238,.2), rgba(139,92,246,.3));
+    box-shadow: 0 8px 18px rgba(15,23,42,.24);
     transition: all .18s ease;
     cursor: pointer;
     white-space: nowrap;
   }
-  #sector-modal .sector-modal-btn:hover { box-shadow: 0 0 14px rgba(34,211,238,.5); transform: translateY(-1px); }
-  #sector-modal .sector-modal-btn.danger { border-color: rgba(248,113,113,.55); background: linear-gradient(135deg, rgba(248,113,113,.25), rgba(220,38,38,.35)); }
-  #sector-modal .sector-modal-btn.danger:hover { border-color: #f87171; box-shadow: 0 0 14px rgba(248,113,113,.5); }
-  #sector-modal .sector-modal-btn.primary { border-color: transparent; background: linear-gradient(135deg, #22d3ee, #8b5cf6); box-shadow: 0 0 16px rgba(139,92,246,.4); }
-  #sector-modal .sector-modal-btn.primary:hover { box-shadow: 0 0 20px rgba(139,92,246,.7); }
-  #sector-modal .sector-modal-btn .bv { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.15; }
-  #sector-modal .sector-modal-btn .bv .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .78rem; text-align: center; }
-  #sector-modal .sector-modal-btn .bv .en { font-size: .6rem; letter-spacing: .04em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+  #sector-modal .sector-modal-btn:hover {
+    box-shadow: 0 0 18px rgba(34,211,238,.55);
+    transform: translateY(-1px);
+    border-color: rgba(34,211,238,.8);
+  }
+  #sector-modal .sector-modal-btn.danger {
+    border-color: rgba(248,113,113,.55);
+    background: linear-gradient(135deg, rgba(248,113,113,.25), rgba(220,38,38,.35));
+  }
+  #sector-modal .sector-modal-btn.danger:hover {
+    border-color: #f87171;
+    box-shadow: 0 0 18px rgba(248,113,113,.5);
+  }
+  #sector-modal .sector-modal-btn.primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    box-shadow: 0 0 16px rgba(139,92,246,.4);
+  }
+  #sector-modal .sector-modal-btn.primary:hover {
+    box-shadow: 0 0 20px rgba(139,92,246,.7);
+  }
+  #sector-modal .sector-modal-btn .bv {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    line-height: 1.15;
+  }
+  #sector-modal .sector-modal-btn .bv .ar {
+    display: block;
+    font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif;
+    direction: rtl;
+    font-size: .8rem;
+    text-align: center;
+  }
+  #sector-modal .sector-modal-btn .bv .en {
+    display: block;
+    font-size: .6rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.72);
+    text-align: center;
+  }
   #sector-modal .sector-modal-title .di { display: flex; justify-content: space-between; gap: .6rem; }
   #sector-modal .sector-modal-title .di .ar { font-family: 'VIP RAWY Regular', 'Segoe UI', sans-serif; direction: rtl; font-size: .82rem; }
   #sector-modal .sector-modal-title .di .en { font-size: .82rem; }

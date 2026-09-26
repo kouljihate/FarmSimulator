@@ -682,14 +682,27 @@ def _minor_line_on_boundary(zone_m, valve_m, row_angle, inter=None):
     return None
 
 
+def _main_valve_group(sector_idx):
+    """Group sectors into the required three main-valve service lines."""
+    try:
+        idx = int(sector_idx)
+    except (TypeError, ValueError):
+        return "MV3"
+    if idx <= 5:
+        return "MV1"
+    if idx <= 7:
+        return "MV2"
+    return "MV3"
+
+
 def extend_config(plan, project, cfg, basin_m, max_elev_m):
     """Add zones, valves and pipes to a chosen sectorisation config.
 
-    Valves: one principal 90 mm valve per sector (at the sector entry) plus
-    one secondary 32 mm valve per zone at the sector∩zone boundary
-    intersection. Pipes: 90 mm principal (basin -> sector entries),
-    63 mm majors (sector valve -> zone valves), 32 mm minors named
-    ``P32-<zone>`` along the zone boundary, perpendicular to the rows.
+    Main valves are grouped by service area: MV1 serves S1-S5, MV2 serves S6-S7,
+    and MV3 serves S8. Each actual zone still gets its own secondary valve.
+    Pipes: 90 mm principal (basin -> sector entries), 63 mm majors (sector valve
+    -> zone valves), 32 mm minors named ``P32-<zone>`` along the zone boundary,
+    perpendicular to the rows.
     """
     if cfg.get("ready"):
         return cfg
@@ -701,6 +714,34 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
     majors = []
     minors = []
 
+    main_valves = {}
+    for sector in cfg["sectors"]:
+        mv_name = _main_valve_group(sector.get("idx"))
+        main_valves.setdefault(mv_name, []).append(sector)
+
+    for mv_name, sectors in (("MV1", main_valves.get("MV1", [])),
+                            ("MV2", main_valves.get("MV2", [])),
+                            ("MV3", main_valves.get("MV3", []))):
+        if not sectors:
+            continue
+        pts = [sector["entry_m"] for sector in sectors if sector.get("entry_m") is not None]
+        if not pts:
+            continue
+        entry_m = Point(sum(p.x for p in pts) / len(pts), sum(p.y for p in pts) / len(pts))
+        entry_ll = project.to_lonlat(entry_m)
+        valves.append({
+            "id": _valve_id("principal", mv_name, mv_name),
+            "kind": "principal",
+            "sector": mv_name,
+            "zone": mv_name,
+            "diameter_mm": 90,
+            "lon": entry_ll.x,
+            "lat": entry_ll.y,
+            "point": entry_ll,
+            "name": mv_name,
+            "served_sectors": [sector["name"] for sector in sectors],
+        })
+
     for sector in cfg["sectors"]:
         sector_m = sector["poly_m"]
         scan_angle = sector.get("zone_angle", cfg["angle"] + 90.0)
@@ -710,17 +751,6 @@ def extend_config(plan, project, cfg, basin_m, max_elev_m):
         sector["zones"] = []
         entry_m = sector["entry_m"]
         entry_ll = project.to_lonlat(entry_m)
-        valves.append({
-            "id": _valve_id("principal", sector["name"], sector["name"]),
-            "kind": "principal",
-            "sector": sector["name"],
-            "zone": sector["name"],
-            "diameter_mm": 90,
-            "lon": entry_ll.x,
-            "lat": entry_ll.y,
-            "point": entry_ll,
-            "name": "Valve principal {0}".format(sector["name"]),
-        })
 
         zidx = 0
         for pi in order:
@@ -1522,13 +1552,13 @@ def _valve_key(v):
 
 
 def _number_valves(cfg):
-    """Name valves: principal ``S<idx>V1``, others ``S<idx>V11…``."""
+    """Name principal valves as MV1/MV2/MV3 and secondary valves per zone."""
     idx_of = {s.get("name"): s.get("idx") for s in cfg.get("sectors", [])}
+    main_names = ["MV1", "MV2", "MV3"]
+    principal_names = {mv_name: mv_name for mv_name in main_names}
     for v in cfg.get("valves") or []:
-        if not v.get("custom") and v.get("kind") == "principal" and v.get("sector"):
-            i = idx_of.get(v.get("sector"))
-            if i is not None:
-                v["name"] = "S{0}V1".format(i)
+        if not v.get("custom") and v.get("kind") == "principal":
+            v["name"] = principal_names.get(v.get("sector"), v.get("name", "MV"))
     counters = {}
     for v in cfg.get("valves") or []:
         if not v.get("custom") and v.get("kind") == "principal":
