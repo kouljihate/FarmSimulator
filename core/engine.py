@@ -829,9 +829,6 @@ def _existing_config(extra, land_m, proj, basin_m):
     """
     kept = []
     for p in extra:
-        desc = (p.get("description") or "").strip().lower()
-        if "sector" not in desc:
-            continue
         gm = proj.to_m(p["polygon"])
         if gm.is_empty:
             continue
