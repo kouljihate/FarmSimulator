@@ -879,3 +879,10 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     (`justify-center`). Apply already sent every table row via
     `{op:row_direction, updates:[...]}` and refreshes the whole page with
     `fillOverview` (verified: S1 zones → 45° on Dhar). VERSION 0.48.3.
+98. v0.48.4: **Sectors tab shows sectors only** — `map_config_preview` no
+    longer draws the land-boundary outline or the water/basin markers; the
+    map is centred on the sectors' centroid and carries only the sector
+    polygons (Leaflet JS selection/manage untouched), so `dhar.kml` shows
+    exactly its 8 sectors. The Sectors-tab legend is reduced to the single
+    sector entry. Previews rebuild on every upload/load, so no `MAPS_V`
+    bump was needed. VERSION 0.48.4.

@@ -432,10 +432,13 @@ def _sector_manage_js(cfg):
 
 def map_config_preview(plan, cfg):
     lay = Layers()
-    lay.dashed(plan["land"], _ti("land_boundary"), "#333333", 2)
-    _marker(plan, lay, "water", plan["water"]["lon"], plan["water"]["lat"], "blue", 8)
-    _marker(plan, lay, "basin", plan["basin"]["lon"], plan["basin"]["lat"], "brown", 10)
-    center = [plan["basin"]["lat"], plan["basin"]["lon"]]
+    sectors = [s for s in cfg.get("sectors", []) or [] if s.get("centroid") is not None]
+    if sectors:
+        cx = sum(s["centroid"].x for s in sectors) / len(sectors)
+        cy = sum(s["centroid"].y for s in sectors) / len(sectors)
+        center = [cy, cx]
+    else:
+        center = [plan["basin"]["lat"], plan["basin"]["lon"]]
     m = build(lay, center, 17)
     for s in cfg.get("sectors", []) or []:
         c = s.get("centroid")
