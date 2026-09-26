@@ -225,11 +225,11 @@
      data-msg-remove="{{ tsf('REMOVE_ASK', name='__N__') }}"
      data-msg-delete="{{ tsf('DELETE_ASK', name='__N__') }}" data-ph-new="{{ ts('NEW_NAME') }}">
   <div class="sector-modal-card w-full max-w-lg p-6">
-    <button type="button" id="sector-modal-cancel" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <h3 id="sector-modal-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
     <input id="sector-modal-name" type="text">
     <p id="sector-modal-msg" class="sector-modal-msg mb-5 text-sm leading-relaxed"></p>
-    <div class="flex justify-center gap-2">
+    <div class="flex items-center justify-center gap-2">
+        <button type="button" id="sector-modal-cancel" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         <button type="button" id="sector-modal-ok" class="sector-modal-btn danger rounded-2xl">{{ bv('CONFIRM') }}</button>
       </div>
   </div>
@@ -237,7 +237,6 @@
 
 <div id="sector-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none">
   <div class="sector-modal-card max-h-[90vh] w-full max-w-4xl overflow-y-auto p-6">
-    <button type="button" id="sector-detail-close" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <h3 id="sector-detail-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
     <iframe id="sector-detail-map" class="map big mb-4" width="100%" height="440"></iframe>
     <div id="sector-detail-zones" class="mb-4 overflow-x-auto rounded-xl border border-white/10"></div>
@@ -268,15 +267,20 @@
         <button type="button" id="zone-remove-btn" class="tool-btn tool-btn-danger">{{ bv('ZONE_REMOVE') }}</button>
       </div>
     </div>
+<div class="flex flex-wrap items-center justify-center gap-3">
+      <button type="button" id="sector-detail-close" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
   </div>
 </div>
 
 <div id="rows-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none">
   <div class="sector-modal-card max-h-[90vh] w-full max-w-4xl overflow-y-auto p-6">
-    <button type="button" id="rows-detail-close" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <h3 id="rows-detail-title" class="sector-modal-title mb-4 text-base font-semibold"></h3>
     <iframe id="rows-detail-map" class="map big mb-4" width="100%" height="440"></iframe>
     <div id="rows-detail-zones" class="mb-4 overflow-x-auto rounded-xl border border-white/10"></div>
+<div class="flex flex-wrap items-center justify-center gap-3">
+      <button type="button" id="rows-detail-close" class="modal-close-btn" title="{{ tl('CLOSE')[0] }} / {{ tl('CLOSE')[1] }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
   </div>
 </div>
 

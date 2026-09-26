@@ -863,12 +863,11 @@ bilingual (add EN+AR keys to `core/i18n.py`).
     `<name> footprint` polygons in the Basins folder so step KMLs round-trip
     the footprint; `core/mapper.py` draws the footprint polygon on
     basin/pipes/other maps instead of a bare marker. VERSION 0.48.0.
-96. v0.48.1: **circle Close button on all modals** — `#sector-modal`,
-    `#sector-detail-modal` and `#rows-detail-modal` footer text Close/Cancel
-    buttons replaced with a top-right `.modal-close-btn`: 2.5 rem neon
-    cyan/violet gradient circle with glow + hover scale and an × SVG icon
-    (`title` = `CLOSE` EN/AR tooltip); modal cards are `position:relative`
-    and titles carry right padding so long names never slide under the
-    button. Button IDs (`sector-modal-cancel`, `sector-detail-close`,
-    `rows-detail-close`) unchanged so all JS open/close wiring keeps working.
-    VERSION 0.48.1.
+96. v0.48.2: **circle Close button on all modal footers** — `#sector-modal`,
+    `#sector-detail-modal` and `#rows-detail-modal` footer Close/Cancel text
+    buttons replaced with a `.modal-close-btn`: 2.5 rem neon cyan/violet
+    gradient circle with glow + hover scale and an × SVG icon (`title` =
+    `CLOSE` EN/AR tooltip), centred in the existing footer row (next to
+    Confirm in the small modal). Button IDs (`sector-modal-cancel`,
+    `sector-detail-close`, `rows-detail-close`) unchanged so all JS
+    open/close wiring keeps working. VERSION 0.48.2.
