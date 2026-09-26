@@ -435,7 +435,7 @@
     if (attempt < 40) setTimeout(function () { withSectorMap(frame, fn, attempt + 1); }, 100);
   }
 
-  var sel = {}, drawMode = {}, editMode = {}, mergeFrom = {}, editIdxOf = {};
+  var sel = {}, drawMode = {}, editMode = {}, mergeFrom = {}, editIdxOf = {}, splitMode = {};
 
   function iframeFor(cfg) {
     var s = document.getElementById('sectors-result');
@@ -467,25 +467,30 @@
     var s = document.getElementById('sectors-result');
     return s && s.querySelector('.tool-btn[data-cfg="' + cfg + '"][data-op="' + op + '"]');
   }
-  function resetTool(cfg, op) {
-    if (!op || op === 'add') {
-      drawMode[cfg] = false;
-      var ab = pickBtn(cfg, 'add');
-      if (ab) { if (ab.dataset.label) ab.innerHTML = ab.dataset.label; ab.classList.remove('armed'); }
-    }
-    if (!op || op === 'edit') {
-      editMode[cfg] = false;
-      editIdxOf[cfg] = null;
-      var eb = pickBtn(cfg, 'edit');
-      if (eb) { if (eb.dataset.label) eb.innerHTML = eb.dataset.label; eb.classList.remove('armed'); }
-    }
-    if (!op) {
-      mergeFrom[cfg] = null;
-      var mb = pickBtn(cfg, 'merge');
-      if (mb) mb.classList.remove('armed');
-    }
-    setStatus(cfg, 'tsel');
-  }
+function resetTool(cfg, op) {
+     if (!op || op === 'add') {
+       drawMode[cfg] = false;
+       var ab = pickBtn(cfg, 'add');
+       if (ab) { if (ab.dataset.label) ab.innerHTML = ab.dataset.label; ab.classList.remove('armed'); }
+     }
+     if (!op || op === 'edit') {
+       editMode[cfg] = false;
+       editIdxOf[cfg] = null;
+       var eb = pickBtn(cfg, 'edit');
+       if (eb) { if (eb.dataset.label) eb.innerHTML = eb.dataset.label; eb.classList.remove('armed'); }
+     }
+     if (!op || op === 'split') {
+       splitMode[cfg] = false;
+       var sb = pickBtn(cfg, 'split');
+       if (sb) { if (sb.dataset.label) sb.innerHTML = sb.dataset.label; sb.classList.remove('armed'); }
+     }
+     if (!op) {
+       mergeFrom[cfg] = null;
+       var mb = pickBtn(cfg, 'merge');
+       if (mb) mb.classList.remove('armed');
+     }
+     setStatus(cfg, 'tsel');
+   }
   function resetSectorState() {
     sel = {}; drawMode = {}; editMode = {}; mergeFrom = {}; editIdxOf = {};
   }
@@ -1497,16 +1502,32 @@
       openRemoveModal(cfg, sel[cfg], chipName(cfg, sel[cfg]));
       return;
     }
-    if (op === 'merge') {
-      var chk = checkedIdx(cfg);
-      if (chk.length === 2) {
-        applySectorOp(cfg, 'merge', { idx: chk[0], idx2: chk[1] });
-      } else {
-        setStatus(cfg, chk.length < 2 ? 'tneed' : 'tmerge');
-      }
-      return;
-    }
-    if (op === 'swap') {
+if (op === 'merge') {
+       var chk = checkedIdx(cfg);
+       if (chk.length === 2) {
+         applySectorOp(cfg, 'merge', { idx: chk[0], idx2: chk[1] });
+       } else {
+         setStatus(cfg, chk.length < 2 ? 'tneed' : 'tmerge');
+       }
+       return;
+     }
+     if (op === 'split') {
+       if (!needsSel(cfg)) return;
+       var idx = sel[cfg];
+       if (!splitMode[cfg]) {
+         if (!b.dataset.label) b.dataset.label = b.innerHTML;
+         withSectorMap(iframeFor(cfg), function (w) { w.startDrawLine(); });
+         splitMode[cfg] = true;
+         if (st) b.textContent = st.dataset.tfin;
+         b.classList.add('armed');
+         setStatus(cfg, 'tsplit');
+} else {
+          withSectorMap(iframeFor(cfg), function (w) { w.finishDrawLine(); });
+          splitMode[cfg] = false;
+        }
+       return;
+     }
+     if (op === 'swap') {
       var chk2 = checkedIdx(cfg);
       if (chk2.length === 2) {
         applySectorOp(cfg, 'swap', { idx: chk2[0], idx2: chk2[1] });
@@ -1922,12 +1943,18 @@
       }
       return;
     }
-    if (e.data.type === 'sector-draw') {
-      resetTool(cfg, 'add');
-      applySectorOp(cfg, 'add', { ring: e.data.ring });
-      return;
-    }
-    if (e.data.type === 'sector-edit') {
+if (e.data.type === 'sector-draw') {
+       resetTool(cfg, 'add');
+       applySectorOp(cfg, 'add', { ring: e.data.ring });
+       return;
+     }
+     if (e.data.type === 'sector-draw-line') {
+       resetTool(cfg, 'split');
+       splitMode[cfg] = false;
+       applySectorOp(cfg, 'split', { idx: sel[cfg], x1: e.data.x1, y1: e.data.y1, x2: e.data.x2, y2: e.data.y2 });
+       return;
+     }
+     if (e.data.type === 'sector-edit') {
       resetTool(cfg, 'edit');
       applySectorOp(cfg, 'edit', { idx: e.data.idx, ring: e.data.ring });
       return;

@@ -620,13 +620,15 @@ def index():
         if plan is None or cfg is None:
             return _err("Run not found.")
         ok, msg = engine.apply_sector_op(
-            plan, cfg,
-            data.get("action", ""),
-            idx=data.get("idx"),
-            idx2=data.get("idx2"),
-            name=data.get("name"),
-            ring=data.get("ring"),
-        )
+             plan, cfg,
+             data.get("action", ""),
+             idx=data.get("idx"),
+             idx2=data.get("idx2"),
+             name=data.get("name"),
+             ring=data.get("ring"),
+             x1=data.get("x1"), y1=data.get("y1"),
+             x2=data.get("x2"), y2=data.get("y2"),
+         )
         if not ok:
             return jsonify(ok=False, error=str(i18n.err(msg)))
         cfg_maps = {}

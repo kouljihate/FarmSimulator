@@ -1279,11 +1279,12 @@ def _current_polys(cfg):
     return [(s["poly_m"], s.get("name")) for s in cfg["sectors"]]
 
 
-def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
+def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None,
+                   x1=None, y1=None, x2=None, y2=None):
     """Apply one sector edit to a config in place. Returns (ok, message).
 
     Supported ops: rename, remove, merge (idx+idx2), swap (idx+idx2),
-    add (ring), edit (idx+ring).
+    add (ring), edit (idx+ring), split (idx, x1, y1, x2, y2).
     After every operation the config's entries/zones/valves/pipes are rebuilt.
     """
     if op == "rename":
@@ -1349,6 +1350,49 @@ def apply_sector_op(plan, cfg, op, idx=None, idx2=None, name=None, ring=None):
         _rekey_pipe_sector(cfg, nm_b, nm_a)
         _rekey_pipe_sector(cfg, "__swap_tmp__", nm_b)
         recompute_sectors(plan, cfg, _current_polys(cfg))
+        return True, None
+
+    if op == "split":
+        target = _find_sector(cfg, idx)
+        if target is None:
+            return False, "Sector not found."
+        if len(cfg["sectors"]) <= 1:
+            return False, "Cannot split the last sector."
+        proj = plan["_proj"]
+        try:
+            a = proj.to_m(Point(float(x1), float(y1)))
+            b = proj.to_m(Point(float(x2), float(y2)))
+        except (TypeError, ValueError):
+            return False, "Invalid coordinates."
+        if a.distance(b) < 1.0:
+            return False, "Invalid coordinates."
+        zm = target["poly_m"]
+        dx, dy = b.x - a.x, b.y - a.y
+        L = (dx * dx + dy * dy) ** 0.5
+        ux, uy = dx / L, dy / L
+        ext = max(zm.bounds[2] - zm.bounds[0], zm.bounds[3] - zm.bounds[1]) + 100.0
+        line = LineString([(a.x - ux * ext, a.y - uy * ext),
+                            (b.x + ux * ext, b.y + uy * ext)])
+        try:
+            res = _shapely_split(zm, line)
+        except Exception:
+            return False, "Invalid split line."
+        parts = [g for g in res.geoms if g.geom_type.startswith("Polygon") and g.area > 60.0]
+        if len(parts) < 2:
+            return False, "The line must cross the sector."
+        parts.sort(key=lambda g: g.area, reverse=True)
+        keep = parts[:2]
+        polys = [(s["poly_m"], s.get("name")) for s in cfg["sectors"] if s["idx"] != idx]
+        new_name = "S{0}".format(max([_sector_num(s.get("name", "")) for s in cfg["sectors"]] + [0]) + 1)
+        while "S{0}".format(new_name) in {s.get("name", "") for s in cfg["sectors"]}:
+            new_name += 1
+        polys.append((keep[0], target["name"]))
+        polys.append((keep[1], new_name))
+        recompute_sectors(plan, cfg, polys)
+        _rebuild_valves_pipes(plan, cfg)
+        cfg["zones_confirmed"] = False
+        cfg["rows_confirmed"] = False
+        cfg["valves_confirmed"] = False
         return True, None
 
     if op in ("add", "edit"):
